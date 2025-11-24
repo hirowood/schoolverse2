@@ -1,7 +1,7 @@
 "use client";
 
 // src/app/credo/page.tsx
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CredoBoard } from "@/components/credo/CredoBoard";
 import { Modal } from "@/components/ui/Modal";
 import { CREDO_ITEMS } from "@/features/credo/config";
@@ -58,12 +58,27 @@ export default function Page() {
   const today = useMemo(() => getToday(), []);
   const [date] = useState<string>(today);
   const [values, setValues] = useState<Record<CredoId, CredoPracticeFormValue>>(
-    () => loadFromStorage(today)?.values ?? buildEmptyValues(today),
+    () => buildEmptyValues(today),
+  );
+  const [summaryOrder, setSummaryOrder] = useState<CredoId[]>(
+    () => CREDO_ITEMS.map((item) => item.id),
   );
 
   const [activeItem, setActiveItem] = useState<CredoItem | null>(null);
   const [modalDone, setModalDone] = useState<boolean>(false);
   const [modalNote, setModalNote] = useState<string>("");
+  const [draggingId, setDraggingId] = useState<CredoId | null>(null);
+  const [hoverId, setHoverId] = useState<CredoId | null>(null);
+
+  // クライアントで保存済みがあれば復元（SSRと一致させるため、初期描画後に読み込み）
+  useEffect(() => {
+    const stored = loadFromStorage(today);
+    if (stored?.values) {
+      // クライアント側でのみ一度同期する用途のため、lintを抑制
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setValues(stored.values);
+    }
+  }, [today]);
 
   const handleSelectItem = (item: CredoItem) => {
     const current = values[item.id];
@@ -88,7 +103,37 @@ export default function Page() {
     setActiveItem(null);
   };
 
+  const reorderSummary = (sourceId: CredoId, targetId: CredoId | null) => {
+    setSummaryOrder((prev) => {
+      if (!targetId || sourceId === targetId) return prev;
+      const presentIds = prev.filter((id) => values[id]?.done || values[id]?.note);
+      const srcIndex = presentIds.indexOf(sourceId);
+      const tgtIndex = presentIds.indexOf(targetId);
+      if (srcIndex === -1 || tgtIndex === -1) return prev;
+      const next = [...presentIds];
+      next.splice(srcIndex, 1);
+      next.splice(tgtIndex, 0, sourceId);
+      const rest = prev.filter((id) => !presentIds.includes(id));
+      return [...next, ...rest];
+    });
+  };
+
   const doneMap = useMemo(() => buildDoneMap(values), [values]);
+  const summaryItems = useMemo(() => {
+    const present = CREDO_ITEMS.filter((item) => {
+      const value = values[item.id];
+      return value?.done || value?.note;
+    });
+    const orderIndex = (id: CredoId) => summaryOrder.indexOf(id);
+    return [...present].sort((a, b) => {
+      const va = values[a.id];
+      const vb = values[b.id];
+      const doneA = va?.done ?? false;
+      const doneB = vb?.done ?? false;
+      if (doneA !== doneB) return Number(doneA) - Number(doneB); // 未完了を先に、完了を下に
+      return orderIndex(a.id) - orderIndex(b.id);
+    });
+  }, [values, summaryOrder]);
 
   return (
     <div className="space-y-6">
@@ -112,33 +157,58 @@ export default function Page() {
           <h2 className="text-lg font-medium text-slate-900">今日のサマリー</h2>
           <p className="text-xs text-slate-600">日付: {date}</p>
           <ul className="mt-3 space-y-2">
-            {CREDO_ITEMS.map((item) => {
+            {summaryItems.map((item) => {
               const value = values[item.id];
-              if (!value?.done && !value?.note) {
-                return null;
-              }
+              if (!value) return null;
+              const isDragging = draggingId === item.id;
               return (
                 <li
                   key={item.id}
-                  className="rounded-md border border-slate-200 bg-white px-3 py-2"
+                  className={`rounded-md border bg-white px-3 py-2 transition-transform transition-shadow duration-300 ease-out ${
+                    isDragging
+                      ? "border-slate-300 shadow-xl shadow-slate-200 translate-y-0.5 scale-[1.01] cursor-grabbing"
+                      : "border-slate-200 cursor-grab hover:shadow-sm hover:-translate-y-0.5"
+                  }`}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    setDraggingId(item.id);
+                    setHoverId(item.id);
+                  }}
+                  onPointerEnter={() => {
+                    if (draggingId && draggingId !== item.id) {
+                      reorderSummary(draggingId, item.id);
+                      setHoverId(item.id);
+                    }
+                  }}
+                  onPointerUp={() => {
+                    setDraggingId(null);
+                    setHoverId(null);
+                  }}
+                  onPointerCancel={() => {
+                    setDraggingId(null);
+                    setHoverId(null);
+                  }}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-slate-900">
                       {item.order}. {item.title}
                     </span>
-                    {value?.done && (
+                    {value.done && (
                       <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">
                         入力済み
                       </span>
                     )}
                   </div>
-                  {value?.note && (
+                  {value.note && (
                     <p className="mt-1 text-xs text-slate-600">{value.note}</p>
                   )}
                 </li>
               );
             })}
           </ul>
+          <p className="text-[11px] text-slate-500">
+            サマリー項目はドラッグ（マウス・タッチ／ポインタ対応）で並び替えできます。入力済みは自動的に下に配置されます。
+          </p>
         </div>
       </div>
 
