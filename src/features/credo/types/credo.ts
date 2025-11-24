@@ -1,6 +1,6 @@
 // src/features/credo/types/credo.ts
 
-// クレドのカテゴリ（UIでのラベルに使う）
+// クレドのカテゴリ（UIラベルに使用）
 export type CredoCategory =
   | "情報の受け取り方"
   | "思考の整理のしかた"
@@ -14,25 +14,58 @@ export type CredoCategory =
   | "対人・コミュニケーション・人生の姿勢"
   | "1日の終わらせ方（ナイトルール）";
 
-// クレド1項目分の定義
+// クレドID（マスタ）
+export type CredoId =
+  | "credo-1"
+  | "credo-2"
+  | "credo-3"
+  | "credo-4"
+  | "credo-5"
+  | "credo-6"
+  | "credo-7"
+  | "credo-8"
+  | "credo-9"
+  | "credo-10"
+  | "credo-11";
+
+// クレド1項目の定義
 export interface CredoItem {
-  id: string; // "C-01" など
-  code: string; // "#01 情報の受け取り方" など
-  title: string;
-  shortDescription: string;
-  detail: string;
+  id: CredoId;
+  order: number;
   category: CredoCategory;
+  title: string;
+  description: string;
 }
 
-// ★ UI内部で使う「クレド1つ分の状態」
-export interface CredoDailyItemValue {
-  credoId: string;
+// CredoBoard 用のprops
+export interface CredoBoardProps {
+  items?: CredoItem[];
+  doneMap?: Record<CredoId, boolean>;
+  onSelect?: (item: CredoItem) => void;
+}
+
+// フォームで扱う1クレド分の値
+export interface CredoPracticeFormValue {
+  credoId: CredoId;
+  date: string; // "YYYY-MM-DD"
   done: boolean;
   note: string;
 }
 
-// ★ 保存するときに使う「1日分の実践ログ」
-export interface CredoPracticeFormValue {
+// 1日のクレド実践入力
+export interface CredoDailyPractice {
   date: string; // "YYYY-MM-DD"
-  items: CredoDailyItemValue[];
+  values: Record<CredoId, CredoPracticeFormValue>;
+}
+
+// 将来的にDBへ保存するモデル
+export interface CredoPracticeLog {
+  id: string; // UUID
+  userId: string;
+  date: string;
+  credoId: CredoId;
+  done: boolean;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
 }

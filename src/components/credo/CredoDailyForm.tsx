@@ -1,37 +1,82 @@
 // src/components/credo/CredoDailyForm.tsx
 "use client";
 
-import { useMemo, useState } from "react";
-import { CREDO_ITEMS } from "@/features/credo/config";
+import { useEffect, useState } from "react";
 import type {
-  CredoDailyFormState,
-  CredoDailyLog,
+  CredoDailyPractice,
+  CredoId,
+  CredoItem,
+  CredoPracticeFormValue,
 } from "@/features/credo/types";
 
-// 今日の日付 "YYYY-MM-DD" を生成する関数
 const getToday = () => new Date().toISOString().slice(0, 10);
 
-interface CredoDailyFormProps {
-  onSubmit?: (log: CredoDailyLog) => void;
+export interface CredoDailyFormProps {
+  date?: string;
+  items: CredoItem[];
+  initialValues?: Record<CredoId, CredoPracticeFormValue>;
+  onSubmit?: (daily: CredoDailyPractice) => void;
 }
 
-export function CredoDailyForm({ onSubmit }: CredoDailyFormProps) {
-  const [date, setDate] = useState<string>(getToday());
+const buildInitialValues = (
+  date: string,
+  items: CredoItem[],
+  initialValues?: Record<CredoId, CredoPracticeFormValue>,
+) =>
+  Object.fromEntries(
+    items.map((item) => {
+      const base = initialValues?.[item.id];
+      return [
+        item.id,
+        {
+          credoId: item.id,
+          date,
+          done: base?.done ?? false,
+          note: base?.note ?? "",
+        },
+      ];
+    }),
+  ) as Record<CredoId, CredoPracticeFormValue>;
 
-  const initialState: CredoDailyFormState = useMemo(
-    () =>
-      Object.fromEntries(
-        CREDO_ITEMS.map((item) => [
-          item.id,
-          { done: false, note: "" },
-        ]),
-      ) as CredoDailyFormState,
-    [],
+export function CredoDailyForm({
+  date: initialDate,
+  items,
+  initialValues,
+  onSubmit,
+}: CredoDailyFormProps) {
+  const [date, setDate] = useState<string>(initialDate ?? getToday());
+  const [values, setValues] = useState<Record<CredoId, CredoPracticeFormValue>>(
+    () => buildInitialValues(initialDate ?? getToday(), items, initialValues),
   );
 
-  const [values, setValues] = useState<CredoDailyFormState>(initialState);
+  useEffect(() => {
+    if (!initialValues) return;
+    // Propからの初期値変更時のみ同期（依存は限定的）
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setValues(buildInitialValues(date, items, initialValues));
+  }, [initialValues, items, date]);
 
-  const handleToggle = (credoId: string) => {
+  const handleDateChange = (nextDate: string) => {
+    setDate(nextDate);
+    setValues((prev) =>
+      Object.fromEntries(
+        items.map((item) => {
+          const prevValue = prev[item.id];
+          return [
+            item.id,
+            {
+              credoId: item.id,
+              date: nextDate,
+              done: prevValue?.done ?? false,
+              note: prevValue?.note ?? "",
+            },
+          ];
+        }),
+      ) as Record<CredoId, CredoPracticeFormValue>,
+    );
+  };
+
+  const handleToggle = (credoId: CredoId) => {
     setValues((prev) => ({
       ...prev,
       [credoId]: {
@@ -41,7 +86,7 @@ export function CredoDailyForm({ onSubmit }: CredoDailyFormProps) {
     }));
   };
 
-  const handleNoteChange = (credoId: string, note: string) => {
+  const handleNoteChange = (credoId: CredoId, note: string) => {
     setValues((prev) => ({
       ...prev,
       [credoId]: {
@@ -53,28 +98,20 @@ export function CredoDailyForm({ onSubmit }: CredoDailyFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    const log: CredoDailyLog = {
-      id: `${date}-${Date.now()}`,
+    const daily: CredoDailyPractice = {
       date,
-      items: Object.entries(values).map(([credoId, v]) => ({
-        credoId,
-        done: v.done,
-        note: v.note.trim(),
-      })),
-      createdAt: new Date().toISOString(),
+      values,
     };
 
     if (onSubmit) {
-      onSubmit(log);
+      onSubmit(daily);
     } else {
-      console.log("CredoDailyLog:", log);
-      alert("クレド実践ログをコンソールに出力しました。");
+      console.log("CredoDailyPractice:", daily);
     }
   };
 
   const handleReset = () => {
-    setValues(initialState);
+    setValues(buildInitialValues(date, items, initialValues));
   };
 
   return (
@@ -88,18 +125,18 @@ export function CredoDailyForm({ onSubmit }: CredoDailyFormProps) {
           type="date"
           className="border border-slate-300 rounded-md px-2 py-1 text-sm"
           value={date}
-          onChange={(e) => setDate(e.target.value)}
+          onChange={(e) => handleDateChange(e.target.value)}
         />
       </div>
 
       <div className="space-y-3">
-        {CREDO_ITEMS.map((item) => {
+        {items.map((item) => {
           const value = values[item.id];
 
           return (
             <div
               key={item.id}
-              className="flex flex-col gap-1 rounded-lg border border-slate-200 bg-white p-3"
+              className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3"
             >
               <div className="flex items-center gap-2">
                 <input
@@ -120,8 +157,9 @@ export function CredoDailyForm({ onSubmit }: CredoDailyFormProps) {
 
               <textarea
                 className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-                placeholder="今日の一言メモ（例：朝に3分リセットできた／今日はできなかった など）"
+                placeholder="今日意識したポイントや一言メモを残してください"
                 rows={2}
+                maxLength={200}
                 value={value?.note ?? ""}
                 onChange={(e) => handleNoteChange(item.id, e.target.value)}
               />
@@ -142,7 +180,7 @@ export function CredoDailyForm({ onSubmit }: CredoDailyFormProps) {
           type="submit"
           className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
         >
-          今日のクレド実践を記録する
+          今日のクレド実践を保存
         </button>
       </div>
     </form>

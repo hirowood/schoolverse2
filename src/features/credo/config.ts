@@ -1,7 +1,6 @@
 import { CredoItem } from "./types";
 
 // 池田さんのクレド11箇条（シンプル版）
-// こちらはボード表示用に最低限の情報だけを持つ
 export const CREDO_ITEMS: CredoItem[] = [
   {
     id: "credo-1",
@@ -25,7 +24,7 @@ export const CREDO_ITEMS: CredoItem[] = [
     category: "タスク管理・行動のしかた",
     title: "今日やる3つと、5〜15分タスクで進める",
     description:
-      "シングルタスクで小さな約束を守り、終わったらチェック。終わらなければさらに分解して翌日に回す。",
+      "シングルタスクで小さな約束を守り、終わったらチェック。終わらなければ細かく分解して翌日に回す。",
   },
   {
     id: "credo-4",
@@ -57,7 +56,7 @@ export const CREDO_ITEMS: CredoItem[] = [
     category: "部屋・生活環境の整理",
     title: "朝3分・夜5分・週1の30分リセットで整える",
     description:
-      "短いリセットをルーティン化し、週1回は徹底整理。不用品処分と紙の仕分けもこの時間に実施。",
+      "短いリセットをルーティン化し、週1回は徹底整理。不用品の処分と紙の仕分けもこの時間に実施。",
   },
   {
     id: "credo-8",
