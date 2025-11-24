@@ -1,0 +1,140 @@
+// prisma/seed.js
+// Supabase / Postgres にクレド11箇条とデモユーザーを投入するスクリプト
+
+const { PrismaClient } = require("@prisma/client");
+
+const prisma = new PrismaClient();
+
+const DEMO_USER = {
+  id: "demo-user",
+  email: "demo@example.com",
+  name: "Demo User",
+};
+
+const CREDO_ITEMS = [
+  {
+    id: "credo-1",
+    order: 1,
+    category: "情報の受け取り方",
+    title: "頭で覚えず、必ず見える化する",
+    description:
+      "指示・予定・不安は紙やメモに1行1情報で書き出し、口頭指示は自分の言葉でメモする。",
+  },
+  {
+    id: "credo-2",
+    order: 2,
+    category: "思考の整理のしかた",
+    title: "まず全部出し、ピラミッド構造で整理する",
+    description:
+      "事実・タスク・感情を混ぜて書き出し、技術/生活/健康などに分けてMECEを意識して整理する。",
+  },
+  {
+    id: "credo-3",
+    order: 3,
+    category: "タスク管理・行動のしかた",
+    title: "今日やる3つと、5〜15分タスクで進める",
+    description:
+      "シングルタスクで小さな約束を守り、終わったらチェック。終わらなければ細かく分解して翌日に回す。",
+  },
+  {
+    id: "credo-4",
+    order: 4,
+    category: "身体・感情・休息の扱い方",
+    title: "状態を記録し、呼吸と休息で整える",
+    description:
+      "睡眠/体温/気分を記録し、思考が詰まったら4-4-6呼吸と短い休憩でリセットする。",
+  },
+  {
+    id: "credo-5",
+    order: 5,
+    category: "ジムでの運動",
+    title: "前日に時間とメニュー3つを決めて淡々とやる",
+    description:
+      "行く時間とウォームアップ・マシン・ストレッチを決め、当日は迷わず実行。行けない日はストレッチや散歩で代替。",
+  },
+  {
+    id: "credo-6",
+    order: 6,
+    category: "食事（脳と体の燃料）",
+    title: "プロテイン・魚・野菜を意識してとる",
+    description:
+      "完璧を狙わず、取れた要素に注目して自己評価する。朝や運動後にプロテイン、魚と野菜を生活に組み込む。",
+  },
+  {
+    id: "credo-7",
+    order: 7,
+    category: "部屋・生活環境の整理",
+    title: "朝3分・夜5分・週1の30分リセットで整える",
+    description:
+      "短いリセットをルーティン化し、週1回は徹底整理。不用品の処分と紙の仕分けもこの時間に実施。",
+  },
+  {
+    id: "credo-8",
+    order: 8,
+    category: "日々の改善・学習・継続",
+    title: "毎日「小さな改善と一歩」を1つ積む",
+    description:
+      "読書や技術記事などから1つ学びをメモし、呼吸/瞑想/運動/整理など続いた習慣にチェックを入れる。",
+  },
+  {
+    id: "credo-9",
+    order: 9,
+    category: "自己受容・自己成長の考え方",
+    title: "できなかった日も「今日のデータ」として受け取る",
+    description:
+      "過去ではなく今日の事実で評価し、守れるサイズの約束を反復。できたら必ず記録して自信に変える。",
+  },
+  {
+    id: "credo-10",
+    order: 10,
+    category: "対人・コミュニケーション・人生の姿勢",
+    title: "事実と感情を分け、配慮と言葉選びを大事にする",
+    description:
+      "『事実＋自分の感情＋してほしいこと』で伝え、相手視点を想像してからメッセージを送る。",
+  },
+  {
+    id: "credo-11",
+    order: 11,
+    category: "1日の終わらせ方（ナイトルール）",
+    title: "今日の一歩・学び・改善を書いて「ここで終わり」と決める",
+    description:
+      "完了タスクと学びを1つ記録し、4-4-6呼吸と短い瞑想で区切る。続いた習慣にチェックを入れる。",
+  },
+];
+
+async function main() {
+  await prisma.user.upsert({
+    where: { id: DEMO_USER.id },
+    update: {
+      email: DEMO_USER.email,
+      name: DEMO_USER.name,
+    },
+    create: DEMO_USER,
+  });
+
+  for (const item of CREDO_ITEMS) {
+    // eslint-disable-next-line no-await-in-loop
+    await prisma.credoItem.upsert({
+      where: { id: item.id },
+      update: {
+        order: item.order,
+        category: item.category,
+        title: item.title,
+        description: item.description,
+      },
+      create: item,
+    });
+  }
+}
+
+main()
+  .then(() => {
+    console.log("Seed completed: demo user & credo items");
+  })
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

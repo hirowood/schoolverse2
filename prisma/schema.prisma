@@ -1,13 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-// schema.prisma
-
 datasource db {
-  provider = "sqlite"      // まずは開発用に sqlite 前提でOK（npx prisma init のデフォルト）
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -15,7 +7,8 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// 将来 NextAuth を入れるときに拡張/差し替え予定
+
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -26,10 +19,8 @@ model User {
   credoLogs CredoPracticeLog[]
 }
 
-// クレド 11箇条のマスタ
 model CredoItem {
-  // "credo-1" ~ "credo-11" などを入れる想定
-  id          String             @id
+  id          String   @id       // "credo-1" など固定ID
   order       Int
   category    String
   title       String
@@ -38,14 +29,13 @@ model CredoItem {
   practiceLogs CredoPracticeLog[]
 }
 
-// 1ユーザー × 1日 × 1クレド の実践ログ
 model CredoPracticeLog {
   id        String   @id @default(cuid())
   userId    String
   credoId   String
-  date      DateTime // "YYYY-MM-DD" 相当の日付（時間は 00:00:00 でOK）
+  date      DateTime
   done      Boolean
-  note      String   @db.Text
+  note      String     @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -55,7 +45,5 @@ model CredoPracticeLog {
 
   @@index([userId, date])
   @@index([userId, credoId, date])
-  @@unique([userId, credoId, date]) // 1日1クレド1レコードを保証
+  @@unique([userId, credoId, date]) // 1ユーザー1クレド1日で一意
 }
-
-

@@ -13,7 +13,6 @@ import type {
 } from "@/features/credo/types";
 
 const getToday = () => new Date().toISOString().slice(0, 10);
-const STORAGE_KEY_PREFIX = "credo-practice-";
 
 const buildEmptyValues = (
   date: string,
@@ -29,22 +28,6 @@ const buildEmptyValues = (
       },
     ]),
   ) as Record<CredoId, CredoPracticeFormValue>;
-
-const loadFromStorage = (date: string): CredoDailyPractice | null => {
-  if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${date}`);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as CredoDailyPractice;
-  } catch {
-    return null;
-  }
-};
-
-const persistValues = (date: string, values: Record<CredoId, CredoPracticeFormValue>) => {
-  const daily: CredoDailyPractice = { date, values };
-  localStorage.setItem(`${STORAGE_KEY_PREFIX}${date}`, JSON.stringify(daily));
-};
 
 const buildDoneMap = (values: Record<CredoId, CredoPracticeFormValue>) => {
   const map: Record<CredoId, boolean> = {} as Record<CredoId, boolean>;
@@ -69,16 +52,31 @@ export default function Page() {
   const [modalNote, setModalNote] = useState<string>("");
   const [draggingId, setDraggingId] = useState<CredoId | null>(null);
   const [hoverId, setHoverId] = useState<CredoId | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // クライアントで保存済みがあれば復元（SSRと一致させるため、初期描画後に読み込み）
+  // APIから当日のデータを取得
   useEffect(() => {
-    const stored = loadFromStorage(today);
-    if (stored?.values) {
-      // クライアント側でのみ一度同期する用途のため、lintを抑制
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setValues(stored.values);
-    }
-  }, [today]);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/credo/practices?date=${date}`);
+        if (!res.ok) throw new Error(`fetch failed (${res.status})`);
+        const data = (await res.json()) as CredoDailyPractice;
+        if (data?.values) {
+          setValues(data.values);
+        }
+        setError(null);
+      } catch (e) {
+        console.error(e);
+        setError("データ取得に失敗しました");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [date]);
 
   const handleSelectItem = (item: CredoItem) => {
     const current = values[item.id];
@@ -99,8 +97,27 @@ export default function Page() {
       },
     };
     setValues(nextValues);
-    persistValues(date, nextValues);
     setActiveItem(null);
+
+    // API保存
+    (async () => {
+      try {
+        setSaving(true);
+        const payload: CredoDailyPractice = { date, values: nextValues };
+        const res = await fetch("/api/credo/practices", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`save failed (${res.status})`);
+        setError(null);
+      } catch (e) {
+        console.error(e);
+        setError("保存に失敗しました");
+      } finally {
+        setSaving(false);
+      }
+    })();
   };
 
   const reorderSummary = (sourceId: CredoId, targetId: CredoId | null) => {
@@ -130,7 +147,7 @@ export default function Page() {
       const vb = values[b.id];
       const doneA = va?.done ?? false;
       const doneB = vb?.done ?? false;
-      if (doneA !== doneB) return Number(doneA) - Number(doneB); // 未完了を先に、完了を下に
+      if (doneA !== doneB) return Number(doneA) - Number(doneB); // 未完了→完了
       return orderIndex(a.id) - orderIndex(b.id);
     });
   }, [values, summaryOrder]);
@@ -156,6 +173,8 @@ export default function Page() {
         <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <h2 className="text-lg font-medium text-slate-900">今日のサマリー</h2>
           <p className="text-xs text-slate-600">日付: {date}</p>
+          {loading && <p className="text-xs text-slate-500">読み込み中...</p>}
+          {error && <p className="text-xs text-red-500">{error}</p>}
           <ul className="mt-3 space-y-2">
             {summaryItems.map((item) => {
               const value = values[item.id];
@@ -209,6 +228,7 @@ export default function Page() {
           <p className="text-[11px] text-slate-500">
             サマリー項目はドラッグ（マウス・タッチ／ポインタ対応）で並び替えできます。入力済みは自動的に下に配置されます。
           </p>
+          {saving && <p className="text-[11px] text-slate-500">保存中...</p>}
         </div>
       </div>
 
