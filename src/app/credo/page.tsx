@@ -2,6 +2,21 @@
 
 // src/app/credo/page.tsx
 import { useEffect, useMemo, useState } from "react";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { CredoBoard } from "@/components/credo/CredoBoard";
 import { Modal } from "@/components/ui/Modal";
 import { CREDO_ITEMS } from "@/features/credo/config";
@@ -46,12 +61,9 @@ export default function Page() {
   const [summaryOrder, setSummaryOrder] = useState<CredoId[]>(
     () => CREDO_ITEMS.map((item) => item.id),
   );
-
   const [activeItem, setActiveItem] = useState<CredoItem | null>(null);
   const [modalDone, setModalDone] = useState<boolean>(false);
   const [modalNote, setModalNote] = useState<string>("");
-  const [draggingId, setDraggingId] = useState<CredoId | null>(null);
-  const [hoverId, setHoverId] = useState<CredoId | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -152,6 +164,72 @@ export default function Page() {
     });
   }, [values, summaryOrder]);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    if (active.id === over.id) return;
+
+    const presentIds = summaryItems.map((item) => item.id);
+    const filteredOrder = summaryOrder.filter((id) => presentIds.includes(id));
+    const oldIndex = filteredOrder.indexOf(active.id as CredoId);
+    const newIndex = filteredOrder.indexOf(over.id as CredoId);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(filteredOrder, oldIndex, newIndex);
+    const rest = summaryOrder.filter((id) => !presentIds.includes(id));
+    setSummaryOrder([...reordered, ...rest]);
+  };
+
+  const summaryIds = summaryItems.map((item) => item.id);
+
+  const SortableSummaryItem = ({
+    item,
+    value,
+  }: {
+    item: CredoItem;
+    value: CredoPracticeFormValue;
+  }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+      id: item.id,
+    });
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.95 : 1,
+    };
+    return (
+      <li
+        ref={setNodeRef}
+        style={style}
+        className={`rounded-md border bg-white px-3 py-2 transition-transform transition-shadow duration-300 ease-out ${
+          isDragging
+            ? "border-slate-300 shadow-xl shadow-slate-200 scale-[1.01]"
+            : "border-slate-200 hover:shadow-sm hover:-translate-y-0.5"
+        }`}
+        {...attributes}
+        {...listeners}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-medium text-slate-900">
+            {item.order}. {item.title}
+          </span>
+          {value.done && (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">
+              入力済み
+            </span>
+          )}
+        </div>
+        {value.note && <p className="mt-1 text-xs text-slate-600">{value.note}</p>}
+      </li>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <section className="space-y-2">
@@ -175,56 +253,17 @@ export default function Page() {
           <p className="text-xs text-slate-600">日付: {date}</p>
           {loading && <p className="text-xs text-slate-500">読み込み中...</p>}
           {error && <p className="text-xs text-red-500">{error}</p>}
-          <ul className="mt-3 space-y-2">
-            {summaryItems.map((item) => {
-              const value = values[item.id];
-              if (!value) return null;
-              const isDragging = draggingId === item.id;
-              return (
-                <li
-                  key={item.id}
-                  className={`rounded-md border bg-white px-3 py-2 transition-transform transition-shadow duration-300 ease-out ${
-                    isDragging
-                      ? "border-slate-300 shadow-xl shadow-slate-200 translate-y-0.5 scale-[1.01] cursor-grabbing"
-                      : "border-slate-200 cursor-grab hover:shadow-sm hover:-translate-y-0.5"
-                  }`}
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    setDraggingId(item.id);
-                    setHoverId(item.id);
-                  }}
-                  onPointerEnter={() => {
-                    if (draggingId && draggingId !== item.id) {
-                      reorderSummary(draggingId, item.id);
-                      setHoverId(item.id);
-                    }
-                  }}
-                  onPointerUp={() => {
-                    setDraggingId(null);
-                    setHoverId(null);
-                  }}
-                  onPointerCancel={() => {
-                    setDraggingId(null);
-                    setHoverId(null);
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-slate-900">
-                      {item.order}. {item.title}
-                    </span>
-                    {value.done && (
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">
-                        入力済み
-                      </span>
-                    )}
-                  </div>
-                  {value.note && (
-                    <p className="mt-1 text-xs text-slate-600">{value.note}</p>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={summaryIds} strategy={verticalListSortingStrategy}>
+              <ul className="mt-3 space-y-2">
+                {summaryItems.map((item) => {
+                  const value = values[item.id];
+                  if (!value) return null;
+                  return <SortableSummaryItem key={item.id} item={item} value={value} />;
+                })}
+              </ul>
+            </SortableContext>
+          </DndContext>
           <p className="text-[11px] text-slate-500">
             サマリー項目はドラッグ（マウス・タッチ／ポインタ対応）で並び替えできます。入力済みは自動的に下に配置されます。
           </p>

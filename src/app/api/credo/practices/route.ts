@@ -61,80 +61,90 @@ const ensureDefaultsOnce = async () => {
 };
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const dateParam = searchParams.get("date");
-  if (!dateParam) {
-    return NextResponse.json({ error: "date is required (YYYY-MM-DD)" }, { status: 400 });
-  }
+  try {
+    const { searchParams } = new URL(request.url);
+    const dateParam = searchParams.get("date");
+    if (!dateParam) {
+      return NextResponse.json({ error: "date is required (YYYY-MM-DD)" }, { status: 400 });
+    }
 
-  const date = parseDate(dateParam);
-  if (!date) {
-    return NextResponse.json({ error: "invalid date format" }, { status: 400 });
-  }
+    const date = parseDate(dateParam);
+    if (!date) {
+      return NextResponse.json({ error: "invalid date format" }, { status: 400 });
+    }
 
-  await ensureDefaultsOnce();
+    await ensureDefaultsOnce();
 
-  const rows = await prisma.credoPracticeLog.findMany({
-    where: {
-      userId: DEFAULT_USER_ID,
-      date,
-    },
-  });
+    const rows = await prisma.credoPracticeLog.findMany({
+      where: {
+        userId: DEFAULT_USER_ID,
+        date,
+      },
+    });
 
-  const values: Record<CredoId, CredoPracticeFormValue> = {} as Record<
-    CredoId,
-    CredoPracticeFormValue
-  >;
-  rows.forEach((row) => {
-    values[row.credoId as CredoId] = {
-      credoId: row.credoId as CredoId,
+    const values: Record<CredoId, CredoPracticeFormValue> = {} as Record<
+      CredoId,
+      CredoPracticeFormValue
+    >;
+    rows.forEach((row) => {
+      values[row.credoId as CredoId] = {
+        credoId: row.credoId as CredoId,
+        date: dateParam,
+        done: row.done,
+        note: row.note ?? "",
+      };
+    });
+
+    const payload: CredoDailyPractice = {
       date: dateParam,
-      done: row.done,
-      note: row.note ?? "",
+      values,
     };
-  });
 
-  const payload: CredoDailyPractice = {
-    date: dateParam,
-    values,
-  };
-
-  return NextResponse.json(payload);
+    return NextResponse.json(payload);
+  } catch (e) {
+    console.error("GET /api/credo/practices error", e);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as Partial<CredoDailyPractice>;
-  if (!body?.date || !body?.values) {
-    return NextResponse.json({ error: "date and values are required" }, { status: 400 });
-  }
+  try {
+    const body = (await request.json()) as Partial<CredoDailyPractice>;
+    if (!body?.date || !body?.values) {
+      return NextResponse.json({ error: "date and values are required" }, { status: 400 });
+    }
 
-  const date = parseDate(body.date);
-  if (!date) {
-    return NextResponse.json({ error: "invalid date format" }, { status: 400 });
-  }
+    const date = parseDate(body.date);
+    if (!date) {
+      return NextResponse.json({ error: "invalid date format" }, { status: 400 });
+    }
 
-  const entries = Object.entries(body.values) as [CredoId, CredoPracticeFormValue][];
-  if (!entries.length) {
-    return NextResponse.json({ error: "values must contain at least one entry" }, { status: 400 });
-  }
+    const entries = Object.entries(body.values) as [CredoId, CredoPracticeFormValue][];
+    if (!entries.length) {
+      return NextResponse.json({ error: "values must contain at least one entry" }, { status: 400 });
+    }
 
-  await prisma.$transaction(async (tx) => {
-    await ensureDefaultsOnce();
+    await prisma.$transaction(async (tx) => {
+      await ensureDefaultsOnce();
 
-    await tx.credoPracticeLog.deleteMany({
-      where: { userId: DEFAULT_USER_ID, date },
+      await tx.credoPracticeLog.deleteMany({
+        where: { userId: DEFAULT_USER_ID, date },
+      });
+
+      await tx.credoPracticeLog.createMany({
+        data: entries.map(([, v]) => ({
+          userId: DEFAULT_USER_ID,
+          credoId: v.credoId,
+          date,
+          done: !!v.done,
+          note: v.note?.trim() ?? "",
+        })),
+      });
     });
 
-    await tx.credoPracticeLog.createMany({
-      data: entries.map(([, v]) => ({
-        userId: DEFAULT_USER_ID,
-        credoId: v.credoId,
-        date,
-        done: !!v.done,
-        note: v.note?.trim() ?? "",
-      })),
-    });
-  });
-
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error("POST /api/credo/practices error", e);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
+  }
 }
