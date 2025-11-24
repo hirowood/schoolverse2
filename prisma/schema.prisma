@@ -13,3 +13,20 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// prisma/schema.prisma のどこか（User などの下あたり）に追加
+model CredoPracticeLog {
+  id        String   @id @default(cuid())
+  userId    String   // 認証実装後に users テーブルなどと紐づけ予定
+  credoId   String
+  date      DateTime
+  done      Boolean  @default(false)
+  note      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+  @@index([credoId, date])
+  @@unique([userId, credoId, date])
+}
+

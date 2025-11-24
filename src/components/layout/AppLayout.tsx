@@ -1,5 +1,5 @@
-import { ReactNode } from "react";
 import Link from "next/link";
+import { ReactNode } from "react";
 import { MAIN_NAV_ITEMS } from "@/config/navigation";
 
 type AppLayoutProps = {
