@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
 import { StudyTask } from "../types";
 import { PLAN_TEXT } from "../constants";
+import { useMemo } from "react";
 
 type Props = {
   task: StudyTask;
@@ -31,6 +32,10 @@ export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild, depth = 0, 
       : task.status === "in_progress"
       ? PLAN_TEXT.statusInProgress
       : PLAN_TEXT.statusTodo;
+  const nextChild = useMemo(
+    () => (task.children ?? []).find((c) => c.status !== "done"),
+    [task.children],
+  );
 
   return (
     <div
@@ -121,6 +126,24 @@ export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild, depth = 0, 
           {PLAN_TEXT.labelSchedule}: {task.dueDate ? `${task.dueDate.slice(0, 10)} ${task.dueDate.slice(11, 16)}` : PLAN_TEXT.notSet}
         </span>
       </div>
+      {nextChild && (
+        <div className="mt-2 rounded-md border border-dashed border-slate-300 bg-white px-3 py-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-slate-800">次の子タスク</p>
+            <button
+              type="button"
+              className="text-[11px] text-emerald-700 underline"
+              onClick={(e) => {
+                e.stopPropagation();
+                onStatusChange(nextChild.id, "done");
+              }}
+            >
+              完了にする
+            </button>
+          </div>
+          <p className="text-xs text-slate-700">{nextChild.title}</p>
+        </div>
+      )}
     </div>
   );
 };

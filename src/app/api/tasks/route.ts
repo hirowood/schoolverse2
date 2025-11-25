@@ -227,5 +227,18 @@ export async function PATCH(request: Request) {
     });
   }
 
+  // If child is done and all siblings are done, set parent to done
+  if (target.parentId && body.status === "done") {
+    const remaining = await prisma.studyTask.count({
+      where: { parentId: target.parentId, status: { not: "done" } },
+    });
+    if (remaining === 0) {
+      await prisma.studyTask.updateMany({
+        where: { id: target.parentId },
+        data: { status: "done" },
+      });
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }

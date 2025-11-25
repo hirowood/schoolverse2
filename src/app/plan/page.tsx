@@ -45,6 +45,7 @@ export default function Page() {
   const [newDate, setNewDate] = useState(today);
   const [newTime, setNewTime] = useState("");
   const [parentId, setParentId] = useState<string | null>(null);
+  const [editingChildren, setEditingChildren] = useState<StudyTask[]>([]);
 
   const historyColumnId = `history-${historyDate}`;
   const historyPlaceholderId = "history-placeholder";
@@ -134,6 +135,7 @@ export default function Page() {
     setNewDate(today);
     setNewTime("");
     setParentId(null);
+    setEditingChildren([]);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -226,6 +228,7 @@ export default function Page() {
     setNewDate(dueDate ? dueDate.slice(0, 10) : today);
     setNewTime(dueDate ? dueDate.slice(11, 16) : "");
     setParentId(task.parentId ?? null);
+    setEditingChildren(task.children ?? []);
     setModalOpen(true);
   };
 
@@ -474,6 +477,24 @@ export default function Page() {
               onChange={(e) => setNewTime(e.target.value)}
             />
           </div>
+          {parentId && (
+            <p className="text-xs text-slate-600">
+              {PLAN_TEXT.modalParentLabel}: {parentId}
+            </p>
+          )}
+          {editingChildren.length > 0 && (
+            <div className="space-y-1 rounded-md border border-slate-200 bg-slate-50 p-2">
+              <p className="text-xs font-medium text-slate-700">{PLAN_TEXT.addChildButton}</p>
+              <ul className="space-y-1 text-xs text-slate-600">
+                {editingChildren.map((c) => (
+                  <li key={c.id} className="flex items-center justify-between gap-2">
+                    <span className="truncate">{c.title}</span>
+                    <span className="text-[11px] text-slate-500">{c.status}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </form>
       </Modal>
     </main>
