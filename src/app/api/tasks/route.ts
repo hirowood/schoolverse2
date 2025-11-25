@@ -84,8 +84,6 @@ export async function GET(request: Request) {
         : {}),
     },
     orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "asc" }],
-    include: { subtasks: true },
-    },
     select: {
       id: true,
       userId: true,
@@ -95,6 +93,19 @@ export async function GET(request: Request) {
       status: true,
       note: true,
       parentId: true,
+      // include children for tree rendering
+      children: {
+        select: {
+          id: true,
+          userId: true,
+          title: true,
+          description: true,
+          dueDate: true,
+          status: true,
+          note: true,
+          parentId: true,
+        },
+      },
     },
   });
 
