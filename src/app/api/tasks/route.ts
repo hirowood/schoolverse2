@@ -242,3 +242,34 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(request: Request) {
+  const session = await getServerSession(authOptions);
+  const user = session?.user as { id?: string; email?: string | null } | undefined;
+  if (!user?.id || !user.email) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  try {
+    assertRateLimit(user.id, "/api/tasks:delete", 20, 60_000);
+  } catch (e) {
+    const err = e as { status?: number };
+    return NextResponse.json({ error: "rate_limited" }, { status: err.status ?? 429 });
+  }
+
+  const userId = await ensureUser({ id: user.id, email: user.email });
+  const body = (await request.json()) as { id?: string };
+  if (!body.id) {
+    return NextResponse.json({ error: "id_required" }, { status: 400 });
+  }
+
+  const deleted = await prisma.studyTask.deleteMany({
+    where: { id: body.id, userId },
+  });
+
+  if (deleted.count === 0) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
