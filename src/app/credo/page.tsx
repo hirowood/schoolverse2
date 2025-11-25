@@ -17,6 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { signIn, useSession } from "next-auth/react";
 import { CredoBoard } from "@/components/credo/CredoBoard";
 import { Modal } from "@/components/ui/Modal";
 import { CREDO_ITEMS } from "@/features/credo/config";
@@ -27,7 +28,27 @@ import type {
   CredoPracticeFormValue,
 } from "@/features/credo/types";
 
+type SummaryResponse = {
+  practicedCount: number;
+  practicedRate: number; // %
+  highlights: string[];
+  ranking: { id: CredoId; title: string; count: number }[];
+  missing: { id: CredoId; title: string }[];
+};
+
 const getToday = () => new Date().toISOString().slice(0, 10);
+
+const getWeekRange = (isoDate: string) => {
+  const d = new Date(isoDate);
+  const day = d.getDay(); // 0 Sun - 6 Sat
+  const diffToMonday = (day + 6) % 7; // Monday start
+  const start = new Date(d);
+  start.setDate(d.getDate() - diffToMonday);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const toIso = (dt: Date) => dt.toISOString().slice(0, 10);
+  return { from: toIso(start), to: toIso(end) };
+};
 
 const buildEmptyValues = (
   date: string,
@@ -53,31 +74,43 @@ const buildDoneMap = (values: Record<CredoId, CredoPracticeFormValue>) => {
 };
 
 export default function Page() {
+  const { status } = useSession();
+  const isAuthed = status === "authenticated";
   const today = useMemo(() => getToday(), []);
-  const [date] = useState<string>(today);
+  const [date, setDate] = useState<string>(today);
   const [values, setValues] = useState<Record<CredoId, CredoPracticeFormValue>>(
     () => buildEmptyValues(today),
   );
-  const [summaryOrder, setSummaryOrder] = useState<CredoId[]>(
-    () => CREDO_ITEMS.map((item) => item.id),
+  const [summaryOrder, setSummaryOrder] = useState<CredoId[]>(() =>
+    CREDO_ITEMS.map((item) => item.id),
   );
   const [activeItem, setActiveItem] = useState<CredoItem | null>(null);
   const [modalDone, setModalDone] = useState<boolean>(false);
   const [modalNote, setModalNote] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<SummaryResponse | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
 
   // APIから当日のデータを取得
   useEffect(() => {
+    if (!isAuthed) return;
     const fetchData = async () => {
       try {
         setLoading(true);
         const res = await fetch(`/api/credo/practices?date=${date}`);
+        if (res.status === 401) {
+          setError("サインインが必要です。");
+          return;
+        }
         if (!res.ok) throw new Error(`fetch failed (${res.status})`);
         const data = (await res.json()) as CredoDailyPractice;
         if (data?.values) {
           setValues(data.values);
+        } else {
+          setValues(buildEmptyValues(date));
         }
         setError(null);
       } catch (e) {
@@ -88,7 +121,33 @@ export default function Page() {
       }
     };
     fetchData();
-  }, [date]);
+  }, [date, isAuthed]);
+
+  // 周次サマリー取得
+  useEffect(() => {
+    if (!isAuthed) return;
+    const { from, to } = getWeekRange(date);
+    const fetchSummary = async () => {
+      try {
+        setSummaryLoading(true);
+        const res = await fetch(`/api/credo/summary?from=${from}&to=${to}`);
+        if (res.status === 401) {
+          setSummaryError("サインインしてください");
+          return;
+        }
+        if (!res.ok) throw new Error(`fetch failed (${res.status})`);
+        const data = (await res.json()) as SummaryResponse;
+        setSummary(data);
+        setSummaryError(null);
+      } catch (e) {
+        console.error(e);
+        setSummaryError("サマリーの取得に失敗しました");
+      } finally {
+        setSummaryLoading(false);
+      }
+    };
+    fetchSummary();
+  }, [date, isAuthed]);
 
   const handleSelectItem = (item: CredoItem) => {
     const current = values[item.id];
@@ -97,7 +156,17 @@ export default function Page() {
     setModalNote(current?.note ?? "");
   };
 
+  const handleDateChange = (nextDate: string) => {
+    setDate(nextDate);
+    setValues(buildEmptyValues(nextDate));
+    setError(null);
+  };
+
   const handleSaveItem = () => {
+    if (!isAuthed) {
+      setError("サインインしてください");
+      return;
+    }
     if (!activeItem) return;
     const nextValues = {
       ...values,
@@ -121,6 +190,10 @@ export default function Page() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
+        if (res.status === 401) {
+          setError("サインインしてください");
+          return;
+        }
         if (!res.ok) throw new Error(`save failed (${res.status})`);
         setError(null);
       } catch (e) {
@@ -130,21 +203,6 @@ export default function Page() {
         setSaving(false);
       }
     })();
-  };
-
-  const reorderSummary = (sourceId: CredoId, targetId: CredoId | null) => {
-    setSummaryOrder((prev) => {
-      if (!targetId || sourceId === targetId) return prev;
-      const presentIds = prev.filter((id) => values[id]?.done || values[id]?.note);
-      const srcIndex = presentIds.indexOf(sourceId);
-      const tgtIndex = presentIds.indexOf(targetId);
-      if (srcIndex === -1 || tgtIndex === -1) return prev;
-      const next = [...presentIds];
-      next.splice(srcIndex, 1);
-      next.splice(tgtIndex, 0, sourceId);
-      const rest = prev.filter((id) => !presentIds.includes(id));
-      return [...next, ...rest];
-    });
   };
 
   const doneMap = useMemo(() => buildDoneMap(values), [values]);
@@ -159,7 +217,7 @@ export default function Page() {
       const vb = values[b.id];
       const doneA = va?.done ?? false;
       const doneB = vb?.done ?? false;
-      if (doneA !== doneB) return Number(doneA) - Number(doneB); // 未完了→完了
+      if (doneA !== doneB) return Number(doneA) - Number(doneB); // 未完→完了
       return orderIndex(a.id) - orderIndex(b.id);
     });
   }, [values, summaryOrder]);
@@ -221,7 +279,7 @@ export default function Page() {
           </span>
           {value.done && (
             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">
-              入力済み
+              完了済み
             </span>
           )}
         </div>
@@ -230,22 +288,140 @@ export default function Page() {
     );
   };
 
+  if (status === "loading") {
+    return (
+      <div className="space-y-3">
+        <h1 className="text-2xl font-semibold">クレド実践ボード</h1>
+        <p className="text-sm text-slate-600">セッションを確認しています...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthed) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold">クレド実践ボード</h1>
+        <p className="text-sm text-slate-600">
+          サインインするとクレドの記録と並べ替えが利用できます。
+        </p>
+        <button
+          type="button"
+          onClick={() => signIn(undefined, { callbackUrl: "/credo" })}
+          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+        >
+          サインイン
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <section className="space-y-2">
         <h1 className="text-2xl font-semibold">クレド実践ボード</h1>
         <p className="text-sm text-slate-600">
-          クレドをクリックするとモーダルが開き、その項目だけ入力できます。入力すると一覧で「入力済み」として斜線が入ります。
+          クレドをクリックするとモーダルで入力できます。完了すると「完了済み」が表示され、サマリーに並びます。
         </p>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-slate-700" htmlFor="credo-date">
+            日付
+          </label>
+          <input
+            id="credo-date"
+            type="date"
+            className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+            value={date}
+            onChange={(e) => handleDateChange(e.target.value)}
+          />
+        </div>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-3">
-          <CredoBoard
-            items={CREDO_ITEMS}
-            doneMap={doneMap}
-            onSelect={handleSelectItem}
-          />
+          <CredoBoard items={CREDO_ITEMS} doneMap={doneMap} onSelect={handleSelectItem} />
+
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-medium text-slate-900">週次サマリー</h2>
+                <p className="text-xs text-slate-600">月曜はじまりの1週間を集計</p>
+              </div>
+              {summaryLoading && <span className="text-[11px] text-slate-500">更新中...</span>}
+            </div>
+            {summaryError && <p className="text-xs text-red-500">{summaryError}</p>}
+            {summary && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-xs text-slate-500">実践率</p>
+                  <div className="mt-1 flex items-center gap-3">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-slate-200">
+                      <span className="text-lg font-semibold text-slate-900">
+                        {summary.practicedRate}%
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-700">実践回数: {summary.practicedCount}</p>
+                      <p className="text-[11px] text-slate-500">11項目中 {summary.ranking.length} 件</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-xs text-slate-500 mb-1">ハイライト</p>
+                  {summary.highlights.length === 0 ? (
+                    <p className="text-sm text-slate-500">メモはまだありません</p>
+                  ) : (
+                    <ul className="space-y-1 text-sm text-slate-700">
+                      {summary.highlights.map((h, idx) => (
+                        <li key={`${h}-${idx}`} className="line-clamp-2">
+                          ・{h}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-slate-200 p-3 sm:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-slate-500">よく実践した項目</p>
+                    <p className="text-[11px] text-slate-500">トップ3</p>
+                  </div>
+                  {summary.ranking.slice(0, 3).length === 0 ? (
+                    <p className="text-sm text-slate-500">まだ実践がありません</p>
+                  ) : (
+                    <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                      {summary.ranking.slice(0, 3).map((r) => (
+                        <li key={r.id} className="flex items-center justify-between">
+                          <span className="truncate">{r.title}</span>
+                          <span className="text-xs text-slate-500">x {r.count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {summary.missing.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-medium text-slate-500">未実践</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {summary.missing.slice(0, 4).map((m) => (
+                          <span
+                            key={m.id}
+                            className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600"
+                          >
+                            {m.title}
+                          </span>
+                        ))}
+                        {summary.missing.length > 4 && (
+                          <span className="text-[11px] text-slate-500">
+                            +{summary.missing.length - 4} もっと
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -265,7 +441,7 @@ export default function Page() {
             </SortableContext>
           </DndContext>
           <p className="text-[11px] text-slate-500">
-            サマリー項目はドラッグ（マウス・タッチ／ポインタ対応）で並び替えできます。入力済みは自動的に下に配置されます。
+            サマリー項目はドラッグ（マウス・タッチ対応）で並び替えできます。入力済みは自動的に下に配置されます。
           </p>
           {saving && <p className="text-[11px] text-slate-500">保存中...</p>}
         </div>
@@ -308,13 +484,13 @@ export default function Page() {
                 htmlFor={`${activeItem.id}-done`}
                 className="text-sm font-medium text-slate-900"
               >
-                今日このクレドを意識できた
+                このクレドを実践した
               </label>
             </div>
             <p className="text-xs text-slate-600">{activeItem.description}</p>
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-700" htmlFor={`${activeItem.id}-note`}>
-                今日の一言メモ
+                気づきやメモ
               </label>
               <textarea
                 id={`${activeItem.id}-note`}
@@ -323,7 +499,7 @@ export default function Page() {
                 maxLength={200}
                 value={modalNote}
                 onChange={(e) => setModalNote(e.target.value)}
-                placeholder="気づきや具体的な行動を書いてください（200文字まで）"
+                placeholder="今日意識したことや改善点をメモ（200文字まで）"
               />
             </div>
           </div>

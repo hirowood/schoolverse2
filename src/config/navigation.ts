@@ -1,26 +1,26 @@
-// ナビゲーションアイテムの型定義
+// ナビゲーション項目の型
 export type NavItem = {
-  label: string;        // 表示名（日本語）
-  href: string;         // 遷移先パス
-  description?: string; // 補足説明（必要なら）
+  label: string;        // 表示ラベル
+  href: string;         // 画面へのパス
+  description?: string; // 補足説明（任意）
 };
 
-// メインサイドバー用ナビリスト
+// メインサイドバーのナビリスト
 export const MAIN_NAV_ITEMS: NavItem[] = [
   {
     label: "AIコーチ",
-    href: "/", // トップページ＝AIコーチダッシュボード
-    description: "AIコーチとの対話や今日の提案",
+    href: "/", // トップページはAIコーチダッシュボード
+    description: "AIコーチとの対話・相談の入口",
   },
   {
-    label: "学習計画",
+    label: "学習プラン",
     href: "/plan",
-    description: "週間・月間の学習プラン",
+    description: "週次・日次の学習プランを管理",
   },
   {
     label: "クレド実践",
     href: "/credo",
-    description: "クレド11箇条のチェック・振り返り",
+    description: "クレド11箇条のチェックと実践ログ",
   },
   {
     label: "設定",

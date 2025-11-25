@@ -1,6 +1,6 @@
 import { CredoItem } from "./types";
 
-// 池田さんのクレド11箇条（シンプル版）
+// リスト型のクレド11箇条（シンプル版）
 export const CREDO_ITEMS: CredoItem[] = [
   {
     id: "credo-1",
@@ -70,7 +70,7 @@ export const CREDO_ITEMS: CredoItem[] = [
     id: "credo-9",
     order: 9,
     category: "自己受容・自己成長の考え方",
-    title: "できなかった日も「今日のデータ」として扱う",
+    title: "できなかった日も「今日のデータ」として受け取る",
     description:
       "過去ではなく今日の事実で評価し、守れるサイズの約束を反復。できたら必ず記録して自信に変える。",
   },
@@ -86,7 +86,7 @@ export const CREDO_ITEMS: CredoItem[] = [
     id: "credo-11",
     order: 11,
     category: "1日の終わらせ方（ナイトルール）",
-    title: "今日の一歩・学び・改善を書き、ここで終わりと決める",
+    title: "今日の一歩・学び・改善を書いて「ここで終わり」と決める",
     description:
       "完了タスクと学びを1つ記録し、4-4-6呼吸と短い瞑想で区切る。続いた習慣にチェックを入れる。",
   },

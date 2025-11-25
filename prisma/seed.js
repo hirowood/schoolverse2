@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 // prisma/seed.js
 // Supabase / Postgres にクレド11箇条とデモユーザーを投入するスクリプト
 
@@ -8,6 +9,7 @@ const prisma = new PrismaClient();
 const DEMO_USER = {
   id: "demo-user",
   email: "demo@example.com",
+  passwordHash: "$2b$10$yR9FptqIldmcxd9YVvN6e.j4nHb3hlxEZ5i8oqLcLh3yM.EuX1X1.",
   name: "Demo User",
 };
 
@@ -107,13 +109,13 @@ async function main() {
     where: { id: DEMO_USER.id },
     update: {
       email: DEMO_USER.email,
+      passwordHash: DEMO_USER.passwordHash,
       name: DEMO_USER.name,
     },
     create: DEMO_USER,
   });
 
   for (const item of CREDO_ITEMS) {
-    // eslint-disable-next-line no-await-in-loop
     await prisma.credoItem.upsert({
       where: { id: item.id },
       update: {

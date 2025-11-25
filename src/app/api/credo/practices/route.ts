@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import type { Prisma, PrismaClient } from "@prisma/client";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CREDO_ITEMS } from "@/features/credo/config";
 import type {
@@ -8,8 +10,11 @@ import type {
   CredoPracticeFormValue,
 } from "@/features/credo/types";
 
-const DEFAULT_USER_ID = "demo-user";
-const DEFAULT_USER_EMAIL = "demo@example.com";
+type SessionUser = {
+  id: string;
+  email: string;
+  name?: string | null;
+};
 
 // 日付文字列を Date に変換
 const parseDate = (value: string) => {
@@ -17,20 +22,8 @@ const parseDate = (value: string) => {
   return Number.isNaN(d.getTime()) ? null : d;
 };
 
-async function ensureDefaults(tx: PrismaClient | Prisma.TransactionClient) {
-  await tx.user.upsert({
-    where: { id: DEFAULT_USER_ID },
-    update: {},
-    create: {
-      id: DEFAULT_USER_ID,
-      email: DEFAULT_USER_EMAIL,
-      name: "Demo User",
-    },
-  });
-
-  // クレドマスタを同期
+const ensureCredoItems = async (tx: PrismaClient | Prisma.TransactionClient) => {
   for (const item of CREDO_ITEMS) {
-    // eslint-disable-next-line no-await-in-loop
     await tx.credoItem.upsert({
       where: { id: item.id },
       update: {
@@ -48,20 +41,44 @@ async function ensureDefaults(tx: PrismaClient | Prisma.TransactionClient) {
       },
     });
   }
-}
+};
 
-let ensureDefaultsPromise: Promise<void> | null = null;
-const ensureDefaultsOnce = async () => {
-  if (!ensureDefaultsPromise) {
-    ensureDefaultsPromise = prisma.$transaction(async (tx) => {
-      await ensureDefaults(tx);
-    });
-  }
-  return ensureDefaultsPromise;
+const ensureUser = async (
+  tx: PrismaClient | Prisma.TransactionClient,
+  user: SessionUser,
+) => {
+  await tx.user.upsert({
+    where: { id: user.id },
+    update: {
+      email: user.email,
+      name: user.name ?? user.email,
+    },
+    create: {
+      id: user.id,
+      email: user.email,
+      name: user.name ?? user.email,
+    },
+  });
+};
+
+const getSessionUser = async (): Promise<SessionUser | null> => {
+  const session = await getServerSession(authOptions);
+  const user = session?.user as { id?: string; email?: string | null; name?: string | null } | undefined;
+  if (!user?.id || !user.email) return null;
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+  };
 };
 
 export async function GET(request: Request) {
   try {
+    const sessionUser = await getSessionUser();
+    if (!sessionUser) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const dateParam = searchParams.get("date");
     if (!dateParam) {
@@ -73,11 +90,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "invalid date format" }, { status: 400 });
     }
 
-    await ensureDefaultsOnce();
+    await prisma.$transaction(async (tx) => {
+      await ensureCredoItems(tx);
+      await ensureUser(tx, sessionUser);
+    });
 
     const rows = await prisma.credoPracticeLog.findMany({
       where: {
-        userId: DEFAULT_USER_ID,
+        userId: sessionUser.id,
         date,
       },
     });
@@ -109,6 +129,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const sessionUser = await getSessionUser();
+    if (!sessionUser) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+
     const body = (await request.json()) as Partial<CredoDailyPractice>;
     if (!body?.date || !body?.values) {
       return NextResponse.json({ error: "date and values are required" }, { status: 400 });
@@ -121,19 +146,23 @@ export async function POST(request: Request) {
 
     const entries = Object.entries(body.values) as [CredoId, CredoPracticeFormValue][];
     if (!entries.length) {
-      return NextResponse.json({ error: "values must contain at least one entry" }, { status: 400 });
+      return NextResponse.json(
+        { error: "values must contain at least one entry" },
+        { status: 400 },
+      );
     }
 
     await prisma.$transaction(async (tx) => {
-      await ensureDefaultsOnce();
+      await ensureCredoItems(tx);
+      await ensureUser(tx, sessionUser);
 
       await tx.credoPracticeLog.deleteMany({
-        where: { userId: DEFAULT_USER_ID, date },
+        where: { userId: sessionUser.id, date },
       });
 
       await tx.credoPracticeLog.createMany({
         data: entries.map(([, v]) => ({
-          userId: DEFAULT_USER_ID,
+          userId: sessionUser.id,
           credoId: v.credoId,
           date,
           done: !!v.done,

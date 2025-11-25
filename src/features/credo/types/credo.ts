@@ -1,6 +1,6 @@
 // src/features/credo/types/credo.ts
 
-// クレドのカテゴリ（UIラベルに使用）
+// クレドのカテゴリ（UI表示用）
 export type CredoCategory =
   | "情報の受け取り方"
   | "思考の整理のしかた"
@@ -28,7 +28,7 @@ export type CredoId =
   | "credo-10"
   | "credo-11";
 
-// クレド1項目の定義
+// クレド1件分の定義
 export interface CredoItem {
   id: CredoId;
   order: number;
@@ -44,7 +44,7 @@ export interface CredoBoardProps {
   onSelect?: (item: CredoItem) => void;
 }
 
-// フォームで扱う1クレド分の値
+// フォームで扱う1クレド単位の値
 export interface CredoPracticeFormValue {
   credoId: CredoId;
   date: string; // "YYYY-MM-DD"
@@ -52,13 +52,13 @@ export interface CredoPracticeFormValue {
   note: string;
 }
 
-// 1日のクレド実践入力
+// 1日分のクレド実践
 export interface CredoDailyPractice {
   date: string; // "YYYY-MM-DD"
   values: Record<CredoId, CredoPracticeFormValue>;
 }
 
-// 将来的にDBへ保存するモデル
+// 永続化用のレコード
 export interface CredoPracticeLog {
   id: string; // UUID
   userId: string;

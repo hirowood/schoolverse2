@@ -1,5 +1,6 @@
 import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 const DEMO_USER = {
@@ -25,10 +26,17 @@ export const authOptions: NextAuthOptions = {
           return DEMO_USER;
         }
 
-        // もしDBにユーザーが存在すればデモ認証として通す（本実装ではパスワードハッシュを必須に）
+        // DBのユーザーを検索して認証
         if (email) {
           const user = await prisma.user.findUnique({ where: { email } });
-          if (user && password === "demo") {
+          if (user) {
+            if (user.passwordHash) {
+              const ok = await bcrypt.compare(password, user.passwordHash);
+              if (!ok) return null;
+            } else {
+              // ハッシュが無い既存ユーザーはデモパスワードで通過させる（旧データ互換）
+              if (password !== "demo") return null;
+            }
             return {
               id: user.id,
               email: user.email,
