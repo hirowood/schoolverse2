@@ -46,6 +46,10 @@ export default function Page() {
   const [newTime, setNewTime] = useState("");
   const [parentId, setParentId] = useState<string | null>(null);
   const [editingChildren, setEditingChildren] = useState<StudyTask[]>([]);
+  const [showChildForm, setShowChildForm] = useState(false);
+  const [newChildTitle, setNewChildTitle] = useState("");
+  const [newChildDescription, setNewChildDescription] = useState("");
+  const [childSaving, setChildSaving] = useState(false);
 
   const historyColumnId = `history-${historyDate}`;
   const historyPlaceholderId = "history-placeholder";
@@ -136,6 +140,10 @@ export default function Page() {
     setNewTime("");
     setParentId(null);
     setEditingChildren([]);
+    setShowChildForm(false);
+    setNewChildTitle("");
+    setNewChildDescription("");
+    setChildSaving(false);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -229,6 +237,9 @@ export default function Page() {
     setNewTime(dueDate ? dueDate.slice(11, 16) : "");
     setParentId(task.parentId ?? null);
     setEditingChildren(task.children ?? []);
+    setShowChildForm(false);
+    setNewChildTitle("");
+    setNewChildDescription("");
     setModalOpen(true);
   };
 
@@ -239,6 +250,38 @@ export default function Page() {
     setNewDate(dueDate ? dueDate.slice(0, 10) : today);
     setNewTime(dueDate ? dueDate.slice(11, 16) : "");
     setModalOpen(true);
+  };
+
+  const handleAddChildInline = async () => {
+    if (!editingTaskId) return;
+    const title = newChildTitle.trim();
+    if (!title) return;
+    setChildSaving(true);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description: newChildDescription,
+          date: newDate || today,
+          time: newTime || null,
+          parentId: editingTaskId,
+        }),
+      });
+      if (!res.ok) throw new Error(`child failed ${res.status}`);
+      const { task } = (await res.json()) as { task: StudyTask };
+      setEditingChildren((prev) => [...prev, task]);
+      setNewChildTitle("");
+      setNewChildDescription("");
+      refresh();
+      loadHistory(newDate || today);
+    } catch (err) {
+      console.error(err);
+      setError(PLAN_TEXT.addError);
+    } finally {
+      setChildSaving(false);
+    }
   };
 
   const goMonth = (delta: number) => {
@@ -496,6 +539,66 @@ export default function Page() {
             </div>
           )}
         </form>
+        {editingTaskId && (
+          <div className="mt-4 space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-800">{PLAN_TEXT.modalChildSection}</p>
+              <button
+                type="button"
+                onClick={() => setShowChildForm((prev) => !prev)}
+                className="text-xs text-slate-700 underline"
+              >
+                {showChildForm ? PLAN_TEXT.modalChildToggleHide : PLAN_TEXT.modalChildToggleShow}
+              </button>
+            </div>
+            {editingChildren.length > 0 && (
+              <ul className="space-y-1 text-xs text-slate-600">
+                {editingChildren.map((c) => (
+                  <li key={c.id} className="flex items-center justify-between">
+                    <span className="truncate">{c.title}</span>
+                    <span className="text-[11px] text-slate-500">{c.status}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {showChildForm && (
+              <div className="space-y-2 rounded-md border border-dashed border-slate-300 bg-white p-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-700" htmlFor="child-title">
+                    {PLAN_TEXT.titleLabel}
+                  </label>
+                  <input
+                    id="child-title"
+                    type="text"
+                    className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+                    value={newChildTitle}
+                    onChange={(e) => setNewChildTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-700" htmlFor="child-desc">
+                    {PLAN_TEXT.descLabel}
+                  </label>
+                  <input
+                    id="child-desc"
+                    type="text"
+                    className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+                    value={newChildDescription}
+                    onChange={(e) => setNewChildDescription(e.target.value)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddChildInline}
+                  disabled={childSaving || !newChildTitle.trim()}
+                  className="w-full rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                >
+                  {childSaving ? PLAN_TEXT.modalSubmitAdding : PLAN_TEXT.modalChildSubmit}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </main>
   );
