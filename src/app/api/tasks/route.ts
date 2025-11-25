@@ -10,7 +10,6 @@ type TaskPayload = {
   date?: string | null;
   time?: string | null;
   note?: string | null;
-  subtasks?: { title: string }[];
   parentId?: string | null;
 };
 
@@ -150,13 +149,8 @@ export async function POST(request: Request) {
       dueDate: dueDate ?? undefined,
       note: body.note?.trim() ?? null,
       parentId: body.parentId ?? null,
-      subtasks: body.subtasks?.length
-        ? {
-            create: body.subtasks.map((s) => ({ title: s.title.trim(), status: "todo" })),
-          }
-        : undefined,
     },
-    include: { subtasks: true },
+    include: { children: true },
   });
 
   return NextResponse.json({ task });

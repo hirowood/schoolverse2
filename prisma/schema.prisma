@@ -86,22 +86,8 @@ model StudyTask {
   user     User       @relation(fields: [userId], references: [id])
   parent   StudyTask? @relation("TaskToSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
   children StudyTask[] @relation("TaskToSubtasks")
-  subtasks TaskSubtask[]
 
   @@index([userId, dueDate])
   @@index([userId, status, dueDate])
   @@index([parentId])
-}
-
-model TaskSubtask {
-  id        String   @id @default(cuid())
-  taskId    String
-  title     String
-  status    String   @default("todo")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  task StudyTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-
-  @@index([taskId, status])
 }
