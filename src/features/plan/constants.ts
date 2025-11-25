@@ -44,6 +44,7 @@ export const PLAN_TEXT = {
   modalChildToggleShow: "子タスクを追加",
   modalChildToggleHide: "入力を隠す",
   modalChildSubmit: "子タスクを保存",
+  modalDelete: "削除",
   modalCancel: "キャンセル",
   modalSubmitAdding: "追加中...",
   modalSubmit: "追加する",

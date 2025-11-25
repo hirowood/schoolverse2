@@ -197,6 +197,28 @@ export default function Page() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!editingTaskId) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingTaskId }),
+      });
+      if (!res.ok) throw new Error(`delete failed ${res.status}`);
+      resetForm();
+      setModalOpen(false);
+      refresh();
+      loadHistory(historyDate);
+    } catch (err) {
+      console.error(err);
+      setError(PLAN_TEXT.statusError);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleStatus = async (id: string, status: StudyTask["status"]) => {
     try {
       await fetch("/api/tasks", {
@@ -455,25 +477,39 @@ export default function Page() {
           resetForm();
         }}
         footer={
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setModalOpen(false);
-                resetForm();
-              }}
-              className="rounded-md border border-slate-300 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50"
-            >
-              {PLAN_TEXT.modalCancel}
-            </button>
-            <button
-              type="submit"
-              form="task-form"
-              disabled={saving}
-              className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-            >
-              {saving ? PLAN_TEXT.modalSubmitAdding : editingTaskId ? PLAN_TEXT.modalSubmitEdit : PLAN_TEXT.modalSubmit}
-            </button>
+          <div className="flex justify-between gap-2">
+            <div>
+              {editingTaskId && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={saving}
+                  className="rounded-md border border-red-300 px-3 py-1 text-sm text-red-700 hover:bg-red-50 disabled:opacity-60"
+                >
+                  {PLAN_TEXT.modalDelete}
+                </button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setModalOpen(false);
+                  resetForm();
+                }}
+                className="rounded-md border border-slate-300 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                {PLAN_TEXT.modalCancel}
+              </button>
+              <button
+                type="submit"
+                form="task-form"
+                disabled={saving}
+                className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+              >
+                {saving ? PLAN_TEXT.modalSubmitAdding : editingTaskId ? PLAN_TEXT.modalSubmitEdit : PLAN_TEXT.modalSubmit}
+              </button>
+            </div>
           </div>
         }
       >
