@@ -38,18 +38,7 @@ export const HistoryPanel = ({
 }: Props) => {
   const { setNodeRef, isOver } = useDroppable({ id: droppableId });
   const tree = buildTaskTree(tasks);
-  const flatten = (nodes: StudyTask[], depth = 0): { task: StudyTask; depth: number }[] =>
-    nodes.flatMap((n) => [{ task: n, depth }, ...flatten(n.children ?? [], depth + 1)]);
-  const flatTasks = flatten(tree);
-  const titleMap = new Map<string, string>();
-  const walk = (nodes: StudyTask[]) => {
-    nodes.forEach((n) => {
-      titleMap.set(n.id, n.title);
-      walk(n.children ?? []);
-    });
-  };
-  walk(tree);
-  const items = flatTasks.length === 0 ? [placeholderId] : flatTasks.map((t) => t.task.id);
+  const items = tree.length === 0 ? [placeholderId] : tree.map((t) => t.id);
 
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -69,84 +58,34 @@ export const HistoryPanel = ({
       {isToday ? (
         <div className="mt-2 space-y-2 rounded-md border border-slate-200 bg-white/60 p-3">
           <p className="text-xs font-medium text-slate-700">{PLAN_TEXT.todayReadOnly}</p>
-          {flatTasks.length === 0 ? (
+          {tree.length === 0 ? (
             <p className="text-xs text-slate-500">{PLAN_TEXT.todayEmpty}</p>
           ) : (
-            flatTasks.map(({ task, depth }) => (
-              <div key={task.id} className="rounded-md border border-slate-200 bg-white px-3 py-2">
-                <p className="text-sm font-medium text-slate-900" style={{ marginLeft: depth * 12 }}>
-                  {task.title}
-                </p>
-                {task.description && <p className="text-xs text-slate-600" style={{ marginLeft: depth * 12 }}>{task.description}</p>}
-                <p className="text-[11px] text-slate-500" style={{ marginLeft: depth * 12 }}>
-                  {PLAN_TEXT.labelStatus}: {task.status}
-                </p>
-                {task.parentId && (
-                  <p className="text-[11px] text-slate-500" style={{ marginLeft: depth * 12 }}>
-                    {PLAN_TEXT.modalParentLabel}: {titleMap.get(task.parentId)}
-                  </p>
-                )}
-                {onEdit && (
-                  <button
-                    type="button"
-                    className="text-[11px] text-slate-600 underline"
-                    onClick={() => onEdit(task)}
-                  >
-                    {PLAN_TEXT.editTaskButton}
-                  </button>
-                )}
-                {onAddChild && (
-                  <button
-                    type="button"
-                    className="text-[11px] text-slate-600 underline"
-                    onClick={() => onAddChild(task)}
-                  >
-                    {PLAN_TEXT.addChildButton}
-                  </button>
-                )}
-              </div>
+            tree.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onStatusChange={onStatusChange}
+                onEdit={onEdit}
+                onAddChild={onAddChild}
+              />
             ))
           )}
         </div>
       ) : isTomorrow ? (
         <div className="mt-2 space-y-2 rounded-md border border-slate-200 bg-white/60 p-3">
           <p className="text-xs font-medium text-slate-700">{PLAN_TEXT.tomorrowReadOnly}</p>
-          {flatTasks.length === 0 ? (
+          {tree.length === 0 ? (
             <p className="text-xs text-slate-500">{PLAN_TEXT.tomorrowEmpty}</p>
           ) : (
-            flatTasks.map(({ task, depth }) => (
-              <div key={task.id} className="rounded-md border border-slate-200 bg-white px-3 py-2">
-                <p className="text-sm font-medium text-slate-900" style={{ marginLeft: depth * 12 }}>
-                  {task.title}
-                </p>
-                {task.description && <p className="text-xs text-slate-600" style={{ marginLeft: depth * 12 }}>{task.description}</p>}
-                <p className="text-[11px] text-slate-500" style={{ marginLeft: depth * 12 }}>
-                  {PLAN_TEXT.labelStatus}: {task.status}
-                </p>
-                {task.parentId && (
-                  <p className="text-[11px] text-slate-500" style={{ marginLeft: depth * 12 }}>
-                    {PLAN_TEXT.modalParentLabel}: {titleMap.get(task.parentId)}
-                  </p>
-                )}
-                {onEdit && (
-                  <button
-                    type="button"
-                    className="text-[11px] text-slate-600 underline"
-                    onClick={() => onEdit(task)}
-                  >
-                    {PLAN_TEXT.editTaskButton}
-                  </button>
-                )}
-                {onAddChild && (
-                  <button
-                    type="button"
-                    className="text-[11px] text-slate-600 underline"
-                    onClick={() => onAddChild(task)}
-                  >
-                    {PLAN_TEXT.addChildButton}
-                  </button>
-                )}
-              </div>
+            tree.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onStatusChange={onStatusChange}
+                onEdit={onEdit}
+                onAddChild={onAddChild}
+              />
             ))
           )}
         </div>
@@ -160,15 +99,13 @@ export const HistoryPanel = ({
           >
             {loading ? (
               <p className="text-xs text-slate-500">{PLAN_TEXT.loading}</p>
-            ) : flatTasks.length === 0 ? (
+            ) : tree.length === 0 ? (
               <PlaceholderCard id={placeholderId} label={PLAN_TEXT.historyPlaceholder} />
             ) : (
-              flatTasks.map(({ task, depth }) => (
+              tree.map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}
-                  depth={depth}
-                  parentTitle={task.parentId ? titleMap.get(task.parentId) : undefined}
                   onStatusChange={onStatusChange}
                   onEdit={onEdit}
                   onAddChild={onAddChild}

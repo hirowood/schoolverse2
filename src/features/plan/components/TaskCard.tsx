@@ -11,14 +11,12 @@ type Props = {
   onStatusChange: (id: string, status: StudyTask["status"]) => void;
   onEdit?: (task: StudyTask) => void;
   onAddChild?: (task: StudyTask) => void;
-  depth?: number;
-  parentTitle?: string;
 };
 
 /**
  * Sortable task card shown in today / tomorrow / history lists.
  */
-export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild, depth = 0, parentTitle }: Props) => {
+export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild }: Props) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
   });
@@ -37,6 +35,58 @@ export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild, depth = 0, 
     [task.children],
   );
 
+  const renderChildren = (children: StudyTask[], level: number) => {
+    if (!children?.length) return null;
+    return (
+      <div className="mt-2 space-y-2">
+        {children.map((child) => (
+          <div key={child.id} className="rounded-md border border-slate-200 bg-white px-2 py-2" style={{ marginLeft: level * 12 }}>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-medium text-slate-900">{child.title}</p>
+                {child.description && <p className="text-[11px] text-slate-700">{child.description}</p>}
+              </div>
+              <div className="flex items-center gap-1">
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(child);
+                    }}
+                    className="rounded-md border border-slate-300 px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100"
+                  >
+                    {PLAN_TEXT.editTaskButton}
+                  </button>
+                )}
+                {onAddChild && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddChild(child);
+                    }}
+                    className="rounded-md border border-slate-300 px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100"
+                  >
+                    {PLAN_TEXT.addChildButton}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-slate-500">
+              <span>
+                {PLAN_TEXT.labelStatus}: {child.status}
+              </span>
+              <span>
+                {PLAN_TEXT.labelSchedule}: {child.dueDate ? `${child.dueDate.slice(0, 10)} ${child.dueDate.slice(11, 16)}` : PLAN_TEXT.notSet}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -45,17 +95,11 @@ export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild, depth = 0, 
       }`}
       {...attributes}
       {...listeners}
-      style={{ ...style, marginLeft: depth > 0 ? depth * 12 : 0 }}
       onDoubleClick={() => onEdit?.(task)}
     >
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-sm font-medium text-slate-900">{task.title}</p>
-          {parentTitle && (
-            <p className="text-[11px] text-slate-500">
-              {PLAN_TEXT.modalParentLabel}: {parentTitle}
-            </p>
-          )}
           {task.description && <p className="text-xs text-slate-700">{task.description}</p>}
         </div>
         <div className="flex items-center gap-1">
