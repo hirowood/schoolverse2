@@ -24,7 +24,6 @@ export const PLAN_TEXT = {
   calendarDescription: "日付をクリックすると、その日のタスクを確認できます。",
   selectedDate: "選択した日",
   addToThisDate: "この日にタスクを追加",
-  addChildButton: "子タスクを追加",
   todayReadOnly: "今日のタスク（カレンダーでは移動できません）",
   tomorrowReadOnly: "明日のタスク（カレンダーでは移動できません）",
   todayEmpty: "今日のタスクはありません",
