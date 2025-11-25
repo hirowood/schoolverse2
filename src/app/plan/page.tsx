@@ -49,6 +49,8 @@ export default function Page() {
   const [showChildForm, setShowChildForm] = useState(false);
   const [newChildTitle, setNewChildTitle] = useState("");
   const [newChildDescription, setNewChildDescription] = useState("");
+  const [newChildDate, setNewChildDate] = useState(today);
+  const [newChildTime, setNewChildTime] = useState("");
   const [childSaving, setChildSaving] = useState(false);
 
   const historyColumnId = `history-${historyDate}`;
@@ -143,6 +145,8 @@ export default function Page() {
     setShowChildForm(false);
     setNewChildTitle("");
     setNewChildDescription("");
+    setNewChildDate(today);
+    setNewChildTime("");
     setChildSaving(false);
   };
 
@@ -240,6 +244,8 @@ export default function Page() {
     setShowChildForm(false);
     setNewChildTitle("");
     setNewChildDescription("");
+    setNewChildDate(dueDate ? dueDate.slice(0, 10) : today);
+    setNewChildTime(dueDate ? dueDate.slice(11, 16) : "");
     setModalOpen(true);
   };
 
@@ -249,6 +255,8 @@ export default function Page() {
     const dueDate = task.dueDate ?? "";
     setNewDate(dueDate ? dueDate.slice(0, 10) : today);
     setNewTime(dueDate ? dueDate.slice(11, 16) : "");
+    setNewChildDate(dueDate ? dueDate.slice(0, 10) : today);
+    setNewChildTime(dueDate ? dueDate.slice(11, 16) : "");
     setModalOpen(true);
   };
 
@@ -264,8 +272,8 @@ export default function Page() {
         body: JSON.stringify({
           title,
           description: newChildDescription,
-          date: newDate || today,
-          time: newTime || null,
+          date: newChildDate || today,
+          time: newChildTime || null,
           parentId: editingTaskId,
         }),
       });
@@ -586,6 +594,32 @@ export default function Page() {
                     value={newChildDescription}
                     onChange={(e) => setNewChildDescription(e.target.value)}
                   />
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700" htmlFor="child-date">
+                      {PLAN_TEXT.dateLabel}
+                    </label>
+                    <input
+                      id="child-date"
+                      type="date"
+                      className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                      value={newChildDate}
+                      onChange={(e) => setNewChildDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700" htmlFor="child-time">
+                      {PLAN_TEXT.timeLabel}
+                    </label>
+                    <input
+                      id="child-time"
+                      type="time"
+                      className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                      value={newChildTime}
+                      onChange={(e) => setNewChildTime(e.target.value)}
+                    />
+                  </div>
                 </div>
                 <button
                   type="button"
