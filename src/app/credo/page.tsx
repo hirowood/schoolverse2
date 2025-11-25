@@ -1,6 +1,5 @@
 "use client";
 
-// src/app/credo/page.tsx
 import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
@@ -10,17 +9,13 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  arrayMove,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useSession } from "next-auth/react";
 import { CredoBoard } from "@/components/credo/CredoBoard";
 import { Modal } from "@/components/ui/Modal";
 import { CREDO_ITEMS } from "@/features/credo/config";
+import { CREDO_TEXT } from "@/features/credo/constants";
 import type {
   CredoDailyPractice,
   CredoId,
@@ -36,12 +31,14 @@ type SummaryResponse = {
   missing: { id: CredoId; title: string }[];
 };
 
+// 今日の日付をYYYY-MM-DDで返す
 const getToday = () => new Date().toISOString().slice(0, 10);
 
+// 週次サマリー用の期間を計算（週の開始は月曜）
 const getWeekRange = (isoDate: string) => {
   const d = new Date(isoDate);
   const day = d.getDay(); // 0 Sun - 6 Sat
-  const diffToMonday = (day + 6) % 7; // Monday start
+  const diffToMonday = (day + 6) % 7;
   const start = new Date(d);
   start.setDate(d.getDate() - diffToMonday);
   const end = new Date(start);
@@ -50,15 +47,15 @@ const getWeekRange = (isoDate: string) => {
   return { from: toIso(start), to: toIso(end) };
 };
 
+// 実践率からコーチコメントを生成
 const coachComment = (rate: number) => {
-  if (rate >= 70) return "かなりいい調子です。続けていきましょう！";
-  if (rate >= 30) return "まずは1日1つだけ、確実にやる日にしてみよう。";
-  return "クレドの中から3つだけ選んで、短時間でも実践してみよう。";
+  if (rate >= 70) return CREDO_TEXT.coachHigh;
+  if (rate >= 30) return CREDO_TEXT.coachMid;
+  return CREDO_TEXT.coachLow;
 };
 
-const buildEmptyValues = (
-  date: string,
-): Record<CredoId, CredoPracticeFormValue> =>
+// 指定日の空データを生成
+const buildEmptyValues = (date: string): Record<CredoId, CredoPracticeFormValue> =>
   Object.fromEntries(
     CREDO_ITEMS.map((item) => [
       item.id,
@@ -71,6 +68,7 @@ const buildEmptyValues = (
     ]),
   ) as Record<CredoId, CredoPracticeFormValue>;
 
+// 完了フラグの辞書を組み立て
 const buildDoneMap = (values: Record<CredoId, CredoPracticeFormValue>) => {
   const map: Record<CredoId, boolean> = {} as Record<CredoId, boolean>;
   Object.entries(values).forEach(([id, value]) => {
@@ -79,17 +77,57 @@ const buildDoneMap = (values: Record<CredoId, CredoPracticeFormValue>) => {
   return map;
 };
 
+// 週次サマリーの並び替えに使用するアイテム
+const SortableSummaryItem = ({
+  item,
+  value,
+}: {
+  item: CredoItem;
+  value: CredoPracticeFormValue;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.95 : 1,
+  };
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-md border bg-white px-3 py-2 transition duration-300 ease-out ${
+        isDragging
+          ? "border-slate-300 shadow-xl shadow-slate-200 scale-[1.01]"
+          : "border-slate-200 hover:shadow-sm hover:-translate-y-0.5"
+      }`}
+      {...attributes}
+      {...listeners}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium text-slate-900">
+          {item.order}. {item.title}
+        </span>
+        {value.done && (
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">実践済み</span>
+        )}
+      </div>
+      {value.note && <p className="mt-1 text-xs text-slate-600">{value.note}</p>}
+    </li>
+  );
+};
+
 export default function Page() {
   const { status } = useSession();
   const isAuthed = status === "authenticated";
   const today = useMemo(() => getToday(), []);
+
+  // 状態管理
   const [date, setDate] = useState<string>(today);
-  const [values, setValues] = useState<Record<CredoId, CredoPracticeFormValue>>(
-    () => buildEmptyValues(today),
-  );
-  const [summaryOrder, setSummaryOrder] = useState<CredoId[]>(() =>
-    CREDO_ITEMS.map((item) => item.id),
-  );
+  const [values, setValues] = useState<Record<CredoId, CredoPracticeFormValue>>(() => buildEmptyValues(today));
+  const [summaryOrder, setSummaryOrder] = useState<CredoId[]>(() => CREDO_ITEMS.map((item) => item.id));
   const [activeItem, setActiveItem] = useState<CredoItem | null>(null);
   const [modalDone, setModalDone] = useState<boolean>(false);
   const [modalNote, setModalNote] = useState<string>("");
@@ -100,7 +138,9 @@ export default function Page() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
-  // APIから当日のデータを取得
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  // 日付切り替え時に当日の入力を取得
   useEffect(() => {
     if (!isAuthed) return;
     const fetchData = async () => {
@@ -108,7 +148,7 @@ export default function Page() {
         setLoading(true);
         const res = await fetch(`/api/credo/practices?date=${date}`);
         if (res.status === 401) {
-          setError("サインインが必要です。");
+          setError(CREDO_TEXT.errorAuth);
           return;
         }
         if (!res.ok) throw new Error(`fetch failed (${res.status})`);
@@ -121,7 +161,7 @@ export default function Page() {
         setError(null);
       } catch (e) {
         console.error(e);
-        setError("データ取得に失敗しました");
+        setError(CREDO_TEXT.errorFetch);
       } finally {
         setLoading(false);
       }
@@ -129,7 +169,7 @@ export default function Page() {
     fetchData();
   }, [date, isAuthed]);
 
-  // 周次サマリー取得
+  // 週次サマリー取得
   useEffect(() => {
     if (!isAuthed) return;
     const { from, to } = getWeekRange(date);
@@ -138,7 +178,7 @@ export default function Page() {
         setSummaryLoading(true);
         const res = await fetch(`/api/credo/summary?from=${from}&to=${to}`);
         if (res.status === 401) {
-          setSummaryError("サインインしてください");
+          setSummaryError(CREDO_TEXT.errorAuth);
           return;
         }
         if (!res.ok) throw new Error(`fetch failed (${res.status})`);
@@ -147,7 +187,7 @@ export default function Page() {
         setSummaryError(null);
       } catch (e) {
         console.error(e);
-        setSummaryError("サマリーの取得に失敗しました");
+        setSummaryError(CREDO_TEXT.errorSummary);
       } finally {
         setSummaryLoading(false);
       }
@@ -155,6 +195,7 @@ export default function Page() {
     fetchSummary();
   }, [date, isAuthed]);
 
+  // クレドカード選択時のモーダル初期化
   const handleSelectItem = (item: CredoItem) => {
     const current = values[item.id];
     setActiveItem(item);
@@ -162,15 +203,17 @@ export default function Page() {
     setModalNote(current?.note ?? "");
   };
 
+  // 日付変更
   const handleDateChange = (nextDate: string) => {
     setDate(nextDate);
     setValues(buildEmptyValues(nextDate));
     setError(null);
   };
 
+  // モーダル保存（楽観的更新で先に状態を反映）
   const handleSaveItem = () => {
     if (!isAuthed) {
-      setError("サインインしてください");
+      setError(CREDO_TEXT.errorAuth);
       return;
     }
     if (!activeItem) return;
@@ -186,7 +229,6 @@ export default function Page() {
     setValues(nextValues);
     setActiveItem(null);
 
-    // API保存
     (async () => {
       try {
         setSaving(true);
@@ -197,21 +239,21 @@ export default function Page() {
           body: JSON.stringify(payload),
         });
         if (res.status === 401) {
-          setError("サインインしてください");
+          setError(CREDO_TEXT.errorAuth);
           return;
         }
         if (!res.ok) throw new Error(`save failed (${res.status})`);
         setError(null);
       } catch (e) {
         console.error(e);
-        setError("保存に失敗しました");
+        setError(CREDO_TEXT.errorFetch);
       } finally {
         setSaving(false);
       }
     })();
   };
 
-  const doneMap = useMemo(() => buildDoneMap(values), [values]);
+  // サマリーカードに表示するアイテム（完了/メモありだけ表示）
   const summaryItems = useMemo(() => {
     const present = CREDO_ITEMS.filter((item) => {
       const value = values[item.id];
@@ -223,17 +265,12 @@ export default function Page() {
       const vb = values[b.id];
       const doneA = va?.done ?? false;
       const doneB = vb?.done ?? false;
-      if (doneA !== doneB) return Number(doneA) - Number(doneB); // 未完→完了
+      if (doneA !== doneB) return Number(doneA) - Number(doneB);
       return orderIndex(a.id) - orderIndex(b.id);
     });
   }, [values, summaryOrder]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 6 },
-    }),
-  );
-
+  // DnD終了時に順序更新
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over) return;
@@ -250,55 +287,14 @@ export default function Page() {
     setSummaryOrder([...reordered, ...rest]);
   };
 
+  const doneMap = useMemo(() => buildDoneMap(values), [values]);
   const summaryIds = summaryItems.map((item) => item.id);
-
-  const SortableSummaryItem = ({
-    item,
-    value,
-  }: {
-    item: CredoItem;
-    value: CredoPracticeFormValue;
-  }) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-      id: item.id,
-    });
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging ? 0.95 : 1,
-    };
-    return (
-      <li
-        ref={setNodeRef}
-        style={style}
-        className={`rounded-md border bg-white px-3 py-2 transition-transform transition-shadow duration-300 ease-out ${
-          isDragging
-            ? "border-slate-300 shadow-xl shadow-slate-200 scale-[1.01]"
-            : "border-slate-200 hover:shadow-sm hover:-translate-y-0.5"
-        }`}
-        {...attributes}
-        {...listeners}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium text-slate-900">
-            {item.order}. {item.title}
-          </span>
-          {value.done && (
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">
-              完了済み
-            </span>
-          )}
-        </div>
-        {value.note && <p className="mt-1 text-xs text-slate-600">{value.note}</p>}
-      </li>
-    );
-  };
 
   if (status === "loading") {
     return (
       <div className="space-y-3">
-        <h1 className="text-2xl font-semibold">クレド実践ボード</h1>
-        <p className="text-sm text-slate-600">セッションを確認しています...</p>
+        <h1 className="text-2xl font-semibold">{CREDO_TEXT.loadingSessionTitle}</h1>
+        <p className="text-sm text-slate-600">{CREDO_TEXT.loadingSessionDescription}</p>
       </div>
     );
   }
@@ -306,11 +302,9 @@ export default function Page() {
   if (!isAuthed) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">クレド実践ボード</h1>
-        <p className="text-sm text-slate-600">
-          ホームでサインインするとクレドの記録と並び替えが使えます。
-        </p>
-        <p className="text-xs text-slate-500">※ ホームに表示されるログインモーダルからサインインしてください。</p>
+        <h1 className="text-2xl font-semibold">{CREDO_TEXT.unauthTitle}</h1>
+        <p className="text-sm text-slate-600">{CREDO_TEXT.unauthDescription}</p>
+        <p className="text-xs text-slate-500">{CREDO_TEXT.unauthHint}</p>
       </div>
     );
   }
@@ -318,13 +312,11 @@ export default function Page() {
   return (
     <div className="space-y-6">
       <section className="space-y-2">
-        <h1 className="text-2xl font-semibold">クレド実践ボード</h1>
-        <p className="text-sm text-slate-600">
-          クレドをクリックするとモーダルで入力できます。完了すると「完了済み」が表示され、サマリーに並びます。
-        </p>
+        <h1 className="text-2xl font-semibold">{CREDO_TEXT.pageTitle}</h1>
+        <p className="text-sm text-slate-600">{CREDO_TEXT.pageDescription}</p>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-slate-700" htmlFor="credo-date">
-            日付
+            {CREDO_TEXT.dateLabel}
           </label>
           <input
             id="credo-date"
@@ -343,36 +335,34 @@ export default function Page() {
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-medium text-slate-900">週次サマリー</h2>
-                <p className="text-xs text-slate-600">月曜はじまりの1週間を集計</p>
+                <h2 className="text-lg font-medium text-slate-900">{CREDO_TEXT.summaryTitle}</h2>
+                <p className="text-xs text-slate-600">{CREDO_TEXT.summarySubtitle}</p>
               </div>
-              {summaryLoading && <span className="text-[11px] text-slate-500">更新中...</span>}
+              {summaryLoading && <span className="text-[11px] text-slate-500">{CREDO_TEXT.summaryLoading}</span>}
             </div>
             {summaryError && <p className="text-xs text-red-500">{summaryError}</p>}
             {summary && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-slate-200 p-3">
-                  <p className="text-xs text-slate-500">実践率</p>
+                  <p className="text-xs text-slate-500">{CREDO_TEXT.summaryRate}</p>
                   <div className="mt-1 flex items-center gap-3">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-slate-200">
-                      <span className="text-lg font-semibold text-slate-900">
-                        {summary.practicedRate}%
-                      </span>
+                      <span className="text-lg font-semibold text-slate-900">{summary.practicedRate}%</span>
                     </div>
                     <div>
-                      <p className="text-sm text-slate-700">実践回数: {summary.practicedCount}</p>
+                      <p className="text-sm text-slate-700">
+                        {CREDO_TEXT.summaryCount}: {summary.practicedCount}
+                      </p>
                       <p className="text-[11px] text-slate-500">11項目中 {summary.ranking.length} 件</p>
                     </div>
                   </div>
-                  <p className="mt-2 text-xs font-medium text-emerald-700">
-                    コーチコメント: {coachComment(summary.practicedRate)}
-                  </p>
+                  <p className="mt-2 text-xs font-medium text-emerald-700">コーチコメント: {coachComment(summary.practicedRate)}</p>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 p-3">
-                  <p className="text-xs text-slate-500 mb-1">ハイライト</p>
+                  <p className="text-xs text-slate-500 mb-1">{CREDO_TEXT.summaryHighlight}</p>
                   {summary.highlights.length === 0 ? (
-                    <p className="text-sm text-slate-500">メモはまだありません</p>
+                    <p className="text-sm text-slate-500">{CREDO_TEXT.summaryEmptyHighlight}</p>
                   ) : (
                     <ul className="space-y-1 text-sm text-slate-700">
                       {summary.highlights.map((h, idx) => (
@@ -386,11 +376,11 @@ export default function Page() {
 
                 <div className="rounded-lg border border-slate-200 p-3 sm:col-span-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-slate-500">よく実践した項目</p>
+                    <p className="text-xs font-medium text-slate-500">{CREDO_TEXT.summaryRanking}</p>
                     <p className="text-[11px] text-slate-500">トップ3</p>
                   </div>
                   {summary.ranking.slice(0, 3).length === 0 ? (
-                    <p className="text-sm text-slate-500">まだ実践がありません</p>
+                    <p className="text-sm text-slate-500">{CREDO_TEXT.summaryEmptyRanking}</p>
                   ) : (
                     <ul className="mt-2 space-y-1 text-sm text-slate-700">
                       {summary.ranking.slice(0, 3).map((r) => (
@@ -403,7 +393,7 @@ export default function Page() {
                   )}
                   {summary.missing.length > 0 && (
                     <div className="mt-3">
-                      <p className="text-xs font-medium text-slate-500">未実践</p>
+                      <p className="text-xs font-medium text-slate-500">{CREDO_TEXT.summaryMissing}</p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {summary.missing.slice(0, 4).map((m) => (
                           <span
@@ -415,7 +405,7 @@ export default function Page() {
                         ))}
                         {summary.missing.length > 4 && (
                           <span className="text-[11px] text-slate-500">
-                            +{summary.missing.length - 4} もっと
+                            {CREDO_TEXT.summaryMissingMore(summary.missing.length - 4)}
                           </span>
                         )}
                       </div>
@@ -428,9 +418,9 @@ export default function Page() {
         </div>
 
         <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <h2 className="text-lg font-medium text-slate-900">今日のサマリー</h2>
-          <p className="text-xs text-slate-600">日付: {date}</p>
-          {loading && <p className="text-xs text-slate-500">読み込み中...</p>}
+          <h2 className="text-lg font-medium text-slate-900">{CREDO_TEXT.todaySummaryTitle}</h2>
+          <p className="text-xs text-slate-600">{CREDO_TEXT.todayDateLabel(date)}</p>
+          {loading && <p className="text-xs text-slate-500">{CREDO_TEXT.todayLoading}</p>}
           {error && <p className="text-xs text-red-500">{error}</p>}
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={summaryIds} strategy={verticalListSortingStrategy}>
@@ -443,10 +433,8 @@ export default function Page() {
               </ul>
             </SortableContext>
           </DndContext>
-          <p className="text-[11px] text-slate-500">
-            サマリー項目はドラッグ（マウス・タッチ対応）で並び替えできます。入力済みは自動的に下に配置されます。
-          </p>
-          {saving && <p className="text-[11px] text-slate-500">保存中...</p>}
+          <p className="text-[11px] text-slate-500">{CREDO_TEXT.todayHint}</p>
+          {saving && <p className="text-[11px] text-slate-500">{CREDO_TEXT.todaySaving}</p>}
         </div>
       </div>
 
@@ -461,14 +449,14 @@ export default function Page() {
               onClick={() => setActiveItem(null)}
               className="rounded-md border border-slate-300 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50"
             >
-              キャンセル
+              {CREDO_TEXT.modalCancel}
             </button>
             <button
               type="button"
               onClick={handleSaveItem}
               className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
             >
-              保存
+              {CREDO_TEXT.modalSave}
             </button>
           </div>
         }
@@ -483,17 +471,14 @@ export default function Page() {
                 checked={modalDone}
                 onChange={(e) => setModalDone(e.target.checked)}
               />
-              <label
-                htmlFor={`${activeItem.id}-done`}
-                className="text-sm font-medium text-slate-900"
-              >
-                このクレドを実践した
+              <label htmlFor={`${activeItem.id}-done`} className="text-sm font-medium text-slate-900">
+                {CREDO_TEXT.modalDoneLabel}
               </label>
             </div>
             <p className="text-xs text-slate-600">{activeItem.description}</p>
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-700" htmlFor={`${activeItem.id}-note`}>
-                気づきやメモ
+                {CREDO_TEXT.modalNoteLabel}
               </label>
               <textarea
                 id={`${activeItem.id}-note`}
@@ -502,7 +487,7 @@ export default function Page() {
                 maxLength={200}
                 value={modalNote}
                 onChange={(e) => setModalNote(e.target.value)}
-                placeholder="今日意識したことや改善点をメモ（200文字まで）"
+                placeholder={CREDO_TEXT.modalNotePlaceholder}
               />
             </div>
           </div>

@@ -2,19 +2,19 @@
 
 // クレドのカテゴリ（UI表示用）
 export type CredoCategory =
-  | "情報の受け取り方"
-  | "思考の整理"
+  | "学びの準備"
+  | "振り返り"
   | "タスク管理"
-  | "体調と気分"
+  | "睡眠と体調"
   | "運動"
-  | "食事"
-  | "部屋と環境"
-  | "日々の改善"
-  | "自己受容"
+  | "相談"
+  | "集中と休憩"
+  | "挑戦"
+  | "環境"
   | "コミュニケーション"
-  | "1日の終わり方";
+  | "一日の締め";
 
-// クレドID（マスタ）
+// クレドID（マスター）
 export type CredoId =
   | "credo-1"
   | "credo-2"
@@ -28,7 +28,7 @@ export type CredoId =
   | "credo-10"
   | "credo-11";
 
-// クレド1件分の定義
+// クレド1件の定義
 export interface CredoItem {
   id: CredoId;
   order: number;
@@ -44,7 +44,7 @@ export interface CredoBoardProps {
   onSelect?: (item: CredoItem) => void;
 }
 
-// フォームで扱う1クレド単位の値
+// フォームに載る1クレド1日の値
 export interface CredoPracticeFormValue {
   credoId: CredoId;
   date: string; // "YYYY-MM-DD"
@@ -58,7 +58,7 @@ export interface CredoDailyPractice {
   values: Record<CredoId, CredoPracticeFormValue>;
 }
 
-// 永続化用のレコード
+// 取得用のレコード
 export interface CredoPracticeLog {
   id: string; // UUID
   userId: string;
