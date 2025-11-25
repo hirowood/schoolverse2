@@ -18,6 +18,9 @@ type CredoText = {
   summaryEmptyHighlight: string;
   summaryEmptyRanking: string;
   summaryMissingMore: (n: number) => string;
+  summaryTopLabel: string;
+  summaryRangeLabel: (count: number) => string;
+  badgeDone: string;
   coachHigh: string;
   coachMid: string;
   coachLow: string;
@@ -63,6 +66,9 @@ export const CREDO_TEXT: CredoText = {
   summaryEmptyHighlight: "まだありません",
   summaryEmptyRanking: "まだありません",
   summaryMissingMore: (n: number) => `+${n}件`,
+  summaryTopLabel: "トップ3",
+  summaryRangeLabel: (count: number) => `11項目中 ${count} 件`,
+  badgeDone: "実践済み",
 
   // Coach comments
   coachHigh: "かなりいい調子です。引き続き頑張りましょう！",

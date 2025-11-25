@@ -111,7 +111,7 @@ const SortableSummaryItem = ({
           {item.order}. {item.title}
         </span>
         {value.done && (
-          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">実践済み</span>
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">{CREDO_TEXT.badgeDone}</span>
         )}
       </div>
       {value.note && <p className="mt-1 text-xs text-slate-600">{value.note}</p>}
@@ -353,11 +353,11 @@ export default function Page() {
                       <p className="text-sm text-slate-700">
                         {CREDO_TEXT.summaryCount}: {summary.practicedCount}
                       </p>
-                      <p className="text-[11px] text-slate-500">11項目中 {summary.ranking.length} 件</p>
-                    </div>
+                      <p className="text-[11px] text-slate-500">{CREDO_TEXT.summaryRangeLabel(summary.ranking.length)}</p>
                   </div>
-                  <p className="mt-2 text-xs font-medium text-emerald-700">コーチコメント: {coachComment(summary.practicedRate)}</p>
                 </div>
+                <p className="mt-2 text-xs font-medium text-emerald-700">コーチコメント: {coachComment(summary.practicedRate)}</p>
+              </div>
 
                 <div className="rounded-lg border border-slate-200 p-3">
                   <p className="text-xs text-slate-500 mb-1">{CREDO_TEXT.summaryHighlight}</p>
@@ -377,7 +377,7 @@ export default function Page() {
                 <div className="rounded-lg border border-slate-200 p-3 sm:col-span-2">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-medium text-slate-500">{CREDO_TEXT.summaryRanking}</p>
-                    <p className="text-[11px] text-slate-500">トップ3</p>
+                    <p className="text-[11px] text-slate-500">{CREDO_TEXT.summaryTopLabel}</p>
                   </div>
                   {summary.ranking.slice(0, 3).length === 0 ? (
                     <p className="text-sm text-slate-500">{CREDO_TEXT.summaryEmptyRanking}</p>
