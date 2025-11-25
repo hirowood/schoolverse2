@@ -19,7 +19,7 @@ import { TaskColumn } from "@/features/plan/components/TaskColumn";
 import { TaskCard } from "@/features/plan/components/TaskCard";
 import { PLAN_TEXT } from "@/features/plan/constants";
 import { StudyTask } from "@/features/plan/types";
-import { addDays, formatLocalIsoDate, getToday, parseLocalDate } from "@/features/plan/utils/date";
+import { addDays, formatLocalIsoDate, getToday, parseLocalDate, buildTaskTree } from "@/features/plan/utils/date";
 
 /** Study plan page: manage today/tomorrow and calendar with drag & drop */
 export default function Page() {
@@ -44,6 +44,7 @@ export default function Page() {
   const [newDescription, setNewDescription] = useState("");
   const [newDate, setNewDate] = useState(today);
   const [newTime, setNewTime] = useState("");
+  const [parentId, setParentId] = useState<string | null>(null);
 
   const historyColumnId = `history-${historyDate}`;
   const historyPlaceholderId = "history-placeholder";
@@ -54,6 +55,14 @@ export default function Page() {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
   const [activeTask, setActiveTask] = useState<StudyTask | null>(null);
+  const flattenIds = useCallback((list: StudyTask[]) => {
+    const tree = buildTaskTree(list);
+    const walk = (nodes: StudyTask[]): string[] =>
+      nodes.flatMap((n) => [n.id, ...walk(n.children ?? [])]);
+    return walk(tree);
+  }, []);
+  const itemsToday = useMemo(() => flattenIds(tasksToday), [flattenIds, tasksToday]);
+  const itemsTomorrow = useMemo(() => flattenIds(tasksTomorrow), [flattenIds, tasksTomorrow]);
 
   const fetchDay = useCallback(async (date: string) => {
     const res = await fetch(`/api/tasks?date=${date}`);
@@ -124,6 +133,7 @@ export default function Page() {
     setNewDescription("");
     setNewDate(today);
     setNewTime("");
+    setParentId(null);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -143,6 +153,7 @@ export default function Page() {
             description: newDescription,
             date: targetDate,
             time: newTime || null,
+            parentId,
           }),
         });
         if (!res.ok) throw new Error(`failed ${res.status}`);
@@ -155,6 +166,7 @@ export default function Page() {
             description: newDescription,
             date: targetDate,
             time: newTime || null,
+            parentId,
           }),
         });
         if (!res.ok) throw new Error(`failed ${res.status}`);
@@ -211,6 +223,16 @@ export default function Page() {
     setEditingTaskId(task.id);
     setNewTitle(task.title);
     setNewDescription(task.description ?? "");
+    setNewDate(dueDate ? dueDate.slice(0, 10) : today);
+    setNewTime(dueDate ? dueDate.slice(11, 16) : "");
+    setParentId(task.parentId ?? null);
+    setModalOpen(true);
+  };
+
+  const openAddChild = (task: StudyTask) => {
+    resetForm();
+    setParentId(task.id);
+    const dueDate = task.dueDate ?? "";
     setNewDate(dueDate ? dueDate.slice(0, 10) : today);
     setNewTime(dueDate ? dueDate.slice(11, 16) : "");
     setModalOpen(true);
@@ -307,7 +329,7 @@ export default function Page() {
           onDragEnd={handleDragEnd}
         >
           <div className="grid gap-4 md:grid-cols-2">
-            <SortableContext items={tasksToday.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={itemsToday} strategy={verticalListSortingStrategy}>
               <TaskColumn
                 id="today"
                 title={`${PLAN_TEXT.todayBoardTitle} (${today})`}
@@ -316,16 +338,18 @@ export default function Page() {
                 onAddClick={() => openModalForDate(today)}
                 onStatusChange={handleStatus}
                 onEdit={openEditModal}
+                onAddChild={openAddChild}
               />
             </SortableContext>
 
-            <SortableContext items={tasksTomorrow.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={itemsTomorrow} strategy={verticalListSortingStrategy}>
               <TaskColumn
                 id="tomorrow"
                 title={`${PLAN_TEXT.tomorrowBoardTitle} (${tomorrow})`}
                 tasks={tasksTomorrow}
                 onStatusChange={handleStatus}
                 onEdit={openEditModal}
+                onAddChild={openAddChild}
               />
             </SortableContext>
           </div>
@@ -354,6 +378,7 @@ export default function Page() {
               onAddClick={() => openModalForDate(historyDate)}
               onStatusChange={handleStatus}
               onEdit={openEditModal}
+              onAddChild={openAddChild}
             />
           </section>
 

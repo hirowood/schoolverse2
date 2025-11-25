@@ -6,6 +6,7 @@ import { StudyTask } from "../types";
 import { TaskCard } from "./TaskCard";
 import { PlaceholderCard } from "./PlaceholderCard";
 import { PLAN_TEXT } from "../constants";
+import { buildTaskTree } from "../utils/date";
 
 type Props = {
   selectedDate: string;
@@ -18,6 +19,7 @@ type Props = {
   onAddClick: () => void;
   onStatusChange: (id: string, status: StudyTask["status"]) => void;
   onEdit?: (task: StudyTask) => void;
+  onAddChild?: (task: StudyTask) => void;
 };
 
 /** カレンダーの「選択した日」のカードとタスクリスト。 */
@@ -32,9 +34,14 @@ export const HistoryPanel = ({
   onAddClick,
   onStatusChange,
   onEdit,
+  onAddChild,
 }: Props) => {
   const { setNodeRef, isOver } = useDroppable({ id: droppableId });
-  const items = tasks.length === 0 ? [placeholderId] : tasks.map((t) => t.id);
+  const tree = buildTaskTree(tasks);
+  const flatten = (nodes: StudyTask[], depth = 0): { task: StudyTask; depth: number }[] =>
+    nodes.flatMap((n) => [{ task: n, depth }, ...flatten(n.children ?? [], depth + 1)]);
+  const flatTasks = flatten(tree);
+  const items = flatTasks.length === 0 ? [placeholderId] : flatTasks.map((t) => t.task.id);
 
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -54,23 +61,34 @@ export const HistoryPanel = ({
       {isToday ? (
         <div className="mt-2 space-y-2 rounded-md border border-slate-200 bg-white/60 p-3">
           <p className="text-xs font-medium text-slate-700">{PLAN_TEXT.todayReadOnly}</p>
-          {tasks.length === 0 ? (
+          {flatTasks.length === 0 ? (
             <p className="text-xs text-slate-500">{PLAN_TEXT.todayEmpty}</p>
           ) : (
-            tasks.map((t) => (
-              <div key={t.id} className="rounded-md border border-slate-200 bg-white px-3 py-2">
-                <p className="text-sm font-medium text-slate-900">{t.title}</p>
-                {t.description && <p className="text-xs text-slate-600">{t.description}</p>}
-                <p className="text-[11px] text-slate-500">
-                  {PLAN_TEXT.labelStatus}: {t.status}
+            flatTasks.map(({ task, depth }) => (
+              <div key={task.id} className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                <p className="text-sm font-medium text-slate-900" style={{ marginLeft: depth * 12 }}>
+                  {task.title}
+                </p>
+                {task.description && <p className="text-xs text-slate-600" style={{ marginLeft: depth * 12 }}>{task.description}</p>}
+                <p className="text-[11px] text-slate-500" style={{ marginLeft: depth * 12 }}>
+                  {PLAN_TEXT.labelStatus}: {task.status}
                 </p>
                 {onEdit && (
                   <button
                     type="button"
-                    className="mt-1 text-[11px] text-slate-600 underline"
-                    onClick={() => onEdit(t)}
+                    className="text-[11px] text-slate-600 underline"
+                    onClick={() => onEdit(task)}
                   >
                     {PLAN_TEXT.editTaskButton}
+                  </button>
+                )}
+                {onAddChild && (
+                  <button
+                    type="button"
+                    className="text-[11px] text-slate-600 underline"
+                    onClick={() => onAddChild(task)}
+                  >
+                    {PLAN_TEXT.addChildButton}
                   </button>
                 )}
               </div>
@@ -80,23 +98,34 @@ export const HistoryPanel = ({
       ) : isTomorrow ? (
         <div className="mt-2 space-y-2 rounded-md border border-slate-200 bg-white/60 p-3">
           <p className="text-xs font-medium text-slate-700">{PLAN_TEXT.tomorrowReadOnly}</p>
-          {tasks.length === 0 ? (
+          {flatTasks.length === 0 ? (
             <p className="text-xs text-slate-500">{PLAN_TEXT.tomorrowEmpty}</p>
           ) : (
-            tasks.map((t) => (
-              <div key={t.id} className="rounded-md border border-slate-200 bg-white px-3 py-2">
-                <p className="text-sm font-medium text-slate-900">{t.title}</p>
-                {t.description && <p className="text-xs text-slate-600">{t.description}</p>}
-                <p className="text-[11px] text-slate-500">
-                  {PLAN_TEXT.labelStatus}: {t.status}
+            flatTasks.map(({ task, depth }) => (
+              <div key={task.id} className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                <p className="text-sm font-medium text-slate-900" style={{ marginLeft: depth * 12 }}>
+                  {task.title}
+                </p>
+                {task.description && <p className="text-xs text-slate-600" style={{ marginLeft: depth * 12 }}>{task.description}</p>}
+                <p className="text-[11px] text-slate-500" style={{ marginLeft: depth * 12 }}>
+                  {PLAN_TEXT.labelStatus}: {task.status}
                 </p>
                 {onEdit && (
                   <button
                     type="button"
-                    className="mt-1 text-[11px] text-slate-600 underline"
-                    onClick={() => onEdit(t)}
+                    className="text-[11px] text-slate-600 underline"
+                    onClick={() => onEdit(task)}
                   >
                     {PLAN_TEXT.editTaskButton}
+                  </button>
+                )}
+                {onAddChild && (
+                  <button
+                    type="button"
+                    className="text-[11px] text-slate-600 underline"
+                    onClick={() => onAddChild(task)}
+                  >
+                    {PLAN_TEXT.addChildButton}
                   </button>
                 )}
               </div>
@@ -113,11 +142,18 @@ export const HistoryPanel = ({
           >
             {loading ? (
               <p className="text-xs text-slate-500">{PLAN_TEXT.loading}</p>
-            ) : tasks.length === 0 ? (
+            ) : flatTasks.length === 0 ? (
               <PlaceholderCard id={placeholderId} label={PLAN_TEXT.historyPlaceholder} />
             ) : (
-              tasks.map((t) => (
-                <TaskCard key={t.id} task={t} onStatusChange={onStatusChange} onEdit={onEdit} />
+              flatTasks.map(({ task, depth }) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  depth={depth}
+                  onStatusChange={onStatusChange}
+                  onEdit={onEdit}
+                  onAddChild={onAddChild}
+                />
               ))
             )}
           </div>

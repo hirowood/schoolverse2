@@ -9,12 +9,14 @@ type Props = {
   task: StudyTask;
   onStatusChange: (id: string, status: StudyTask["status"]) => void;
   onEdit?: (task: StudyTask) => void;
+  onAddChild?: (task: StudyTask) => void;
+  depth?: number;
 };
 
 /**
  * Sortable task card shown in today / tomorrow / history lists.
  */
-export const TaskCard = ({ task, onStatusChange, onEdit }: Props) => {
+export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild, depth = 0 }: Props) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
   });
@@ -38,6 +40,7 @@ export const TaskCard = ({ task, onStatusChange, onEdit }: Props) => {
       }`}
       {...attributes}
       {...listeners}
+      style={{ ...style, marginLeft: depth > 0 ? depth * 12 : 0 }}
       onDoubleClick={() => onEdit?.(task)}
     >
       <div className="flex items-center justify-between gap-2">
@@ -56,6 +59,18 @@ export const TaskCard = ({ task, onStatusChange, onEdit }: Props) => {
               className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
             >
               {PLAN_TEXT.editTaskButton}
+            </button>
+          )}
+          {onAddChild && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddChild(task);
+              }}
+              className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+            >
+              {PLAN_TEXT.addChildButton}
             </button>
           )}
           <button

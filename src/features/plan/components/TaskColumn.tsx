@@ -4,6 +4,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { StudyTask } from "../types";
 import { PLAN_TEXT } from "../constants";
 import { TaskCard } from "./TaskCard";
+import { buildTaskTree } from "../utils/date";
 
 type Props = {
   id: string;
@@ -13,6 +14,7 @@ type Props = {
   onAddClick?: () => void;
   onStatusChange: (id: string, status: StudyTask["status"]) => void;
   onEdit?: (task: StudyTask) => void;
+  onAddChild?: (task: StudyTask) => void;
 };
 
 /** Droppable column with optional add button */
@@ -24,8 +26,14 @@ export const TaskColumn = ({
   onAddClick,
   onStatusChange,
   onEdit,
+  onAddChild,
 }: Props) => {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const tree = buildTaskTree(tasks);
+
+  const flatten = (nodes: StudyTask[], depth = 0): { task: StudyTask; depth: number }[] =>
+    nodes.flatMap((n) => [{ task: n, depth }, ...flatten(n.children ?? [], depth + 1)]);
+  const flatTasks = flatten(tree);
 
   return (
     <div
@@ -50,8 +58,15 @@ export const TaskColumn = ({
         <p className="text-sm text-slate-500">{PLAN_TEXT.boardEmptyGeneric}</p>
       ) : (
         <div className="space-y-2">
-          {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onStatusChange={onStatusChange} onEdit={onEdit} />
+          {flatTasks.map(({ task, depth }) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              depth={depth}
+              onStatusChange={onStatusChange}
+              onEdit={onEdit}
+              onAddChild={onAddChild}
+            />
           ))}
         </div>
       )}

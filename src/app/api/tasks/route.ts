@@ -11,6 +11,7 @@ type TaskPayload = {
   time?: string | null;
   note?: string | null;
   subtasks?: { title: string }[];
+  parentId?: string | null;
 };
 
 const parseDateTime = (date?: string | null, time?: string | null) => {
@@ -84,6 +85,17 @@ export async function GET(request: Request) {
     },
     orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "asc" }],
     include: { subtasks: true },
+    },
+    select: {
+      id: true,
+      userId: true,
+      title: true,
+      description: true,
+      dueDate: true,
+      status: true,
+      note: true,
+      parentId: true,
+    },
   });
 
   return NextResponse.json({ tasks });
@@ -111,6 +123,14 @@ export async function POST(request: Request) {
   }
   const dueDate = parseDateTime(body.date, body.time);
 
+  // Validate parent ownership
+  if (body.parentId) {
+    const parent = await prisma.studyTask.findUnique({ where: { id: body.parentId } });
+    if (!parent || parent.userId !== userId) {
+      return NextResponse.json({ error: "invalid_parent" }, { status: 400 });
+    }
+  }
+
   const task = await prisma.studyTask.create({
     data: {
       userId,
@@ -118,6 +138,7 @@ export async function POST(request: Request) {
       description: body.description?.trim() ?? null,
       dueDate: dueDate ?? undefined,
       note: body.note?.trim() ?? null,
+      parentId: body.parentId ?? null,
       subtasks: body.subtasks?.length
         ? {
             create: body.subtasks.map((s) => ({ title: s.title.trim(), status: "todo" })),
@@ -153,24 +174,52 @@ export async function PATCH(request: Request) {
     description?: string | null;
     date?: string | null;
     time?: string | null;
+    parentId?: string | null;
   };
   if (!body.id) {
     return NextResponse.json({ error: "id_required" }, { status: 400 });
   }
   const dueDate = parseDateTime(body.date, body.time);
 
-  const updated = await prisma.studyTask.updateMany({
-    where: { id: body.id, userId: userIdForPatch },
+  const target = await prisma.studyTask.findUnique({ where: { id: body.id } });
+  if (!target || target.userId !== userIdForPatch) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
+  if (body.parentId) {
+    const parent = await prisma.studyTask.findUnique({ where: { id: body.parentId } });
+    if (!parent || parent.userId !== userIdForPatch) {
+      return NextResponse.json({ error: "invalid_parent" }, { status: 400 });
+    }
+  }
+
+  // Prevent marking parent done if children not all done
+  if (body.status === "done") {
+    const childNotDone = await prisma.studyTask.count({
+      where: { parentId: body.id, status: { not: "done" } },
+    });
+    if (childNotDone > 0) {
+      return NextResponse.json({ error: "child_not_done" }, { status: 400 });
+    }
+  }
+
+  await prisma.studyTask.update({
+    where: { id: body.id },
     data: {
       ...(body.status ? { status: body.status } : {}),
       ...(body.title ? { title: body.title.trim() } : {}),
+      ...(body.parentId !== undefined ? { parentId: body.parentId } : {}),
       description: body.description !== undefined ? body.description?.trim() ?? null : undefined,
       dueDate: body.date !== undefined ? dueDate ?? null : undefined,
     },
   });
 
-  if (updated.count === 0) {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  // If child status changed to non-done, ensure parent is not done
+  if (target.parentId && body.status && body.status !== "done") {
+    await prisma.studyTask.updateMany({
+      where: { id: target.parentId, status: "done" },
+      data: { status: "in_progress" },
+    });
   }
 
   return NextResponse.json({ ok: true });

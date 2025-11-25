@@ -18,6 +18,23 @@ export const addDays = (iso: string, days: number) => {
   return formatLocalIsoDate(d);
 };
 
+// Build a tree structure from flat tasks (using parentId)
+export const buildTaskTree = <T extends { id: string; parentId?: string | null; children?: T[] }>(
+  tasks: T[],
+): T[] => {
+  const map = new Map<string, T & { children: T[] }>();
+  tasks.forEach((t) => map.set(t.id, { ...t, children: [] }));
+  const roots: (T & { children: T[] })[] = [];
+  map.forEach((t) => {
+    if (t.parentId && map.has(t.parentId)) {
+      map.get(t.parentId)!.children.push(t);
+    } else {
+      roots.push(t);
+    }
+  });
+  return roots;
+};
+
 export const monthMeta = (dateIso: string) => {
   const d = parseLocalDate(dateIso);
   const year = d.getFullYear();
