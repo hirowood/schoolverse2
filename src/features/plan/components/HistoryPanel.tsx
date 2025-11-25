@@ -41,6 +41,14 @@ export const HistoryPanel = ({
   const flatten = (nodes: StudyTask[], depth = 0): { task: StudyTask; depth: number }[] =>
     nodes.flatMap((n) => [{ task: n, depth }, ...flatten(n.children ?? [], depth + 1)]);
   const flatTasks = flatten(tree);
+  const titleMap = new Map<string, string>();
+  const walk = (nodes: StudyTask[]) => {
+    nodes.forEach((n) => {
+      titleMap.set(n.id, n.title);
+      walk(n.children ?? []);
+    });
+  };
+  walk(tree);
   const items = flatTasks.length === 0 ? [placeholderId] : flatTasks.map((t) => t.task.id);
 
   return (
@@ -73,6 +81,11 @@ export const HistoryPanel = ({
                 <p className="text-[11px] text-slate-500" style={{ marginLeft: depth * 12 }}>
                   {PLAN_TEXT.labelStatus}: {task.status}
                 </p>
+                {task.parentId && (
+                  <p className="text-[11px] text-slate-500" style={{ marginLeft: depth * 12 }}>
+                    {PLAN_TEXT.modalParentLabel}: {titleMap.get(task.parentId)}
+                  </p>
+                )}
                 {onEdit && (
                   <button
                     type="button"
@@ -110,6 +123,11 @@ export const HistoryPanel = ({
                 <p className="text-[11px] text-slate-500" style={{ marginLeft: depth * 12 }}>
                   {PLAN_TEXT.labelStatus}: {task.status}
                 </p>
+                {task.parentId && (
+                  <p className="text-[11px] text-slate-500" style={{ marginLeft: depth * 12 }}>
+                    {PLAN_TEXT.modalParentLabel}: {titleMap.get(task.parentId)}
+                  </p>
+                )}
                 {onEdit && (
                   <button
                     type="button"
@@ -150,6 +168,7 @@ export const HistoryPanel = ({
                   key={task.id}
                   task={task}
                   depth={depth}
+                  parentTitle={task.parentId ? titleMap.get(task.parentId) : undefined}
                   onStatusChange={onStatusChange}
                   onEdit={onEdit}
                   onAddChild={onAddChild}

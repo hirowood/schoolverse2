@@ -11,12 +11,13 @@ type Props = {
   onEdit?: (task: StudyTask) => void;
   onAddChild?: (task: StudyTask) => void;
   depth?: number;
+  parentTitle?: string;
 };
 
 /**
  * Sortable task card shown in today / tomorrow / history lists.
  */
-export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild, depth = 0 }: Props) => {
+export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild, depth = 0, parentTitle }: Props) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
   });
@@ -45,6 +46,11 @@ export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild, depth = 0 }
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-sm font-medium text-slate-900">{task.title}</p>
+          {parentTitle && (
+            <p className="text-[11px] text-slate-500">
+              {PLAN_TEXT.modalParentLabel}: {parentTitle}
+            </p>
+          )}
           {task.description && <p className="text-xs text-slate-700">{task.description}</p>}
         </div>
         <div className="flex items-center gap-1">

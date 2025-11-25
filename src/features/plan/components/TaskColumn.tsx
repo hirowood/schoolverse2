@@ -5,6 +5,7 @@ import { StudyTask } from "../types";
 import { PLAN_TEXT } from "../constants";
 import { TaskCard } from "./TaskCard";
 import { buildTaskTree } from "../utils/date";
+import { useMemo } from "react";
 
 type Props = {
   id: string;
@@ -30,6 +31,17 @@ export const TaskColumn = ({
 }: Props) => {
   const { setNodeRef, isOver } = useDroppable({ id });
   const tree = buildTaskTree(tasks);
+  const titleMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const walk = (nodes: StudyTask[]) => {
+      nodes.forEach((n) => {
+        map.set(n.id, n.title);
+        walk(n.children ?? []);
+      });
+    };
+    walk(tree);
+    return map;
+  }, [tree]);
 
   const flatten = (nodes: StudyTask[], depth = 0): { task: StudyTask; depth: number }[] =>
     nodes.flatMap((n) => [{ task: n, depth }, ...flatten(n.children ?? [], depth + 1)]);
@@ -63,6 +75,7 @@ export const TaskColumn = ({
               key={task.id}
               task={task}
               depth={depth}
+              parentTitle={task.parentId ? titleMap.get(task.parentId) : undefined}
               onStatusChange={onStatusChange}
               onEdit={onEdit}
               onAddChild={onAddChild}
