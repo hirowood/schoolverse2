@@ -34,7 +34,6 @@ export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild, depth = 0 }
   return (
     <div
       ref={setNodeRef}
-      style={style}
       className={`flex flex-col gap-1 rounded-lg border border-slate-200 bg-slate-50 p-3 ${
         isDragging ? "shadow-lg shadow-slate-300" : ""
       }`}

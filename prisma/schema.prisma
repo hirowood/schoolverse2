@@ -86,6 +86,7 @@ model StudyTask {
   user     User       @relation(fields: [userId], references: [id])
   parent   StudyTask? @relation("TaskToSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
   children StudyTask[] @relation("TaskToSubtasks")
+  subtasks TaskSubtask[]
 
   @@index([userId, dueDate])
   @@index([userId, status, dueDate])
