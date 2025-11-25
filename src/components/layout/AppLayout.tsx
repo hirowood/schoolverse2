@@ -28,7 +28,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       <header className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
         <div className="flex items-center gap-3">
-          <span className="text-xl font-semibold tracking-tight">Schoolverse2</span>
+          <span className="text-xl font-semibold tracking-tight">schoolhouse2</span>
           <span className="text-xs text-slate-500">
             AI学習コーチとクレド実践のハブ
           </span>

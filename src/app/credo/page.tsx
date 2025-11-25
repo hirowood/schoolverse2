@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { CredoBoard } from "@/components/credo/CredoBoard";
 import { Modal } from "@/components/ui/Modal";
 import { CREDO_ITEMS } from "@/features/credo/config";
@@ -48,6 +48,12 @@ const getWeekRange = (isoDate: string) => {
   end.setDate(start.getDate() + 6);
   const toIso = (dt: Date) => dt.toISOString().slice(0, 10);
   return { from: toIso(start), to: toIso(end) };
+};
+
+const coachComment = (rate: number) => {
+  if (rate >= 70) return "かなりいい調子です。続けていきましょう！";
+  if (rate >= 30) return "まずは1日1つだけ、確実にやる日にしてみよう。";
+  return "クレドの中から3つだけ選んで、短時間でも実践してみよう。";
 };
 
 const buildEmptyValues = (
@@ -302,15 +308,9 @@ export default function Page() {
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold">クレド実践ボード</h1>
         <p className="text-sm text-slate-600">
-          サインインするとクレドの記録と並べ替えが利用できます。
+          ホームでサインインするとクレドの記録と並び替えが使えます。
         </p>
-        <button
-          type="button"
-          onClick={() => signIn(undefined, { callbackUrl: "/credo" })}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
-        >
-          サインイン
-        </button>
+        <p className="text-xs text-slate-500">※ ホームに表示されるログインモーダルからサインインしてください。</p>
       </div>
     );
   }
@@ -364,6 +364,9 @@ export default function Page() {
                       <p className="text-[11px] text-slate-500">11項目中 {summary.ranking.length} 件</p>
                     </div>
                   </div>
+                  <p className="mt-2 text-xs font-medium text-emerald-700">
+                    コーチコメント: {coachComment(summary.practicedRate)}
+                  </p>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 p-3">

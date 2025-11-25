@@ -110,7 +110,7 @@ export default function Page() {
       setPlan(data.plan);
     } catch (e) {
       console.error(e);
-      setPlanError("プラン生成に失敗しました");
+      setPlanError("プラン生成に失敗しました。しばらく待ってから再試行してください。");
     } finally {
       setPlanLoading(false);
     }
@@ -125,6 +125,15 @@ export default function Page() {
           今日の課題や気分を送ると、クレドに沿った一歩を提案します。
         </p>
       </header>
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm space-y-2">
+        <p className="text-xs font-semibold text-slate-700">使い方ガイド</p>
+        <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+          <li>今日やりたいこと、困りごと、気分を短く送ってみてください。</li>
+          <li>クレド実践の振り返りや、次にやる一歩を相談できます。</li>
+          <li>学習計画ボタンで、設定値＋クレド状況から今日のプランを生成します。</li>
+        </ul>
+      </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -158,8 +167,19 @@ export default function Page() {
 
       <div className="flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="h-[480px] overflow-y-auto p-4 space-y-3">
-          {initialLoading && <p className="text-sm text-slate-500">読み込み中...</p>}
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {initialLoading && (
+            <div className="space-y-2 text-sm text-slate-500">
+              <p>読み込み中...（例:「英語の勉強のコツは？」などを送れます）</p>
+            </div>
+          )}
+          {error && (
+            <div className="space-y-1">
+              <p className="text-sm text-red-500">{error}</p>
+              <p className="text-xs text-slate-500">
+                再読み込みするか、サインイン状態を確認してから再度お試しください。
+              </p>
+            </div>
+          )}
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -184,7 +204,7 @@ export default function Page() {
               className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500"
               rows={2}
               maxLength={500}
-              placeholder="今日やること、困りごと、気分を入力..."
+              placeholder="例: 数学の苦手をどう克服すればいい？ / 今日の気分は少しだるい"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={loading}
