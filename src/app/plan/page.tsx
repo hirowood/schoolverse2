@@ -33,6 +33,7 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -117,36 +118,54 @@ export default function Page() {
     return () => clearInterval(id);
   }, [today]);
 
-  const handleAdd = async (e: FormEvent) => {
+  const resetForm = () => {
+    setEditingTaskId(null);
+    setNewTitle("");
+    setNewDescription("");
+    setNewDate(today);
+    setNewTime("");
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const title = newTitle.trim();
     const targetDate = newDate || historyDate || today;
     if (!title || !targetDate) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          description: newDescription,
-          date: targetDate,
-          time: newTime || null,
-        }),
-      });
-      if (!res.ok) throw new Error(`failed ${res.status}`);
-      setNewTitle("");
-      setNewDescription("");
-      setNewDate(today);
-      setNewTime("");
-      setModalOpen(false);
-      if (targetDate === today || targetDate === tomorrow) {
-        refresh();
+      if (editingTaskId) {
+        const res = await fetch("/api/tasks", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingTaskId,
+            title,
+            description: newDescription,
+            date: targetDate,
+            time: newTime || null,
+          }),
+        });
+        if (!res.ok) throw new Error(`failed ${res.status}`);
+      } else {
+        const res = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            description: newDescription,
+            date: targetDate,
+            time: newTime || null,
+          }),
+        });
+        if (!res.ok) throw new Error(`failed ${res.status}`);
       }
+      resetForm();
+      setModalOpen(false);
+      refresh();
       loadHistory(targetDate);
     } catch (err) {
       console.error(err);
-      setError(PLAN_TEXT.addError);
+      setError(editingTaskId ? PLAN_TEXT.statusError : PLAN_TEXT.addError);
     } finally {
       setSaving(false);
     }
@@ -182,10 +201,18 @@ export default function Page() {
   };
 
   const openModalForDate = (date: string) => {
+    resetForm();
     setNewDate(date);
-    setNewTime("");
-    setNewTitle("");
-    setNewDescription("");
+    setModalOpen(true);
+  };
+
+  const openEditModal = (task: StudyTask) => {
+    const dueDate = task.dueDate ?? "";
+    setEditingTaskId(task.id);
+    setNewTitle(task.title);
+    setNewDescription(task.description ?? "");
+    setNewDate(dueDate ? dueDate.slice(0, 10) : today);
+    setNewTime(dueDate ? dueDate.slice(11, 16) : "");
     setModalOpen(true);
   };
 
@@ -288,6 +315,7 @@ export default function Page() {
                 showAddButton
                 onAddClick={() => openModalForDate(today)}
                 onStatusChange={handleStatus}
+                onEdit={openEditModal}
               />
             </SortableContext>
 
@@ -297,6 +325,7 @@ export default function Page() {
                 title={`${PLAN_TEXT.tomorrowBoardTitle} (${tomorrow})`}
                 tasks={tasksTomorrow}
                 onStatusChange={handleStatus}
+                onEdit={openEditModal}
               />
             </SortableContext>
           </div>
@@ -324,6 +353,7 @@ export default function Page() {
               placeholderId={historyPlaceholderId}
               onAddClick={() => openModalForDate(historyDate)}
               onStatusChange={handleStatus}
+              onEdit={openEditModal}
             />
           </section>
 
@@ -340,29 +370,35 @@ export default function Page() {
 
       <Modal
         open={modalOpen}
-        title={PLAN_TEXT.modalTitle}
-        onClose={() => setModalOpen(false)}
+        title={editingTaskId ? PLAN_TEXT.modalEditTitle : PLAN_TEXT.modalTitle}
+        onClose={() => {
+          setModalOpen(false);
+          resetForm();
+        }}
         footer={
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => setModalOpen(false)}
+              onClick={() => {
+                setModalOpen(false);
+                resetForm();
+              }}
               className="rounded-md border border-slate-300 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50"
             >
               {PLAN_TEXT.modalCancel}
             </button>
             <button
               type="submit"
-              form="new-task-form"
+              form="task-form"
               disabled={saving}
               className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
             >
-              {saving ? PLAN_TEXT.modalSubmitAdding : PLAN_TEXT.modalSubmit}
+              {saving ? PLAN_TEXT.modalSubmitAdding : editingTaskId ? PLAN_TEXT.modalSubmitEdit : PLAN_TEXT.modalSubmit}
             </button>
           </div>
         }
       >
-        <form id="new-task-form" onSubmit={handleAdd} className="space-y-3">
+        <form id="task-form" onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1">
             <label className="text-sm font-medium text-slate-800" htmlFor="new-task-title">
               {PLAN_TEXT.titleLabel}

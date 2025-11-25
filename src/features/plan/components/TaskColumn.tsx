@@ -12,12 +12,19 @@ type Props = {
   showAddButton?: boolean;
   onAddClick?: () => void;
   onStatusChange: (id: string, status: StudyTask["status"]) => void;
+  onEdit?: (task: StudyTask) => void;
 };
 
-/**
- * Droppable column with optional “新規タスク”ボタン.
- */
-export const TaskColumn = ({ id, title, tasks, showAddButton, onAddClick, onStatusChange }: Props) => {
+/** Droppable column with optional add button */
+export const TaskColumn = ({
+  id,
+  title,
+  tasks,
+  showAddButton,
+  onAddClick,
+  onStatusChange,
+  onEdit,
+}: Props) => {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
@@ -44,7 +51,7 @@ export const TaskColumn = ({ id, title, tasks, showAddButton, onAddClick, onStat
       ) : (
         <div className="space-y-2">
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onStatusChange={onStatusChange} />
+            <TaskCard key={task.id} task={task} onStatusChange={onStatusChange} onEdit={onEdit} />
           ))}
         </div>
       )}

@@ -16,6 +16,7 @@ export const PLAN_TEXT = {
   tomorrowBoardEmpty: "明日に移すタスクはありません",
   boardEmptyGeneric: "このボードにはタスクがありません",
   newTaskButton: "新規タスク",
+  editTaskButton: "編集",
 
   // Calendar & history
   calendarTitle: "カレンダー（タスク一覧）",
@@ -36,9 +37,11 @@ export const PLAN_TEXT = {
   dateLabel: "日付",
   timeLabel: "時間（任意）",
   modalTitle: "新規タスク",
+  modalEditTitle: "タスクを編集",
   modalCancel: "キャンセル",
   modalSubmitAdding: "追加中...",
   modalSubmit: "追加する",
+  modalSubmitEdit: "更新する",
 
   // Task meta
   labelStatus: "ステータス",

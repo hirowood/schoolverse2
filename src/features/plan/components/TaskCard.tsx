@@ -8,12 +8,13 @@ import { PLAN_TEXT } from "../constants";
 type Props = {
   task: StudyTask;
   onStatusChange: (id: string, status: StudyTask["status"]) => void;
+  onEdit?: (task: StudyTask) => void;
 };
 
 /**
  * Sortable task card shown in today / tomorrow / history lists.
  */
-export const TaskCard = ({ task, onStatusChange }: Props) => {
+export const TaskCard = ({ task, onStatusChange, onEdit }: Props) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
   });
@@ -37,13 +38,26 @@ export const TaskCard = ({ task, onStatusChange }: Props) => {
       }`}
       {...attributes}
       {...listeners}
+      onDoubleClick={() => onEdit?.(task)}
     >
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-sm font-medium text-slate-900">{task.title}</p>
           {task.description && <p className="text-xs text-slate-700">{task.description}</p>}
         </div>
-        <div className="flex gap-1">
+        <div className="flex items-center gap-1">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(task);
+              }}
+              className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+            >
+              {PLAN_TEXT.editTaskButton}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onStatusChange(task.id, "todo")}
