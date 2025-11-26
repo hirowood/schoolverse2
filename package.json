@@ -21,7 +21,7 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.1",
     "@prisma/adapter-pg": "^7.0.1",
-    "@prisma/client": "^7.0.0",
+    "@prisma/client": "^7.0.1",
     "bcryptjs": "^3.0.3",
     "next": "16.0.3",
     "next-auth": "^4.24.13",
@@ -43,7 +43,7 @@
     "dotenv": "^16.4.5",
     "eslint": "^9",
     "eslint-config-next": "16.0.3",
-    "prisma": "^7.0.0",
+    "prisma": "^7.0.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.13"

@@ -2,14 +2,8 @@ import path from "node:path";
 import { defineConfig } from "prisma/config";
 
 export default defineConfig({
-  schema: path.join(__dirname, "prisma", "schema.prisma"),
-
+  schema: path.join("prisma", "schema.prisma"),
   migrate: {
-    async url() {
-      return process.env.DATABASE_URL ?? "";
-    },
-    async shadowDatabaseUrl() {
-      return process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? "";
-    },
+    url: process.env.DATABASE_URL!,
   },
 });
