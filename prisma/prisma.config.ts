@@ -1,8 +1,10 @@
-import { defineConfig } from "@prisma/config";
+import { defineConfig, env } from "@prisma/config";
 
 export default defineConfig({
+  engine: "classic",
   datasource: {
     provider: "postgresql",
-    url: { fromEnvVar: "DATABASE_URL" },
+    // Prisma 7: datasource url は config 側で解決する
+    url: env("DATABASE_URL"),
   },
 });
