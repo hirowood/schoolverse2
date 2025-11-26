@@ -31,6 +31,8 @@ export const PLAN_TEXT = {
   historyEmpty: "この日のタスクはありません",
   historyPlaceholder: "この日にドラッグしてタスクを追加",
   loading: "読み込み中...",
+  todayProgressLabel: "今日の達成度（子なし親＋子タスク）",
+  progressNoTasks: "対象のタスクがありません",
 
   // Modal form
   titleLabel: "タイトル",

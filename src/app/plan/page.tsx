@@ -138,6 +138,29 @@ export default function Page() {
   }, []);
   const itemsToday = useMemo(() => flattenIds(tasksToday), [flattenIds, tasksToday]);
   const itemsTomorrow = useMemo(() => flattenIds(tasksTomorrow), [flattenIds, tasksTomorrow]);
+  const calculateLeafCompletion = useCallback((tasks: StudyTask[]) => {
+    const tree = buildTaskTree(tasks);
+    // Count only leaves: parents without children + child tasks
+    const walk = (nodes: StudyTask[]): { done: number; total: number } =>
+      nodes.reduce(
+        (acc, node) => {
+          if (node.children?.length) {
+            const child = walk(node.children);
+            return { done: acc.done + child.done, total: acc.total + child.total };
+          }
+          return {
+            done: acc.done + (node.status === "done" ? 1 : 0),
+            total: acc.total + 1,
+          };
+        },
+        { done: 0, total: 0 },
+      );
+
+    const { done, total } = walk(tree);
+    if (total === 0) return null;
+    return { done, total, percent: Math.round((done / total) * 100) };
+  }, []);
+  const todayProgress = useMemo(() => calculateLeafCompletion(tasksToday), [calculateLeafCompletion, tasksToday]);
 
   const fetchDay = useCallback(async (date: string) => {
     const res = await fetch(`/api/tasks?date=${date}`);
@@ -470,6 +493,22 @@ export default function Page() {
         <p className="text-sm text-slate-600">{PLAN_TEXT.pageDescription}</p>
       </header>
 
+      {!loading && (
+        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+          <p className="text-sm font-medium text-slate-900">{PLAN_TEXT.todayProgressLabel}</p>
+          {todayProgress ? (
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-semibold text-emerald-600">{todayProgress.percent}%</span>
+              <span className="text-xs text-slate-500">
+                ({todayProgress.done}/{todayProgress.total})
+              </span>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500">{PLAN_TEXT.progressNoTasks}</p>
+          )}
+        </div>
+      )}
+
       {error && <p className="text-sm text-red-500">{error}</p>}
       {loading ? (
         <p className="text-sm text-slate-500">{PLAN_TEXT.loading}</p>
@@ -486,6 +525,8 @@ export default function Page() {
                 id="today"
                 title={`${PLAN_TEXT.todayBoardTitle} (${today})`}
                 tasks={tasksToday}
+                progress={todayProgress ?? undefined}
+                progressLabel={PLAN_TEXT.todayProgressLabel}
                 showAddButton
                 onAddClick={() => openModalForDate(today)}
                 onStatusChange={handleStatus}
