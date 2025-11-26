@@ -1,12 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 
-// Fallback for dev/CI when DATABASE_URL is not set
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/devdb";
-}
-// Force Prisma to use binary engine (avoid data proxy "client" engine)
-process.env.PRISMA_CLIENT_ENGINE_TYPE = "binary";
-
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 export const prisma =
