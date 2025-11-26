@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Development placeholder so Prisma can run in CI without a real DB
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/devdb
 
     steps:
       - name: Checkout repository
