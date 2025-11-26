@@ -1,17 +1,10 @@
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 generator client {
   provider = "prisma-client-js"
 }
-
-
-
-
-
 
 model User {
   id          String   @id @default(cuid())
@@ -94,11 +87,7 @@ model StudyTask {
   parent   StudyTask? @relation("TaskToSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
   children StudyTask[] @relation("TaskToSubtasks")
 
-  
-
   @@index([userId, dueDate])
   @@index([userId, status, dueDate])
   @@index([parentId])
 }
-
-
