@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function SignInPage() {
+const SignInContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/credo";
@@ -41,7 +41,7 @@ export default function SignInPage() {
         <p className="text-xs font-medium text-slate-500">Access</p>
         <h1 className="text-2xl font-semibold">サインイン</h1>
         <p className="text-sm text-slate-600">
-          デモ用アカウントは「email: demo@example.com / password: demo」です。
+          デモアカウントは「email: demo@example.com / password: demo」です。
         </p>
       </div>
 
@@ -87,7 +87,7 @@ export default function SignInPage() {
             onClick={() => router.push("/")}
             className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
           >
-            戻る
+            もどる
           </button>
           <Link href="/auth/signup" className="text-sm text-slate-700 underline-offset-2 hover:underline">
             新規登録
@@ -102,5 +102,13 @@ export default function SignInPage() {
         </div>
       </form>
     </div>
+  );
+};
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-sm text-slate-600">読み込み中...</div>}>
+      <SignInContent />
+    </Suspense>
   );
 }
