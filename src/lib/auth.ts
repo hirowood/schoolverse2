@@ -7,6 +7,7 @@ const DEMO_USER = {
   id: "demo-user",
   email: "demo@example.com",
   name: "Demo User",
+  password: "demo1234",
 };
 
 export const authOptions: NextAuthOptions = {
@@ -21,12 +22,12 @@ export const authOptions: NextAuthOptions = {
         const email = credentials?.email?.trim().toLowerCase();
         const password = credentials?.password ?? "";
 
-        // デモ用: 固定ユーザー + パスワード "demo" を許可
-        if (email === DEMO_USER.email && password === "demo") {
+        // Demo: predefined user with demo password
+        if (email === DEMO_USER.email && password === DEMO_USER.password) {
           return DEMO_USER;
         }
 
-        // DBのユーザーを検索して認証
+        // Verify against DB users
         if (email) {
           const user = await prisma.user.findUnique({ where: { email } });
           if (user) {
@@ -34,8 +35,8 @@ export const authOptions: NextAuthOptions = {
               const ok = await bcrypt.compare(password, user.passwordHash);
               if (!ok) return null;
             } else {
-              // ハッシュが無い既存ユーザーはデモパスワードで通過させる（旧データ互換）
-              if (password !== "demo") return null;
+              // For seed users without passwordHash, allow demo password
+              if (password !== DEMO_USER.password) return null;
             }
             return {
               id: user.id,
