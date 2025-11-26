@@ -1,15 +1,11 @@
 import { defineConfig } from "@prisma/config";
 import { config as loadEnv } from "dotenv";
 
+// Load local .env if present (ignored in Vercel because Prisma already loads env there)
 loadEnv();
 
-const databaseUrl =
-  process.env.DATABASE_URL ??
-  (process.env.CI ? "postgresql://user:pass@localhost:5432/prisma_placeholder" : undefined);
-
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is required for Prisma");
-}
+// Use a safe placeholder when DATABASE_URL is not provided (e.g. in CI)
+const databaseUrl = process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/prisma_placeholder";
 
 export default defineConfig({
   engine: "classic",
