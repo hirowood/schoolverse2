@@ -7,13 +7,11 @@ if (!process.env.DATABASE_URL) {
 // Force Prisma to use binary engine (avoid data proxy "client" engine)
 process.env.PRISMA_CLIENT_ENGINE_TYPE = "binary";
 
-// PrismaClient はシングルトンで使う（Hot Reload 対応）
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    engineType: "binary",
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });
 
