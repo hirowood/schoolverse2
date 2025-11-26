@@ -3,7 +3,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { StudyTask } from "../types";
-import { TaskCard } from "./TaskCard";
+import { TaskCard, TaskCardReadonly } from "./TaskCard";
 import { PlaceholderCard } from "./PlaceholderCard";
 import { PLAN_TEXT } from "../constants";
 import { buildTaskTree } from "../utils/date";
@@ -62,7 +62,7 @@ export const HistoryPanel = ({
             <p className="text-xs text-slate-500">{PLAN_TEXT.todayEmpty}</p>
           ) : (
             tree.map((task) => (
-              <TaskCard
+              <TaskCardReadonly
                 key={task.id}
                 task={task}
                 onStatusChange={onStatusChange}
@@ -79,7 +79,7 @@ export const HistoryPanel = ({
             <p className="text-xs text-slate-500">{PLAN_TEXT.tomorrowEmpty}</p>
           ) : (
             tree.map((task) => (
-              <TaskCard
+              <TaskCardReadonly
                 key={task.id}
                 task={task}
                 onStatusChange={onStatusChange}

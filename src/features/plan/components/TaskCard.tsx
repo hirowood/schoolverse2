@@ -1,5 +1,6 @@
 "use client";
 
+import type { ComponentProps, CSSProperties } from "react";
 import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
 import { StudyTask } from "../types";
@@ -23,17 +24,23 @@ const findNextChildTask = (children?: StudyTask[]): StudyTask | null => {
   return null;
 };
 
-/**
- * Sortable task card shown in today / tomorrow / history lists.
- */
-export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild }: Props) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: task.id,
-  });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+type CardContentProps = Props & {
+  setNodeRef?: (element: HTMLElement | null) => void;
+  style?: CSSProperties;
+  dragProps?: ComponentProps<"div">;
+  isDragging?: boolean;
+};
+
+const TaskCardContent = ({
+  task,
+  onStatusChange,
+  onEdit,
+  onAddChild,
+  setNodeRef,
+  style,
+  dragProps,
+  isDragging,
+}: CardContentProps) => {
   const statusLabel =
     task.status === "done"
       ? PLAN_TEXT.statusDone
@@ -49,8 +56,7 @@ export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild }: Props) =>
         isDragging ? "shadow-lg shadow-slate-300" : ""
       }`}
       style={style}
-      {...attributes}
-      {...listeners}
+      {...dragProps}
       onDoubleClick={() => onEdit?.(task)}
     >
       <div className="flex items-center justify-between gap-2">
@@ -152,3 +158,39 @@ export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild }: Props) =>
     </div>
   );
 };
+
+/**
+ * Sortable task card shown in today / tomorrow / history lists.
+ */
+export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild }: Props) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <TaskCardContent
+      task={task}
+      onStatusChange={onStatusChange}
+      onEdit={onEdit}
+      onAddChild={onAddChild}
+      setNodeRef={setNodeRef}
+      style={style}
+      dragProps={{ ...attributes, ...listeners }}
+      isDragging={isDragging}
+    />
+  );
+};
+
+/** Read-only card (no drag registration) used for non-movable views/overlays. */
+export const TaskCardReadonly = ({ task, onStatusChange, onEdit, onAddChild }: Props) => (
+  <TaskCardContent
+    task={task}
+    onStatusChange={onStatusChange}
+    onEdit={onEdit}
+    onAddChild={onAddChild}
+  />
+);

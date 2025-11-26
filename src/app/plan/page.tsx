@@ -17,7 +17,7 @@ import { Modal } from "@/components/ui/Modal";
 import { CalendarGrid } from "@/features/plan/components/CalendarGrid";
 import { HistoryPanel } from "@/features/plan/components/HistoryPanel";
 import { TaskColumn } from "@/features/plan/components/TaskColumn";
-import { TaskCard } from "@/features/plan/components/TaskCard";
+import { TaskCard, TaskCardReadonly } from "@/features/plan/components/TaskCard";
 import { PLAN_TEXT } from "@/features/plan/constants";
 import { StudyTask } from "@/features/plan/types";
 import { addDays, formatLocalIsoDate, getToday, parseLocalDate, buildTaskTree } from "@/features/plan/utils/date";
@@ -305,11 +305,11 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: taskId, date: targetDate }),
       });
-      refresh();
-      if (targetDate === historyDate) loadHistory(targetDate);
     } catch (e) {
       console.error(e);
       setError(PLAN_TEXT.dateError);
+      refresh();
+      if (targetDate === historyDate) loadHistory(targetDate);
     }
   };
 
@@ -459,10 +459,7 @@ export default function Page() {
     setListByContainer(target, [...getListByContainer(target), task]);
 
     const targetDate = target === "today" ? today : target === "tomorrow" ? tomorrow : historyDate;
-    await updateTaskDate(String(active.id), targetDate);
-    if (target === "history" || source === "history") {
-      loadHistory(historyDate);
-    }
+    void updateTaskDate(String(active.id), targetDate);
   };
 
   return (
@@ -543,7 +540,9 @@ export default function Page() {
               easing: "cubic-bezier(0.22, 1, 0.36, 1)",
             }}
           >
-            {activeTask ? <TaskCard task={activeTask} onStatusChange={handleStatus} /> : null}
+            {activeTask ? (
+              <TaskCardReadonly task={activeTask} onStatusChange={handleStatus} onEdit={openEditModal} onAddChild={openAddChild} />
+            ) : null}
           </DragOverlay>
         </DndContext>
       )}
