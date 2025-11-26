@@ -1,14 +1,16 @@
 import { PrismaClient } from "@prisma/client";
 
-// PrismaClient をシングルトンで共有（Hot Reload 対応）
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+// Fallback for dev/CI when DATABASE_URL is not set
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/devdb";
+}
 
-const datasourceUrl = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/devdb";
+// PrismaClient はシングルトンで使う（Hot Reload 対応）
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    datasources: { db: { url: datasourceUrl } },
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });
 
