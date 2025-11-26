@@ -9,8 +9,11 @@ export default function HomePage() {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("demo@example.com");
-  const [password, setPassword] = useState("demo");
+  const demoEmail = "demo@example.com";
+  const demoPassword = "demo1234";
+  const [email, setEmail] = useState(demoEmail);
+  const [password, setPassword] = useState(demoPassword);
+  const [showPassword, setShowPassword] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -169,30 +172,44 @@ export default function HomePage() {
             <input
               id="home-email"
               type="email"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-800" htmlFor="home-password">
-              パスワード
-            </label>
-            <input
-              id="home-password"
-              type="password"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              minLength={8}
-              required
-            />
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <p className="text-xs text-slate-500">デモ: email=demo@example.com / password=demo</p>
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          required
+          placeholder={demoEmail}
+        />
+      </div>
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-slate-800" htmlFor="home-password">
+          パスワード
+        </label>
+        <input
+          id="home-password"
+          type={showPassword ? "text" : "password"}
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete={mode === "signin" ? "current-password" : "new-password"}
+          minLength={8}
+          required
+          placeholder={demoPassword}
+        />
+        <div className="flex items-center justify-between text-[11px] text-slate-600">
+          <span>8文字以上のパスワードを入力してください。</span>
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="text-slate-700 underline"
+          >
+            {showPassword ? "隠す" : "表示"}
+          </button>
+        </div>
+      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <p className="text-xs text-slate-500">
+        デモ: email={demoEmail} / password={demoPassword}
+      </p>
         </form>
       </Modal>
     </main>
