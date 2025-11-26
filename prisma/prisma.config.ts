@@ -10,7 +10,6 @@ const databaseUrl = process.env.DATABASE_URL ?? "postgresql://user:pass@localhos
 export default defineConfig({
   engine: "classic",
   datasource: {
-    provider: "postgresql",
     // Load from env; in CI a placeholder is used so prisma generate can run without a real DB
     url: databaseUrl,
   },
