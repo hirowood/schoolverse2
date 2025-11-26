@@ -9,6 +9,7 @@ const fallbackUrl = "postgresql://postgres:postgres@localhost:5432/devdb";
 process.env.DATABASE_URL = process.env.DATABASE_URL ?? fallbackUrl;
 
 export default defineConfig({
+  engine: "binary",
   datasource: {
     // Prisma 7: URL is supplied via prisma.config.ts, not in schema
     url: env("DATABASE_URL"),
