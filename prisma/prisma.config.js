@@ -1,4 +1,5 @@
 // Prisma configuration (JS to avoid TS type noise in CI/Next build)
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { defineConfig, env } = require("@prisma/config");
 const { config: loadEnv } = require("dotenv");
 
