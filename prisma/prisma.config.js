@@ -12,6 +12,7 @@ const fallbackUrl = "postgresql://postgres:postgres@localhost:5432/devdb";
 process.env.DATABASE_URL = process.env.DATABASE_URL ?? fallbackUrl;
 
 module.exports = defineConfig({
+  engine: "binary",
   datasource: {
     url: env("DATABASE_URL"),
   },
