@@ -57,7 +57,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    assertRateLimit(user.id, "/api/tasks:get", 60, 60_000);
+    // GET は一覧取得で呼ばれやすいので上限を緩める
+    assertRateLimit(user.id, "/api/tasks:get", 300, 60_000);
   } catch (e) {
     const err = e as { status?: number };
     return NextResponse.json({ error: "rate_limited" }, { status: err.status ?? 429 });
@@ -83,26 +84,10 @@ export async function GET(request: Request) {
         : {}),
     },
     orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "asc" }],
-    select: {
-      id: true,
-      userId: true,
-      title: true,
-      description: true,
-      dueDate: true,
-      status: true,
-      note: true,
-      parentId: true,
-      // include children for tree rendering
+    include: {
       children: {
-        select: {
-          id: true,
-          userId: true,
-          title: true,
-          description: true,
-          dueDate: true,
-          status: true,
-          note: true,
-          parentId: true,
+        include: {
+          children: true, // 2階層分まで事前に取得（必要に応じて再帰を追加）
         },
       },
     },
@@ -119,7 +104,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    assertRateLimit(user.id, "/api/tasks:post", 20, 60_000);
+    assertRateLimit(user.id, "/api/tasks:post", 60, 60_000);
   } catch (e) {
     const err = e as { status?: number };
     return NextResponse.json({ error: "rate_limited" }, { status: err.status ?? 429 });
@@ -136,7 +121,7 @@ export async function POST(request: Request) {
   // Validate parent ownership
   if (body.parentId) {
     const parent = await prisma.studyTask.findUnique({ where: { id: body.parentId } });
-    if (!parent || parent.userId !== userId) {
+    if (!parent || parent.userId !== userId || parent.parentId) {
       return NextResponse.json({ error: "invalid_parent" }, { status: 400 });
     }
   }
@@ -164,7 +149,7 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    assertRateLimit(user.id, "/api/tasks:patch", 30, 60_000);
+    assertRateLimit(user.id, "/api/tasks:patch", 120, 60_000);
   } catch (e) {
     const err = e as { status?: number };
     return NextResponse.json({ error: "rate_limited" }, { status: err.status ?? 429 });
@@ -193,7 +178,7 @@ export async function PATCH(request: Request) {
 
   if (body.parentId) {
     const parent = await prisma.studyTask.findUnique({ where: { id: body.parentId } });
-    if (!parent || parent.userId !== userIdForPatch) {
+    if (!parent || parent.userId !== userIdForPatch || parent.parentId) {
       return NextResponse.json({ error: "invalid_parent" }, { status: 400 });
     }
   }
@@ -251,7 +236,7 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    assertRateLimit(user.id, "/api/tasks:delete", 20, 60_000);
+    assertRateLimit(user.id, "/api/tasks:delete", 60, 60_000);
   } catch (e) {
     const err = e as { status?: number };
     return NextResponse.json({ error: "rate_limited" }, { status: err.status ?? 429 });

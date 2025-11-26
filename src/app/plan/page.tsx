@@ -11,7 +11,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, arrayMove, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Modal } from "@/components/ui/Modal";
 import { CalendarGrid } from "@/features/plan/components/CalendarGrid";
 import { HistoryPanel } from "@/features/plan/components/HistoryPanel";
@@ -20,6 +21,71 @@ import { TaskCard } from "@/features/plan/components/TaskCard";
 import { PLAN_TEXT } from "@/features/plan/constants";
 import { StudyTask } from "@/features/plan/types";
 import { addDays, formatLocalIsoDate, getToday, parseLocalDate, buildTaskTree } from "@/features/plan/utils/date";
+
+const createChildDraft = (date: string) => ({ title: "", description: "", date, time: "" });
+
+type ChildCardProps = {
+  child: StudyTask;
+  onEdit: (task: StudyTask) => void;
+};
+
+const ChildSortableCard = ({ child, onEdit }: ChildCardProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: child.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex flex-col rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 ${
+        isDragging ? "shadow-lg shadow-slate-200" : ""
+      }`}
+      role="button"
+      tabIndex={0}
+      onDoubleClick={() => onEdit(child)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") onEdit(child);
+      }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="cursor-grab rounded border border-slate-300 px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100"
+            aria-label="drag"
+            {...attributes}
+            {...listeners}
+          >
+            Drag
+          </button>
+          <div>
+            <span className="font-medium text-slate-900">{child.title}</span>
+            {child.description && <p className="text-[11px] text-slate-700">{child.description}</p>}
+          </div>
+        </div>
+        <span className="text-[11px] text-slate-500">{child.status}</span>
+      </div>
+      <span className="text-[11px] text-slate-500">
+        {PLAN_TEXT.labelSchedule}: {child.dueDate ? `${child.dueDate.slice(0, 10)} ${child.dueDate.slice(11, 16)}` : PLAN_TEXT.notSet}
+      </span>
+      {child.children?.length ? (
+        <div className="mt-1 space-y-1 border-l border-dashed border-slate-300 pl-2">
+          {child.children.map((gc) => (
+            <div key={gc.id} className="flex items-center justify-between">
+              <span className="truncate text-[11px]">{gc.title}</span>
+              <span className="text-[11px] text-slate-500">{gc.status}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+};
 
 /** Study plan page: manage today/tomorrow and calendar with drag & drop */
 export default function Page() {
@@ -47,10 +113,9 @@ export default function Page() {
   const [parentId, setParentId] = useState<string | null>(null);
   const [editingChildren, setEditingChildren] = useState<StudyTask[]>([]);
   const [showChildForm, setShowChildForm] = useState(false);
-  const [newChildTitle, setNewChildTitle] = useState("");
-  const [newChildDescription, setNewChildDescription] = useState("");
-  const [newChildDate, setNewChildDate] = useState(today);
-  const [newChildTime, setNewChildTime] = useState("");
+  const [childDrafts, setChildDrafts] = useState<
+    { title: string; description: string; date: string; time: string }[]
+  >(() => [createChildDraft(getToday())]);
   const [childSaving, setChildSaving] = useState(false);
 
   const historyColumnId = `history-${historyDate}`;
@@ -60,6 +125,9 @@ export default function Page() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+  const childSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
   const [activeTask, setActiveTask] = useState<StudyTask | null>(null);
   const flattenIds = useCallback((list: StudyTask[]) => {
@@ -143,10 +211,7 @@ export default function Page() {
     setParentId(null);
     setEditingChildren([]);
     setShowChildForm(false);
-    setNewChildTitle("");
-    setNewChildDescription("");
-    setNewChildDate(today);
-    setNewChildTime("");
+    setChildDrafts([createChildDraft(today)]);
     setChildSaving(false);
   };
 
@@ -264,46 +329,49 @@ export default function Page() {
     setParentId(task.parentId ?? null);
     setEditingChildren(task.children ?? []);
     setShowChildForm(false);
-    setNewChildTitle("");
-    setNewChildDescription("");
-    setNewChildDate(dueDate ? dueDate.slice(0, 10) : today);
-    setNewChildTime(dueDate ? dueDate.slice(11, 16) : "");
+    setChildDrafts([createChildDraft(dueDate ? dueDate.slice(0, 10) : today)]);
     setModalOpen(true);
   };
 
   const openAddChild = (task: StudyTask) => {
+    if (task.parentId) return;
     resetForm();
-    setParentId(task.id);
+    // 子タスク追加は「兄弟」も想定し、親がいれば親IDを再利用する
+    setParentId(task.parentId ?? task.id);
     const dueDate = task.dueDate ?? "";
     setNewDate(dueDate ? dueDate.slice(0, 10) : today);
     setNewTime(dueDate ? dueDate.slice(11, 16) : "");
-    setNewChildDate(dueDate ? dueDate.slice(0, 10) : today);
-    setNewChildTime(dueDate ? dueDate.slice(11, 16) : "");
+    setChildDrafts([createChildDraft(dueDate ? dueDate.slice(0, 10) : today)]);
     setModalOpen(true);
   };
 
   const handleAddChildInline = async () => {
     if (!editingTaskId) return;
-    const title = newChildTitle.trim();
-    if (!title) return;
+    const drafts = childDrafts
+      .map((draft) => ({ ...draft, title: draft.title.trim() }))
+      .filter((draft) => draft.title);
+    if (drafts.length === 0) return;
     setChildSaving(true);
     try {
-      const res = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          description: newChildDescription,
-          date: newChildDate || today,
-          time: newChildTime || null,
-          parentId: editingTaskId,
-        }),
-      });
-      if (!res.ok) throw new Error(`child failed ${res.status}`);
-      const { task } = (await res.json()) as { task: StudyTask };
-      setEditingChildren((prev) => [...prev, task]);
-      setNewChildTitle("");
-      setNewChildDescription("");
+      const created: StudyTask[] = [];
+      for (const draft of drafts) {
+        const res = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: draft.title,
+            description: draft.description,
+            date: draft.date || today,
+            time: draft.time || null,
+            parentId: editingTaskId,
+          }),
+        });
+        if (!res.ok) throw new Error(`child failed ${res.status}`);
+        const { task } = (await res.json()) as { task: StudyTask };
+        created.push(task);
+      }
+      setEditingChildren((prev) => [...prev, ...created]);
+      setChildDrafts([createChildDraft(newDate || today)]);
       refresh();
       loadHistory(newDate || today);
     } catch (err) {
@@ -312,6 +380,17 @@ export default function Page() {
     } finally {
       setChildSaving(false);
     }
+  };
+
+  const handleChildDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setEditingChildren((prev) => {
+      const oldIndex = prev.findIndex((c) => c.id === active.id);
+      const newIndex = prev.findIndex((c) => c.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
   };
 
   const goMonth = (delta: number) => {
@@ -569,102 +648,142 @@ export default function Page() {
               {PLAN_TEXT.modalParentLabel}: {parentId}
             </p>
           )}
-          {editingChildren.length > 0 && (
-            <div className="space-y-1 rounded-md border border-slate-200 bg-slate-50 p-2">
-              <p className="text-xs font-medium text-slate-700">{PLAN_TEXT.addChildButton}</p>
-              <ul className="space-y-1 text-xs text-slate-600">
-                {editingChildren.map((c) => (
-                  <li key={c.id} className="flex items-center justify-between gap-2">
-                    <span className="truncate">{c.title}</span>
-                    <span className="text-[11px] text-slate-500">{c.status}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </form>
-        {editingTaskId && (
-          <div className="mt-4 space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-800">{PLAN_TEXT.modalChildSection}</p>
-              <button
+          {editingTaskId && !parentId && (
+            <div className="mt-4 space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-800">{PLAN_TEXT.modalChildSection}</p>
+                <button
                 type="button"
                 onClick={() => setShowChildForm((prev) => !prev)}
                 className="text-xs text-slate-700 underline"
               >
                 {showChildForm ? PLAN_TEXT.modalChildToggleHide : PLAN_TEXT.modalChildToggleShow}
               </button>
-            </div>
+              </div>
             {editingChildren.length > 0 && (
-              <ul className="space-y-1 text-xs text-slate-600">
-                {editingChildren.map((c) => (
-                  <li key={c.id} className="flex items-center justify-between">
-                    <span className="truncate">{c.title}</span>
-                    <span className="text-[11px] text-slate-500">{c.status}</span>
-                  </li>
-                ))}
-              </ul>
+              <DndContext sensors={childSensors} onDragEnd={handleChildDragEnd}>
+                <SortableContext
+                  items={editingChildren.map((c) => c.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {editingChildren.map((c) => (
+                      <ChildSortableCard key={c.id} child={c} onEdit={openEditModal} />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             )}
             {showChildForm && (
               <div className="space-y-2 rounded-md border border-dashed border-slate-300 bg-white p-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-700" htmlFor="child-title">
-                    {PLAN_TEXT.titleLabel}
-                  </label>
-                  <input
-                    id="child-title"
-                    type="text"
-                    className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
-                    value={newChildTitle}
-                    onChange={(e) => setNewChildTitle(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-700" htmlFor="child-desc">
-                    {PLAN_TEXT.descLabel}
-                  </label>
-                  <input
-                    id="child-desc"
-                    type="text"
-                    className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
-                    value={newChildDescription}
-                    onChange={(e) => setNewChildDescription(e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700" htmlFor="child-date">
-                      {PLAN_TEXT.dateLabel}
-                    </label>
-                    <input
-                      id="child-date"
-                      type="date"
-                      className="rounded-md border border-slate-300 px-2 py-1 text-xs"
-                      value={newChildDate}
-                      onChange={(e) => setNewChildDate(e.target.value)}
-                    />
+                {childDrafts.map((draft, index) => (
+                  <div key={index} className="space-y-2 rounded-md border border-slate-200 p-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-slate-800">
+                        {PLAN_TEXT.titleLabel} #{index + 1}
+                      </p>
+                      {childDrafts.length > 1 && (
+                        <button
+                          type="button"
+                          className="text-[11px] text-slate-600 underline"
+                          onClick={() =>
+                            setChildDrafts((prev) =>
+                              prev.length === 1 ? prev : prev.filter((_, i) => i !== index),
+                            )
+                          }
+                        >
+                          {PLAN_TEXT.modalCancel}
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-700" htmlFor={`child-title-${index}`}>
+                        {PLAN_TEXT.titleLabel}
+                      </label>
+                      <input
+                        id={`child-title-${index}`}
+                        type="text"
+                        className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+                        value={draft.title}
+                        onChange={(e) =>
+                          setChildDrafts((prev) =>
+                            prev.map((d, i) => (i === index ? { ...d, title: e.target.value } : d)),
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-700" htmlFor={`child-desc-${index}`}>
+                        {PLAN_TEXT.descLabel}
+                      </label>
+                      <input
+                        id={`child-desc-${index}`}
+                        type="text"
+                        className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+                        value={draft.description}
+                        onChange={(e) =>
+                          setChildDrafts((prev) =>
+                            prev.map((d, i) => (i === index ? { ...d, description: e.target.value } : d)),
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-700" htmlFor={`child-date-${index}`}>
+                          {PLAN_TEXT.dateLabel}
+                        </label>
+                        <input
+                          id={`child-date-${index}`}
+                          type="date"
+                          className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                          value={draft.date}
+                          onChange={(e) =>
+                            setChildDrafts((prev) =>
+                              prev.map((d, i) => (i === index ? { ...d, date: e.target.value } : d)),
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-700" htmlFor={`child-time-${index}`}>
+                          {PLAN_TEXT.timeLabel}
+                        </label>
+                        <input
+                          id={`child-time-${index}`}
+                          type="time"
+                          className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                          value={draft.time}
+                          onChange={(e) =>
+                            setChildDrafts((prev) =>
+                              prev.map((d, i) => (i === index ? { ...d, time: e.target.value } : d)),
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700" htmlFor="child-time">
-                      {PLAN_TEXT.timeLabel}
-                    </label>
-                    <input
-                      id="child-time"
-                      type="time"
-                      className="rounded-md border border-slate-300 px-2 py-1 text-xs"
-                      value={newChildTime}
-                      onChange={(e) => setNewChildTime(e.target.value)}
-                    />
-                  </div>
+                ))}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setChildDrafts((prev) => [...prev, createChildDraft(newDate || today)])
+                    }
+                    className="rounded-md border border-slate-300 px-3 py-1 text-[11px] text-slate-700 hover:bg-slate-100"
+                  >
+                    {PLAN_TEXT.addChildButton}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddChildInline}
+                    disabled={childSaving || !childDrafts.some((d) => d.title.trim())}
+                    className="flex-1 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                  >
+                    {childSaving ? PLAN_TEXT.modalSubmitAdding : PLAN_TEXT.modalChildSubmit}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddChildInline}
-                  disabled={childSaving || !newChildTitle.trim()}
-                  className="w-full rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-                >
-                  {childSaving ? PLAN_TEXT.modalSubmitAdding : PLAN_TEXT.modalChildSubmit}
-                </button>
               </div>
             )}
           </div>
