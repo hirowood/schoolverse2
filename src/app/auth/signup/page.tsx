@@ -22,8 +22,8 @@ export default function SignUpPage() {
       setError("パスワードが一致しません。");
       return;
     }
-    if (password.length < 8) {
-      setError("パスワードは8文字以上にしてください。");
+    if (password.length < 4) {
+      setError("パスワードは4文字以上にしてください。");
       return;
     }
     setLoading(true);
@@ -110,7 +110,7 @@ export default function SignUpPage() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="new-password"
               required
-              minLength={8}
+              minLength={4}
             />
           </div>
           <div className="space-y-2">
@@ -125,7 +125,7 @@ export default function SignUpPage() {
               onChange={(e) => setConfirm(e.target.value)}
               autoComplete="new-password"
               required
-              minLength={8}
+              minLength={4}
             />
           </div>
         </div>
