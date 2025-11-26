@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
   email: z.string().email(),
-  password: z.string().min(4),
+  password: z.string().min(8),
   name: z.string().min(1).max(50).optional(),
 });
 

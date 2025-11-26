@@ -10,6 +10,8 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -22,8 +24,8 @@ export default function SignUpPage() {
       setError("パスワードが一致しません。");
       return;
     }
-    if (password.length < 4) {
-      setError("パスワードは4文字以上にしてください。");
+    if (password.length < 8) {
+      setError("パスワードは8文字以上にしてください。");
       return;
     }
     setLoading(true);
@@ -36,7 +38,7 @@ export default function SignUpPage() {
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         if (data.error === "already_exists") {
-          setError("このメールアドレスはすでに登録されています。");
+          setError("このメールアドレスは既に登録されています。");
         } else if (data.error === "invalid_input") {
           setError("入力内容を確認してください。");
         } else {
@@ -57,10 +59,12 @@ export default function SignUpPage() {
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-4">
       <div className="space-y-1">
-        <p className="text-xs font-medium text-slate-500">Create account</p>
-        <h1 className="text-2xl font-semibold">サインアップ</h1>
-        <p className="text-sm text-slate-600">
-          メールとパスワードを登録すると、自分のクレド記録を保存できます。
+        <p className="text-xs font-medium text-slate-600">Create account</p>
+        <h1 className="text-2xl font-semibold text-slate-900">サインアップ</h1>
+        <p className="text-sm text-slate-700">
+          メールとパスワードを登録すると、学習プランなどが保存できます。デモ用: email{" "}
+          <span className="font-semibold text-slate-900">demo@example.com</span> / password{" "}
+          <span className="font-semibold text-slate-900">demo1234</span>（8文字）
         </p>
       </div>
 
@@ -70,12 +74,12 @@ export default function SignUpPage() {
       >
         <div className="space-y-2">
           <label htmlFor="name" className="text-sm font-medium text-slate-800">
-            名前（省略可）
+            名前（任意）
           </label>
           <input
             id="name"
             type="text"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-slate-500"
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="山田 太郎"
@@ -89,11 +93,12 @@ export default function SignUpPage() {
           <input
             id="email"
             type="email"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-slate-500"
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
             required
+            placeholder="demo@example.com"
           />
         </div>
 
@@ -104,14 +109,25 @@ export default function SignUpPage() {
             </label>
             <input
               id="password"
-              type="password"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-slate-500"
+              type={showPassword ? "text" : "password"}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="new-password"
               required
-              minLength={4}
+              minLength={8}
+              placeholder="8文字以上（例: demo1234）"
             />
+            <div className="flex items-center justify-between text-[11px] text-slate-600">
+              <span>英数字を組み合わせてください。</span>
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="text-slate-700 underline"
+              >
+                {showPassword ? "隠す" : "表示"}
+              </button>
+            </div>
           </div>
           <div className="space-y-2">
             <label htmlFor="confirm" className="text-sm font-medium text-slate-800">
@@ -119,14 +135,24 @@ export default function SignUpPage() {
             </label>
             <input
               id="confirm"
-              type="password"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-slate-500"
+              type={showConfirm ? "text" : "password"}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               autoComplete="new-password"
               required
-              minLength={4}
+              minLength={8}
+              placeholder="同じパスワードを再入力"
             />
+            <div className="flex items-center justify-end text-[11px] text-slate-600">
+              <button
+                type="button"
+                onClick={() => setShowConfirm((prev) => !prev)}
+                className="text-slate-700 underline"
+              >
+                {showConfirm ? "隠す" : "表示"}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -134,10 +160,7 @@ export default function SignUpPage() {
         {done && <p className="text-sm text-emerald-600">登録が完了しました。サインインできます。</p>}
 
         <div className="flex items-center justify-between gap-2">
-          <Link
-            href="/auth/signin"
-            className="text-sm text-slate-700 underline-offset-2 hover:underline"
-          >
+          <Link href="/auth/signin" className="text-sm text-slate-700 underline-offset-2 hover:underline">
             サインインへ戻る
           </Link>
           <button

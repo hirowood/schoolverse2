@@ -5,13 +5,17 @@ import { FormEvent, Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+const DEMO_EMAIL = "demo@example.com";
+const DEMO_PASSWORD = "demo1234";
+
 const SignInContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/credo";
 
-  const [email, setEmail] = useState("demo@example.com");
-  const [password, setPassword] = useState("demo");
+  const [email, setEmail] = useState(DEMO_EMAIL);
+  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -38,10 +42,11 @@ const SignInContent = () => {
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-4">
       <div className="space-y-1">
-        <p className="text-xs font-medium text-slate-500">Access</p>
-        <h1 className="text-2xl font-semibold">サインイン</h1>
-        <p className="text-sm text-slate-600">
-          デモアカウントは「email: demo@example.com / password: demo」です。
+        <p className="text-xs font-medium text-slate-600">Access</p>
+        <h1 className="text-2xl font-semibold text-slate-900">サインイン</h1>
+        <p className="text-sm text-slate-700">
+          デモアカウント: <span className="font-semibold text-slate-900">{DEMO_EMAIL}</span> /{" "}
+          <span className="font-semibold text-slate-900">{DEMO_PASSWORD}</span>
         </p>
       </div>
 
@@ -56,11 +61,12 @@ const SignInContent = () => {
           <input
             id="email"
             type="email"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-slate-500"
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
             required
+            placeholder={DEMO_EMAIL}
           />
         </div>
 
@@ -70,13 +76,24 @@ const SignInContent = () => {
           </label>
           <input
             id="password"
-            type="password"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-slate-500"
+            type={showPassword ? "text" : "password"}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
             required
+            placeholder={DEMO_PASSWORD}
           />
+          <div className="flex items-center justify-between text-[11px] text-slate-600">
+            <span>8文字以上のパスワードを入力してください。</span>
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="text-slate-700 underline"
+            >
+              {showPassword ? "隠す" : "表示"}
+            </button>
+          </div>
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
