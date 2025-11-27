@@ -118,10 +118,10 @@ export async function POST(request: Request) {
   }
   const dueDate = parseDateTime(body.date, body.time);
 
-  // Validate parent ownership
+  // Validate parent ownership (allow nesting)
   if (body.parentId) {
     const parent = await prisma.studyTask.findUnique({ where: { id: body.parentId } });
-    if (!parent || parent.userId !== userId || parent.parentId) {
+    if (!parent || parent.userId !== userId) {
       return NextResponse.json({ error: "invalid_parent" }, { status: 400 });
     }
   }
@@ -178,7 +178,7 @@ export async function PATCH(request: Request) {
 
   if (body.parentId) {
     const parent = await prisma.studyTask.findUnique({ where: { id: body.parentId } });
-    if (!parent || parent.userId !== userIdForPatch || parent.parentId) {
+    if (!parent || parent.userId !== userIdForPatch) {
       return NextResponse.json({ error: "invalid_parent" }, { status: 400 });
     }
   }
@@ -194,7 +194,7 @@ export async function PATCH(request: Request) {
   }
 
   // 作業時間計測ロジック
-  let additionalData: {
+  const additionalData: {
     totalWorkTime?: number;
     lastStartedAt?: Date | null;
   } = {};

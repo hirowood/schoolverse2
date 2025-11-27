@@ -365,8 +365,7 @@ export default function DashboardPage() {
     setDetailLoading(true);
     setDetailError(null);
     try {
-      // API制約で子タスクの親はトップレベルのみ許可
-      const parentId = todayTopParent?.id ?? todayTopTask.id;
+      const parentId = todayTopTask.id;
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -391,7 +390,7 @@ export default function DashboardPage() {
     } finally {
       setDetailLoading(false);
     }
-  }, [detailDesc, detailTitle, refreshTasks, today, todayTopParent?.id, todayTopTask]);
+  }, [detailDesc, detailTitle, refreshTasks, today, todayTopTask]);
 
   const todayStats = useMemo(() => {
     const inProgress = rootTasks.filter((t) => t.status === "in_progress").length;
@@ -597,9 +596,7 @@ export default function DashboardPage() {
                       )}
                       <TaskActions task={todayTopTask} onChange={handleStatusChange} disabled={statusUpdating !== null} />
                       <div className="rounded-md border border-dashed border-slate-300 bg-white px-3 py-2">
-                        <p className="text-[11px] font-semibold text-slate-800">
-                          タスクの具体化（子Todo追加）※子はトップレベル親に紐づきます
-                        </p>
+                        <p className="text-[11px] font-semibold text-slate-800">タスクの具体化（子Todo追加）</p>
                         <div className="mt-1 grid gap-2 sm:grid-cols-2">
                           <input
                             type="text"
