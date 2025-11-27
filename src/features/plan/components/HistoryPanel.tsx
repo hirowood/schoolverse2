@@ -36,6 +36,7 @@ export const HistoryPanel = ({
   onStatusChange,
   onEdit,
   onAddChild,
+  onDetail,
 }: Props) => {
   const { setNodeRef, isOver } = useDroppable({ id: droppableId });
   const tree = buildTaskTree(tasks);
