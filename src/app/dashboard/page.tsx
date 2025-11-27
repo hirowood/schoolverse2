@@ -163,6 +163,12 @@ export default function DashboardPage() {
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editTarget, setEditTarget] = useState<StudyTask | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -399,6 +405,75 @@ export default function DashboardPage() {
       setDetailLoading(false);
     }
   }, [detailDesc, detailTitle, refreshTasks, today, todayTopTask]);
+
+  const openEditModal = useCallback((task: StudyTask) => {
+    setEditTarget(task);
+    setEditTitle(task.title);
+    setEditDesc(task.description ?? "");
+    setEditModalOpen(true);
+  }, []);
+
+  const handleUpdateChild = useCallback(async () => {
+    if (!editTarget) return;
+    const title = editTitle.trim();
+    const description = editDesc.trim();
+    if (!title) {
+      setDetailError("タイトルを入力してください");
+      return;
+    }
+    setEditLoading(true);
+    setDetailError(null);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editTarget.id,
+          title,
+          description: description || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setDetailError(data.error || "更新に失敗しました");
+        return;
+      }
+      setEditModalOpen(false);
+      setEditTarget(null);
+      await refreshTasks({ silent: true });
+    } catch (e) {
+      console.error(e);
+      setDetailError("更新に失敗しました。ネットワークをご確認ください。");
+    } finally {
+      setEditLoading(false);
+    }
+  }, [editDesc, editTarget, editTitle, refreshTasks]);
+
+  const handleDeleteChild = useCallback(
+    async (id: string) => {
+      setDeleteLoadingId(id);
+      setDetailError(null);
+      try {
+        const res = await fetch("/api/tasks", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+        if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as { error?: string };
+          setDetailError(data.error || "削除に失敗しました");
+          return;
+        }
+        await refreshTasks({ silent: true });
+      } catch (e) {
+        console.error(e);
+        setDetailError("削除に失敗しました。ネットワークをご確認ください。");
+      } finally {
+        setDeleteLoadingId(null);
+      }
+    },
+    [refreshTasks],
+  );
 
   const todayStats = useMemo(() => {
     const inProgress = rootTasks.filter((t) => t.status === "in_progress").length;
@@ -654,7 +729,11 @@ export default function DashboardPage() {
                         <div key={child.id} className="rounded-md border border-slate-200 bg-slate-50 p-3">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-sm font-semibold text-slate-900">{child.title}</p>
+                              <p
+                                className={`text-sm font-semibold ${child.status === "done" ? "text-slate-500 line-through" : "text-slate-900"}`}
+                              >
+                                {child.title}
+                              </p>
                               <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white">
                                 {statusLabel[child.status]}
                               </span>
@@ -664,12 +743,30 @@ export default function DashboardPage() {
                                 </span>
                               )}
                             </div>
-                            {statusUpdating === child.id && (
-                              <span className="text-[10px] text-slate-500">更新中...</span>
-                            )}
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openEditModal(child)}
+                                className="rounded-md border border-slate-300 px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100"
+                              >
+                                編集
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteChild(child.id)}
+                                disabled={deleteLoadingId === child.id}
+                                className="rounded-md border border-red-300 px-2 py-1 text-[11px] text-red-700 hover:bg-red-50 disabled:opacity-60"
+                              >
+                                {deleteLoadingId === child.id ? "削除中" : "削除"}
+                              </button>
+                            </div>
                           </div>
                           {child.description && (
-                            <p className="mt-1 text-xs text-slate-700">{child.description}</p>
+                            <p
+                              className={`mt-1 text-xs ${child.status === "done" ? "text-slate-500 line-through" : "text-slate-700"}`}
+                            >
+                              {child.description}
+                            </p>
                           )}
                           <div className="mt-2">
                             <TaskActions task={child} onChange={handleStatusChange} disabled={statusUpdating !== null} />
@@ -749,6 +846,67 @@ export default function DashboardPage() {
                 {todayTopParent && todayTopParent.id !== todayTopTask.id ? `（親: ${todayTopParent.title}）` : ""}
               </p>
             )}
+            {detailError && <p className="text-xs text-red-500">{detailError}</p>}
+          </div>
+        </Modal>
+
+        <Modal
+          open={editModalOpen}
+          title="子Todoを編集"
+          onClose={() => {
+            setEditModalOpen(false);
+            setDetailError(null);
+          }}
+          footer={
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setDetailError(null);
+                }}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateChild}
+                disabled={editLoading || !editTarget}
+                className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+              >
+                {editLoading ? "更新中..." : "更新"}
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-800" htmlFor="edit-title">
+                タイトル
+              </label>
+              <input
+                id="edit-title"
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                placeholder="子タスクのタイトル"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-800" htmlFor="edit-desc">
+                メモ（任意）
+              </label>
+              <textarea
+                id="edit-desc"
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                rows={3}
+                placeholder="補足メモがあれば入力"
+              />
+            </div>
             {detailError && <p className="text-xs text-red-500">{detailError}</p>}
           </div>
         </Modal>
