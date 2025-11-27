@@ -13,6 +13,11 @@ export const MAIN_NAV_ITEMS: NavItem[] = [
     description: "AIコーチとの対話・相談の入口",
   },
   {
+    label: "ダッシュボード",
+    href: "/dashboard",
+    description: "今日のプラン・目標・体調・連絡のまとめ",
+  },
+  {
     label: "学習プラン",
     href: "/plan",
     description: "週次・日次の学習プランを管理",
