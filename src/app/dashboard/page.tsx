@@ -361,8 +361,8 @@ export default function DashboardPage() {
     const parent = todayTopParent ?? todayTopTask;
     return parent?.children ?? [];
   }, [todayTopParent, todayTopTask]);
+  const planTodoList = useMemo(() => sortedRootTasks.filter((t) => t.status !== "done"), [sortedRootTasks]);
   const autoCompleteRef = useRef<string | null>(null);
-  const targetParent = todayTopParent ?? todayTopTask;
 
   const findTaskAndParent = useCallback(
     (id: string): { task: StudyTask | null; parent: StudyTask | null } => {
@@ -389,10 +389,7 @@ export default function DashboardPage() {
 
 
   const handleAddDetail = useCallback(async () => {
-    if (!targetParent) {
-      setDetailError("追加先のタスクがありません");
-      return;
-    }
+    // ルートレベルの今日のTodoとして追加する
     const title = detailTitle.trim();
     const description = detailDesc.trim();
     if (!title) {
@@ -402,7 +399,6 @@ export default function DashboardPage() {
     setDetailLoading(true);
     setDetailError(null);
     try {
-      const parentId = targetParent.id;
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -410,7 +406,7 @@ export default function DashboardPage() {
           title,
           description: description || null,
           date: today,
-          parentId,
+          parentId: null,
         }),
       });
       if (!res.ok) {
@@ -428,7 +424,7 @@ export default function DashboardPage() {
     } finally {
       setDetailLoading(false);
     }
-  }, [detailDesc, detailTitle, refreshTasks, targetParent, today]);
+  }, [detailDesc, detailTitle, refreshTasks, today]);
 
   const openEditModal = useCallback((task: StudyTask) => {
     setEditTarget(task);
@@ -780,11 +776,11 @@ export default function DashboardPage() {
                     <p className="text-xs font-medium text-slate-500">今日の学習プランのTodo</p>
                     {statusUpdating && <span className="text-[11px] text-slate-500">更新中...</span>}
                   </div>
-                  {currentTodoList.length === 0 ? (
-                    <p className="text-sm text-slate-600">まだ子タスクはありません</p>
+                  {planTodoList.length === 0 ? (
+                    <p className="text-sm text-slate-600">まだTodoはありません</p>
                   ) : (
                     <div className="space-y-2">
-                      {currentTodoList.map((child) => (
+                      {planTodoList.map((child) => (
                         <div key={child.id} className="rounded-md border border-slate-200 bg-slate-50 p-3">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex flex-wrap items-center gap-2">
@@ -899,12 +895,7 @@ export default function DashboardPage() {
                 placeholder="補足メモがあれば入力"
               />
             </div>
-            {targetParent && (
-              <p className="text-xs text-slate-500">
-                追加先: {targetParent.title}
-                {todayTopParent && todayTopParent.id !== targetParent.id ? `（親: ${todayTopParent.title}）` : ""}
-              </p>
-            )}
+            <p className="text-xs text-slate-500">追加先: 今日の学習プラン（トップレベル）</p>
             {detailError && <p className="text-xs text-red-500">{detailError}</p>}
           </div>
         </Modal>
