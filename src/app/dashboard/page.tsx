@@ -386,7 +386,6 @@ export default function DashboardPage() {
     if (!parent?.children?.length) return null;
     return parent.children.find((c) => c.status !== "done") ?? null;
   }, []);
-  const targetParent = todayTopParent ?? todayTopTask;
 
 
   const handleAddDetail = useCallback(async () => {
