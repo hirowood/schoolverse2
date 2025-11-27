@@ -77,6 +77,17 @@ const startOfWeekIso = (iso: string) => {
   return formatLocalIsoDate(d);
 };
 
+const TASK_FETCH_ERROR_MESSAGE = "�w�K�v�����̎擾�Ɏ��s���܂���";
+
+const fetchTasksList = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`task fetch failed ${url} ${res.status}`);
+  }
+  const data = (await res.json()) as { tasks: StudyTask[] };
+  return data.tasks;
+};
+
 const Bar = ({
   label,
   value,
@@ -201,27 +212,23 @@ export default function DashboardPage() {
     [healthCredoIds],
   );
 
-  const refreshTasks = useCallback(async (opts?: { silent?: boolean }) => {
-    const silent = opts?.silent ?? false;
-    try {
-      if (!silent) setTasksLoading(true);
-      const [todayRes, allRes] = await Promise.all([
-        fetch(`/api/tasks?date=${today}`),
-        fetch("/api/tasks"),
-      ]);
-      if (!todayRes.ok) throw new Error(`today failed ${todayRes.status}`);
-      if (!allRes.ok) throw new Error(`all failed ${allRes.status}`);
-      const todayData = (await todayRes.json()) as { tasks: StudyTask[] };
-      const allData = (await allRes.json()) as { tasks: StudyTask[] };
-      setTasksToday(todayData.tasks);
-      setAllTaskRows(allData.tasks);
-      setTaskError(null);
-    } catch (e) {
-      console.error(e);
-      setTaskError("学習プランの取得に失敗しました");
-    } finally {
-      if (!silent) setTasksLoading(false);
-    }
+  const refreshTasks = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent ?? false;
+    try {
+      if (!silent) setTasksLoading(true);
+      const [todayTasks, allTasksResult] = await Promise.all([
+        fetchTasksList(`/api/tasks?date=${today}`),
+        fetchTasksList("/api/tasks"),
+      ]);
+      setTasksToday(todayTasks);
+      setAllTaskRows(allTasksResult);
+      setTaskError(null);
+    } catch (e) {
+      console.error(e);
+      setTaskError(TASK_FETCH_ERROR_MESSAGE);
+    } finally {
+      if (!silent) setTasksLoading(false);
+    }
   }, [today]);
 
   useEffect(() => {

@@ -46,7 +46,7 @@ export function PlanCard({ plan }: PlanCardProps) {
                   {i + 1}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 break-words">
+                  <p className="text-sm font-medium text-slate-900 wrap-break-word">
                     {task.title}
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">

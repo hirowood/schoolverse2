@@ -77,6 +77,23 @@ const buildDoneMap = (values: Record<CredoId, CredoPracticeFormValue>) => {
   return map;
 };
 
+type FetchResult<T> = {
+  unauthorized: boolean;
+  data?: T;
+};
+
+const fetchJsonWithAuth = async <T,>(url: string): Promise<FetchResult<T>> => {
+  const res = await fetch(url);
+  if (res.status === 401) {
+    return { unauthorized: true };
+  }
+  if (!res.ok) {
+    throw new Error(`fetch failed (${res.status})`);
+  }
+  const data = (await res.json()) as T;
+  return { unauthorized: false, data };
+};
+
 // 週次サマリーの並び替えに使用するアイテム
 const SortableSummaryItem = ({
   item,
@@ -146,13 +163,13 @@ export default function Page() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/credo/practices?date=${date}`);
-        if (res.status === 401) {
+        const { unauthorized, data } = await fetchJsonWithAuth<CredoDailyPractice>(
+          `/api/credo/practices?date=${date}`,
+        );
+        if (unauthorized) {
           setError(CREDO_TEXT.errorAuth);
           return;
         }
-        if (!res.ok) throw new Error(`fetch failed (${res.status})`);
-        const data = (await res.json()) as CredoDailyPractice;
         if (data?.values) {
           setValues(data.values);
         } else {
@@ -176,14 +193,14 @@ export default function Page() {
     const fetchSummary = async () => {
       try {
         setSummaryLoading(true);
-        const res = await fetch(`/api/credo/summary?from=${from}&to=${to}`);
-        if (res.status === 401) {
+        const { unauthorized, data } = await fetchJsonWithAuth<SummaryResponse>(
+          `/api/credo/summary?from=${from}&to=${to}`,
+        );
+        if (unauthorized) {
           setSummaryError(CREDO_TEXT.errorAuth);
           return;
         }
-        if (!res.ok) throw new Error(`fetch failed (${res.status})`);
-        const data = (await res.json()) as SummaryResponse;
-        setSummary(data);
+        setSummary(data || null);
         setSummaryError(null);
       } catch (e) {
         console.error(e);
