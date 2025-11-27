@@ -161,6 +161,10 @@ export default function DashboardPage() {
   const [addLoading, setAddLoading] = useState(false);
   const [addTitle, setAddTitle] = useState("");
   const [addDesc, setAddDesc] = useState("");
+  const [detailTitle, setDetailTitle] = useState("");
+  const [detailDesc, setDetailDesc] = useState("");
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -391,6 +395,46 @@ export default function DashboardPage() {
     }
   }, [addDesc, addTitle, refreshTasks, todayTopTask?.id, today]);
 
+  const handleAddDetail = useCallback(async () => {
+    if (!todayTopTask) {
+      setDetailError("追加先のタスクがありません");
+      return;
+    }
+    const title = detailTitle.trim();
+    const description = detailDesc.trim();
+    if (!title) {
+      setDetailError("タイトルを入力してください");
+      return;
+    }
+    setDetailLoading(true);
+    setDetailError(null);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description: description || null,
+          date: today,
+          parentId: todayTopTask.id,
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setDetailError(data.error || "追加に失敗しました");
+        return;
+      }
+      setDetailTitle("");
+      setDetailDesc("");
+      await refreshTasks({ silent: true });
+    } catch (e) {
+      console.error(e);
+      setDetailError("追加に失敗しました。ネットワークをご確認ください。");
+    } finally {
+      setDetailLoading(false);
+    }
+  }, [detailDesc, detailTitle, refreshTasks, today, todayTopTask]);
+
   const todayStats = useMemo(() => {
     const inProgress = rootTasks.filter((t) => t.status === "in_progress").length;
     const done = rootTasks.filter((t) => t.status === "done").length;
@@ -594,6 +638,36 @@ export default function DashboardPage() {
                         <p className="text-sm text-slate-700">{todayTopTask.description}</p>
                       )}
                       <TaskActions task={todayTopTask} onChange={handleStatusChange} disabled={statusUpdating !== null} />
+                      <div className="rounded-md border border-dashed border-slate-300 bg-white px-3 py-2">
+                        <p className="text-[11px] font-semibold text-slate-800">タスクの具体化（子Todo追加）</p>
+                        <div className="mt-1 grid gap-2 sm:grid-cols-2">
+                          <input
+                            type="text"
+                            value={detailTitle}
+                            onChange={(e) => setDetailTitle(e.target.value)}
+                            placeholder="子タスクのタイトル"
+                            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={detailDesc}
+                            onChange={(e) => setDetailDesc(e.target.value)}
+                            placeholder="補足メモ（任意）"
+                            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                          />
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleAddDetail}
+                            disabled={detailLoading}
+                            className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                          >
+                            {detailLoading ? "追加中..." : "具体化Todoを追加"}
+                          </button>
+                          {detailError && <span className="text-[11px] text-red-500">{detailError}</span>}
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <p className="text-sm text-slate-600">今日のタスクはまだ作成されていません</p>
