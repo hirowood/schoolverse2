@@ -349,6 +349,10 @@ export default function DashboardPage() {
 
   const todayTopTask = activeTask?.task ?? null;
   const todayTopParent = activeTask?.parent ?? null;
+  const currentTodoList = useMemo(() => {
+    const parent = todayTopParent ?? todayTopTask;
+    return parent?.children ?? [];
+  }, [todayTopParent, todayTopTask]);
 
 
   const handleAddDetail = useCallback(async () => {
@@ -631,6 +635,44 @@ export default function DashboardPage() {
                   )}
                 </div>
 
+                <div className="rounded-lg border border-slate-200 bg-white p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-slate-500">今日の学習プランのTodo</p>
+                    {statusUpdating && <span className="text-[11px] text-slate-500">更新中...</span>}
+                  </div>
+                  {currentTodoList.length === 0 ? (
+                    <p className="text-sm text-slate-600">まだ子タスクはありません</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {currentTodoList.map((child) => (
+                        <div key={child.id} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-semibold text-slate-900">{child.title}</p>
+                              <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white">
+                                {statusLabel[child.status]}
+                              </span>
+                              {child.dueDate && (
+                                <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-700">
+                                  {child.dueDate.slice(0, 10)} {child.dueDate.slice(11, 16)}
+                                </span>
+                              )}
+                            </div>
+                            {statusUpdating === child.id && (
+                              <span className="text-[10px] text-slate-500">更新中...</span>
+                            )}
+                          </div>
+                          {child.description && (
+                            <p className="mt-1 text-xs text-slate-700">{child.description}</p>
+                          )}
+                          <div className="mt-2">
+                            <TaskActions task={child} onChange={handleStatusChange} disabled={statusUpdating !== null} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {planHint && <p className="text-[11px] text-slate-500">設定ページより: {planHint}</p>}
