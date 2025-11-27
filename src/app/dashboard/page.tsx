@@ -362,10 +362,11 @@ export default function DashboardPage() {
     return parent?.children ?? [];
   }, [todayTopParent, todayTopTask]);
   const autoCompleteRef = useRef<string | null>(null);
+  const targetParent = todayTopParent ?? todayTopTask;
 
 
   const handleAddDetail = useCallback(async () => {
-    if (!todayTopTask) {
+    if (!targetParent) {
       setDetailError("追加先のタスクがありません");
       return;
     }
@@ -378,7 +379,7 @@ export default function DashboardPage() {
     setDetailLoading(true);
     setDetailError(null);
     try {
-      const parentId = todayTopTask.id;
+      const parentId = targetParent.id;
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -404,7 +405,7 @@ export default function DashboardPage() {
     } finally {
       setDetailLoading(false);
     }
-  }, [detailDesc, detailTitle, refreshTasks, today, todayTopTask]);
+  }, [detailDesc, detailTitle, refreshTasks, targetParent, today]);
 
   const openEditModal = useCallback((task: StudyTask) => {
     setEditTarget(task);
@@ -840,10 +841,10 @@ export default function DashboardPage() {
                 placeholder="補足メモがあれば入力"
               />
             </div>
-            {todayTopTask && (
+            {targetParent && (
               <p className="text-xs text-slate-500">
-                追加先: {todayTopTask.title}
-                {todayTopParent && todayTopParent.id !== todayTopTask.id ? `（親: ${todayTopParent.title}）` : ""}
+                追加先: {targetParent.title}
+                {todayTopParent && todayTopParent.id !== targetParent.id ? `（親: ${todayTopParent.title}）` : ""}
               </p>
             )}
             {detailError && <p className="text-xs text-red-500">{detailError}</p>}
