@@ -248,43 +248,6 @@ export default function DashboardPage() {
     setSavedGoal(trimmed);
   };
 
-  const handleAddTask = useCallback(async () => {
-    const title = addTitle.trim();
-    const description = addDesc.trim();
-    if (!title) {
-      setAddError("タイトルを入力してください");
-      return;
-    }
-    setAddLoading(true);
-    setAddError(null);
-    try {
-      const res = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          description: description || null,
-          date: today,
-          parentId: todayTopTask?.id ?? null,
-        }),
-      });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setAddError(data.error || "追加に失敗しました");
-        return;
-      }
-      setAddTitle("");
-      setAddDesc("");
-      // keep current top task; no parent selector
-      await refreshTasks({ silent: true });
-    } catch (e) {
-      console.error(e);
-      setAddError("追加に失敗しました。ネットワークをご確認ください。");
-    } finally {
-      setAddLoading(false);
-    }
-  }, [addDesc, addTitle, refreshTasks, todayTopTask?.id, today]);
-
   useEffect(() => {
     refreshTasks();
   }, [refreshTasks]);
@@ -384,6 +347,42 @@ export default function DashboardPage() {
     () => sortedRootTasks.filter((t) => t.status !== "done"),
     [sortedRootTasks],
   );
+
+  const handleAddTask = useCallback(async () => {
+    const title = addTitle.trim();
+    const description = addDesc.trim();
+    if (!title) {
+      setAddError("タイトルを入力してください");
+      return;
+    }
+    setAddLoading(true);
+    setAddError(null);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description: description || null,
+          date: today,
+          parentId: todayTopTask?.id ?? null,
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setAddError(data.error || "追加に失敗しました");
+        return;
+      }
+      setAddTitle("");
+      setAddDesc("");
+      await refreshTasks({ silent: true });
+    } catch (e) {
+      console.error(e);
+      setAddError("追加に失敗しました。ネットワークをご確認ください。");
+    } finally {
+      setAddLoading(false);
+    }
+  }, [addDesc, addTitle, refreshTasks, todayTopTask?.id, today]);
 
   const todayStats = useMemo(() => {
     const inProgress = rootTasks.filter((t) => t.status === "in_progress").length;
