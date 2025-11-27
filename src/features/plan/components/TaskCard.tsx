@@ -12,6 +12,7 @@ type Props = {
   onStatusChange: (id: string, status: StudyTask["status"]) => void;
   onEdit?: (task: StudyTask) => void;
   onAddChild?: (task: StudyTask) => void;
+  onDetail?: (task: StudyTask) => void;
 };
 
 // 深さ優先で最初の未完了の子孫タスクを取得
@@ -186,6 +187,7 @@ const TaskCardContent = ({
   onStatusChange,
   onEdit,
   onAddChild,
+  onDetail,
   setNodeRef,
   style,
   dragProps,
@@ -263,6 +265,18 @@ const TaskCardContent = ({
               className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
             >
               {PLAN_TEXT.editTaskButton}
+            </button>
+          )}
+          {onDetail && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDetail(task);
+              }}
+              className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+            >
+              詳細
             </button>
           )}
           {canAddChild && (
@@ -347,7 +361,7 @@ const TaskCardContent = ({
 /**
  * Sortable task card shown in today / tomorrow / history lists.
  */
-export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild }: Props) => {
+export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild, onDetail }: Props) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
   });
@@ -362,6 +376,7 @@ export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild }: Props) =>
       onStatusChange={onStatusChange}
       onEdit={onEdit}
       onAddChild={onAddChild}
+      onDetail={onDetail}
       setNodeRef={setNodeRef}
       style={style}
       dragProps={{ ...attributes, ...listeners }}
@@ -371,11 +386,12 @@ export const TaskCard = ({ task, onStatusChange, onEdit, onAddChild }: Props) =>
 };
 
 /** Read-only card (no drag registration) used for non-movable views/overlays. */
-export const TaskCardReadonly = ({ task, onStatusChange, onEdit, onAddChild }: Props) => (
+export const TaskCardReadonly = ({ task, onStatusChange, onEdit, onAddChild, onDetail }: Props) => (
   <TaskCardContent
     task={task}
     onStatusChange={onStatusChange}
     onEdit={onEdit}
     onAddChild={onAddChild}
+    onDetail={onDetail}
   />
 );

@@ -15,6 +15,7 @@ type Props = {
   onStatusChange: (id: string, status: StudyTask["status"]) => void;
   onEdit?: (task: StudyTask) => void;
   onAddChild?: (task: StudyTask) => void;
+  onDetail?: (task: StudyTask) => void;
   progress?: { percent: number; done: number; total: number };
   progressLabel?: string;
 };
@@ -29,6 +30,7 @@ export const TaskColumn = ({
   onStatusChange,
   onEdit,
   onAddChild,
+  onDetail,
   progress,
   progressLabel,
 }: Props) => {
@@ -74,6 +76,7 @@ export const TaskColumn = ({
               onStatusChange={onStatusChange}
               onEdit={onEdit}
               onAddChild={onAddChild}
+              onDetail={onDetail}
             />
           ))}
         </div>

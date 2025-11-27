@@ -117,6 +117,8 @@ export default function Page() {
     { title: string; description: string; date: string; time: string }[]
   >(() => [createChildDraft(getToday())]);
   const [childSaving, setChildSaving] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailTask, setDetailTask] = useState<StudyTask | null>(null);
 
   const toggleSingleTaskMode = useCallback(() => {
     setSingleTaskMode((prev) => {
@@ -578,6 +580,11 @@ export default function Page() {
     void updateTaskDate(String(active.id), targetDate);
   };
 
+  const openDetailModal = (task: StudyTask) => {
+    setDetailTask(task);
+    setDetailModalOpen(true);
+  };
+
   return (
     <main className="space-y-4">
       <header className="space-y-1">
@@ -640,30 +647,32 @@ export default function Page() {
         >
           <div className="grid gap-4 md:grid-cols-2">
             <SortableContext items={itemsToday} strategy={verticalListSortingStrategy}>
-              <TaskColumn
-                id="today"
-                title={`${PLAN_TEXT.todayBoardTitle} (${today})`}
-                tasks={tasksToday}
-                progress={todayLeafProgress ?? undefined}
-                progressLabel={PLAN_TEXT.todayLeafProgressLabel}
-                showAddButton
-                onAddClick={() => openModalForDate(today)}
-                onStatusChange={handleStatus}
-                onEdit={openEditModal}
-                onAddChild={openAddChild}
-              />
-            </SortableContext>
+            <TaskColumn
+              id="today"
+              title={`${PLAN_TEXT.todayBoardTitle} (${today})`}
+              tasks={tasksToday}
+              progress={todayLeafProgress ?? undefined}
+              progressLabel={PLAN_TEXT.todayLeafProgressLabel}
+              showAddButton
+              onAddClick={() => openModalForDate(today)}
+              onStatusChange={handleStatus}
+              onEdit={openEditModal}
+              onAddChild={openAddChild}
+              onDetail={openDetailModal}
+            />
+          </SortableContext>
 
             <SortableContext items={itemsTomorrow} strategy={verticalListSortingStrategy}>
-              <TaskColumn
-                id="tomorrow"
-                title={`${PLAN_TEXT.tomorrowBoardTitle} (${tomorrow})`}
-                tasks={tasksTomorrow}
-                onStatusChange={handleStatus}
-                onEdit={openEditModal}
-                onAddChild={openAddChild}
-              />
-            </SortableContext>
+            <TaskColumn
+              id="tomorrow"
+              title={`${PLAN_TEXT.tomorrowBoardTitle} (${tomorrow})`}
+              tasks={tasksTomorrow}
+              onStatusChange={handleStatus}
+              onEdit={openEditModal}
+              onAddChild={openAddChild}
+              onDetail={openDetailModal}
+            />
+          </SortableContext>
           </div>
 
           <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -691,6 +700,7 @@ export default function Page() {
               onStatusChange={handleStatus}
               onEdit={openEditModal}
               onAddChild={openAddChild}
+              onDetail={openDetailModal}
             />
           </section>
 
@@ -980,6 +990,62 @@ export default function Page() {
         }
       >
         <p className="text-sm text-slate-700">{PLAN_TEXT.singleTaskWarningMessage}</p>
+      </Modal>
+
+      <Modal
+        open={detailModalOpen}
+        title={detailTask ? `${detailTask.title} の詳細` : "詳細"}
+        onClose={() => {
+          setDetailModalOpen(false);
+          setDetailTask(null);
+        }}
+      >
+        {detailTask ? (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">学習プランのTodo</p>
+              <p className="text-xs text-slate-500">子タスクがあれば下に一覧表示します。</p>
+            </div>
+            <div className="space-y-2">
+              {(detailTask.children?.length ? detailTask.children : [detailTask]).map((t) => (
+                <div key={t.id} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-900">{t.title}</span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] ${
+                          t.status === "done"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : t.status === "in_progress"
+                              ? "bg-amber-100 text-amber-700"
+                              : t.status === "paused"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {t.status === "done"
+                          ? "完了"
+                          : t.status === "in_progress"
+                            ? "進行中"
+                            : t.status === "paused"
+                              ? "一時停止"
+                              : "未着手"}
+                      </span>
+                    </div>
+                    {t.dueDate && (
+                      <span className="text-[11px] text-slate-600">
+                        {t.dueDate.slice(0, 10)} {t.dueDate.slice(11, 16)}
+                      </span>
+                    )}
+                  </div>
+                  {t.description && <p className="mt-1 text-xs text-slate-700">{t.description}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-600">タスクが選択されていません</p>
+        )}
       </Modal>
     </main>
   );
