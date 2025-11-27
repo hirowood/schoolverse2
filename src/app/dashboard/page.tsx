@@ -157,10 +157,6 @@ export default function DashboardPage() {
   const [allTaskRows, setAllTaskRows] = useState<StudyTask[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [taskError, setTaskError] = useState<string | null>(null);
-  const [addError, setAddError] = useState<string | null>(null);
-  const [addLoading, setAddLoading] = useState(false);
-  const [addTitle, setAddTitle] = useState("");
-  const [addDesc, setAddDesc] = useState("");
   const [detailTitle, setDetailTitle] = useState("");
   const [detailDesc, setDetailDesc] = useState("");
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -354,46 +350,6 @@ export default function DashboardPage() {
   const todayTopTask = activeTask?.task ?? null;
   const todayTopParent = activeTask?.parent ?? null;
 
-  const todoTasks = useMemo(
-    () => sortedRootTasks.filter((t) => t.status !== "done"),
-    [sortedRootTasks],
-  );
-
-  const handleAddTask = useCallback(async () => {
-    const title = addTitle.trim();
-    const description = addDesc.trim();
-    if (!title) {
-      setAddError("タイトルを入力してください");
-      return;
-    }
-    setAddLoading(true);
-    setAddError(null);
-    try {
-      const res = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          description: description || null,
-          date: today,
-          parentId: todayTopTask?.id ?? null,
-        }),
-      });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setAddError(data.error || "追加に失敗しました");
-        return;
-      }
-      setAddTitle("");
-      setAddDesc("");
-      await refreshTasks({ silent: true });
-    } catch (e) {
-      console.error(e);
-      setAddError("追加に失敗しました。ネットワークをご確認ください。");
-    } finally {
-      setAddLoading(false);
-    }
-  }, [addDesc, addTitle, refreshTasks, todayTopTask?.id, today]);
 
   const handleAddDetail = useCallback(async () => {
     if (!todayTopTask) {
@@ -674,75 +630,6 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                <div className="rounded-lg border border-slate-200 bg-white p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-medium text-slate-500">Todoリスト（未完了）</p>
-                    {statusUpdating && <span className="text-[11px] text-slate-500">更新中...</span>}
-                  </div>
-                  <div className="space-y-2 rounded-md border border-dashed border-slate-300 bg-slate-50 p-3">
-                    <p className="text-xs font-semibold text-slate-700">新規追加</p>
-                    <input
-                      type="text"
-                      value={addTitle}
-                      onChange={(e) => setAddTitle(e.target.value)}
-                      placeholder="タイトル"
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      value={addDesc}
-                      onChange={(e) => setAddDesc(e.target.value)}
-                      placeholder="メモ（任意）"
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    />
-                    <p className="text-[11px] text-slate-600">
-                      今やっているタスク（最上段）に紐づくTodoとして追加します。タスクが無い場合はトップレベルに追加されます。
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleAddTask}
-                        disabled={addLoading}
-                        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-                      >
-                        {addLoading ? "追加中..." : "Todoを追加"}
-                      </button>
-                      {addError && <span className="text-xs text-red-500">{addError}</span>}
-                    </div>
-                  </div>
-                  {todoTasks.length === 0 ? (
-                    <p className="text-sm text-slate-600">未完了のタスクはありません</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {todoTasks.map((task) => (
-                        <div key={task.id} className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-sm font-semibold text-slate-900">{task.title}</p>
-                              <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white">
-                                {statusLabel[task.status]}
-                              </span>
-                              {task.dueDate && (
-                                <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-700">
-                                  {task.dueDate.slice(0, 10)} {task.dueDate.slice(11, 16)}
-                                </span>
-                              )}
-                            </div>
-                            {statusUpdating === task.id && (
-                              <span className="text-[10px] text-slate-500">更新中...</span>
-                            )}
-                          </div>
-                          {task.description && (
-                            <p className="mt-1 text-xs text-slate-700">{task.description}</p>
-                          )}
-                          <div className="mt-2">
-                            <TaskActions task={task} onChange={handleStatusChange} disabled={statusUpdating !== null} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
 
               {planHint && <p className="text-[11px] text-slate-500">設定ページより: {planHint}</p>}
