@@ -338,10 +338,17 @@ export default function DashboardPage() {
     return [...rootTasks].sort((a, b) => order[a.status] - order[b.status]);
   }, [rootTasks]);
 
-  const todayTopTask = useMemo(
-    () => sortedRootTasks.find((t) => t.status !== "done") ?? sortedRootTasks[0] ?? null,
-    [sortedRootTasks],
-  );
+  const activeTask = useMemo(() => {
+    for (const parent of sortedRootTasks) {
+      const nextChild = nextChildTask(parent);
+      if (nextChild) return { task: nextChild, parent };
+      if (parent.status !== "done") return { task: parent, parent: parent };
+    }
+    return null;
+  }, [sortedRootTasks]);
+
+  const todayTopTask = activeTask?.task ?? null;
+  const todayTopParent = activeTask?.parent ?? null;
 
   const todoTasks = useMemo(
     () => sortedRootTasks.filter((t) => t.status !== "done"),
@@ -560,7 +567,7 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-medium text-slate-500">一番上のタスク</p>
+                    <p className="text-xs font-medium text-slate-500">今やっているタスク</p>
                     {statusUpdating && todayTopTask?.id === statusUpdating && (
                       <span className="text-[11px] text-slate-500">更新中...</span>
                     )}
@@ -572,6 +579,11 @@ export default function DashboardPage() {
                         <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white">
                           {statusLabel[todayTopTask.status]}
                         </span>
+                        {todayTopParent && todayTopParent.id !== todayTopTask.id && (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700">
+                            親: {todayTopParent.title}
+                          </span>
+                        )}
                         {todayTopTask.dueDate && (
                           <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-700">
                             {todayTopTask.dueDate.slice(0, 10)} {todayTopTask.dueDate.slice(11, 16)}
@@ -582,30 +594,6 @@ export default function DashboardPage() {
                         <p className="text-sm text-slate-700">{todayTopTask.description}</p>
                       )}
                       <TaskActions task={todayTopTask} onChange={handleStatusChange} disabled={statusUpdating !== null} />
-
-                      {nextChildTask(todayTopTask) && (
-                        <div className="rounded-md border border-dashed border-slate-300 bg-white px-3 py-2">
-                          <div className="flex items-center justify-between">
-                            <p className="text-[11px] font-semibold text-slate-800">次の小タスク</p>
-                            {statusUpdating && nextChildTask(todayTopTask)?.id === statusUpdating && (
-                              <span className="text-[10px] text-slate-500">更新中...</span>
-                            )}
-                          </div>
-                          <p className="text-sm text-slate-900">{nextChildTask(todayTopTask)?.title}</p>
-                          {nextChildTask(todayTopTask)?.description && (
-                            <p className="text-xs text-slate-600">{nextChildTask(todayTopTask)?.description}</p>
-                          )}
-                          {nextChildTask(todayTopTask) && (
-                            <div className="mt-2">
-                              <TaskActions
-                                task={nextChildTask(todayTopTask)!}
-                                onChange={handleStatusChange}
-                                disabled={statusUpdating !== null}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   ) : (
                     <p className="text-sm text-slate-600">今日のタスクはまだ作成されていません</p>
