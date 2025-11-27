@@ -413,6 +413,7 @@ export default function DashboardPage() {
           description: description || null,
           date: today,
           parentId: null,
+          source: "dashboard",
         }),
       });
       if (!res.ok) {

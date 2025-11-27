@@ -7,6 +7,7 @@ import { assertRateLimit } from "@/lib/rateLimit";
 type TaskPayload = {
   title: string;
   description?: string | null;
+  source?: string | null;
   date?: string | null;
   time?: string | null;
   note?: string | null;
@@ -131,6 +132,7 @@ export async function POST(request: Request) {
       userId,
       title: body.title.trim(),
       description: body.description?.trim() ?? null,
+      source: body.source?.trim() || "user",
       dueDate: dueDate ?? undefined,
       note: body.note?.trim() ?? null,
       parentId: body.parentId ?? null,
@@ -162,6 +164,7 @@ export async function PATCH(request: Request) {
     status?: string;
     title?: string;
     description?: string | null;
+    source?: string | null;
     date?: string | null;
     time?: string | null;
     parentId?: string | null;
@@ -224,6 +227,7 @@ export async function PATCH(request: Request) {
     data: {
       ...(body.status ? { status: body.status } : {}),
       ...(body.title ? { title: body.title.trim() } : {}),
+      ...(body.source ? { source: body.source.trim() } : {}),
       ...(body.parentId !== undefined ? { parentId: body.parentId } : {}),
       description: body.description !== undefined ? body.description?.trim() ?? null : undefined,
       dueDate: body.date !== undefined ? dueDate ?? null : undefined,

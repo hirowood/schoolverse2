@@ -17,7 +17,7 @@ import { Modal } from "@/components/ui/Modal";
 import { CalendarGrid } from "@/features/plan/components/CalendarGrid";
 import { HistoryPanel } from "@/features/plan/components/HistoryPanel";
 import { TaskColumn } from "@/features/plan/components/TaskColumn";
-import { TaskCard, TaskCardReadonly } from "@/features/plan/components/TaskCard";
+import { TaskCardReadonly } from "@/features/plan/components/TaskCard";
 import { PLAN_TEXT } from "@/features/plan/constants";
 import { StudyTask } from "@/features/plan/types";
 import { addDays, formatLocalIsoDate, getToday, parseLocalDate, buildTaskTree } from "@/features/plan/utils/date";
@@ -118,6 +118,16 @@ export default function Page() {
   >(() => [createChildDraft(getToday())]);
   const [childSaving, setChildSaving] = useState(false);
 
+  const toggleSingleTaskMode = useCallback(() => {
+    setSingleTaskMode((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("singleTaskMode", String(next));
+      }
+      return next;
+    });
+  }, []);
+
   // シングルタスクモード（実行中は1つだけ）
   const [singleTaskMode, setSingleTaskMode] = useState(() => {
     if (typeof window !== "undefined") {
@@ -183,27 +193,6 @@ export default function Page() {
   const todayLeafProgress = useMemo(() => calculateLeafCompletion(tasksToday), [calculateLeafCompletion, tasksToday]);
   const todayParentProgress = useMemo(() => calculateParentCompletion(tasksToday), [calculateParentCompletion, tasksToday]);
 
-  // 実行中のタスクがあるかチェック（今日と明日のタスクを全てチェック）
-  const hasInProgressTask = useMemo(() => {
-    const allTasks = [...tasksToday, ...tasksTomorrow];
-    const checkInProgress = (tasks: StudyTask[]): boolean => {
-      for (const task of tasks) {
-        if (task.status === "in_progress") return true;
-        if (task.children?.length && checkInProgress(task.children)) return true;
-      }
-      return false;
-    };
-    return checkInProgress(allTasks);
-  }, [tasksToday, tasksTomorrow]);
-
-  // シングルタスクモードのトグル
-  const toggleSingleTaskMode = useCallback(() => {
-    setSingleTaskMode((prev) => {
-      const next = !prev;
-      localStorage.setItem("singleTaskMode", String(next));
-      return next;
-    });
-  }, []);
 
   const fetchDay = useCallback(async (date: string) => {
     const res = await fetch(`/api/tasks?date=${date}`);
@@ -211,7 +200,7 @@ export default function Page() {
       throw new Error(`fetch failed ${res.status}`);
     }
     const data = (await res.json()) as { tasks: StudyTask[] };
-    return data.tasks;
+    return data.tasks.filter((t) => t.source !== "dashboard");
   }, []);
 
   const refresh = useCallback(async () => {

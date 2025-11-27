@@ -78,6 +78,7 @@ model StudyTask {
   userId        String
   title         String
   description   String?
+  source        String    @default("user")
   dueDate       DateTime?
   status        String    @default("todo")
   note          String?
