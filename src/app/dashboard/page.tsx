@@ -366,6 +366,8 @@ export default function DashboardPage() {
     () => sortedRootTasks.filter((t) => t.status !== "done" && t.id !== activeRootId),
     [activeRootId, sortedRootTasks],
   );
+  const topTodo = planTodoList[0] ?? null;
+  const nextTodo = planTodoList[1] ?? null;
   const autoCompleteRef = useRef<string | null>(null);
 
   const findTaskAndParent = useCallback(
@@ -602,6 +604,14 @@ export default function DashboardPage() {
       setStatusUpdating(id);
       setStatusError(null);
       try {
+        const setStatusSilent = async (targetId: string, targetStatus: StudyTask["status"]) => {
+          await fetch("/api/tasks", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: targetId, status: targetStatus }),
+          }).catch(console.error);
+        };
+
         const res = await fetch("/api/tasks", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -623,11 +633,27 @@ export default function DashboardPage() {
         if (status === "in_progress" && task && !parent) {
           const next = findNextChild(task);
           if (next && next.status !== "in_progress") {
-            await fetch("/api/tasks", {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id: next.id, status: "in_progress" }),
-            }).catch(console.error);
+            await setStatusSilent(next.id, "in_progress");
+          }
+          // 今日のTodoのトップも実行に
+          if (topTodo && topTodo.status !== "in_progress") {
+            await setStatusSilent(topTodo.id, "in_progress");
+          }
+        }
+
+        // 今日のTodo一番上を一時停止 -> 今やっているタスクも一時停止
+        if (status === "paused" && topTodo && id === topTodo.id && todayTopTask && todayTopTask.status !== "paused") {
+          await setStatusSilent(todayTopTask.id, "paused");
+        }
+
+        // 今日のTodo一番上が完了 -> 次のTodoを実行、無ければ今やっているタスクを完了
+        if (status === "done" && topTodo && id === topTodo.id) {
+          if (nextTodo) {
+            if (nextTodo.status !== "in_progress") {
+              await setStatusSilent(nextTodo.id, "in_progress");
+            }
+          } else if (todayTopTask && todayTopTask.status !== "done") {
+            await setStatusSilent(todayTopTask.id, "done");
           }
         }
 
@@ -636,18 +662,10 @@ export default function DashboardPage() {
           const next = findNextChild(parent);
           if (next) {
             if (next.status !== "in_progress") {
-              await fetch("/api/tasks", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: next.id, status: "in_progress" }),
-              }).catch(console.error);
+              await setStatusSilent(next.id, "in_progress");
             }
           } else if (parent.status !== "done") {
-            await fetch("/api/tasks", {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id: parent.id, status: "done" }),
-            }).catch(console.error);
+            await setStatusSilent(parent.id, "done");
           }
         }
 
@@ -659,7 +677,7 @@ export default function DashboardPage() {
         setStatusUpdating(null);
       }
     },
-    [findNextChild, findTaskAndParent, refreshTasks],
+    [findNextChild, findTaskAndParent, nextTodo, refreshTasks, todayTopTask, topTodo],
   );
 
   // 子Todoがすべて完了したら親（もしくは現在のタスク）を完了にする
