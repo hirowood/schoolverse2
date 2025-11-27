@@ -7,6 +7,7 @@ export const PLAN_TEXT = {
   fetchError: "タスクの取得に失敗しました",
   addError: "タスクの追加に失敗しました",
   statusError: "ステータス更新に失敗しました",
+  childNotDoneError: "子タスクをすべて完了してから親タスクを完了にしてください",
   dateError: "日付の更新に失敗しました",
 
   // Boards
@@ -31,7 +32,8 @@ export const PLAN_TEXT = {
   historyEmpty: "この日のタスクはありません",
   historyPlaceholder: "この日にドラッグしてタスクを追加",
   loading: "読み込み中...",
-  todayProgressLabel: "今日の達成度（子なし親＋子タスク）",
+  todayProgressLabel: "今日の達成度（親タスク）",
+  todayLeafProgressLabel: "今日の達成度（子なし親＋子タスク）",
   progressNoTasks: "対象のタスクがありません",
 
   // Modal form
@@ -55,8 +57,18 @@ export const PLAN_TEXT = {
   // Task meta
   labelStatus: "ステータス",
   labelSchedule: "予定",
+  labelWorkTime: "作業時間",
   notSet: "未設定",
   statusTodo: "未着手",
   statusInProgress: "実行中",
+  statusPaused: "一時停止",
   statusDone: "完了",
+
+  // Single task mode
+  singleTaskModeLabel: "シングルタスクモード",
+  singleTaskModeDescription: "ONにすると実行中は1つだけに制限されます",
+  singleTaskWarningTitle: "⚠️ 実行中のタスクがあります",
+  singleTaskWarningMessage: "シングルタスクモードがONです。既に実行中のタスクがあるため、このタスクを実行中にすると集中が分散する可能性があります。",
+  singleTaskWarningCancel: "キャンセル",
+  singleTaskWarningContinue: "それでも実行中にする",
 };

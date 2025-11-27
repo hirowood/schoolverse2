@@ -193,6 +193,32 @@ export async function PATCH(request: Request) {
     }
   }
 
+  // 作業時間計測ロジック
+  let additionalData: {
+    totalWorkTime?: number;
+    lastStartedAt?: Date | null;
+  } = {};
+
+  if (body.status) {
+    const now = new Date();
+    const oldStatus = target.status;
+    const newStatus = body.status;
+
+    // 実行中から一時停止/完了に変更: 経過時間を加算
+    if (oldStatus === "in_progress" && (newStatus === "paused" || newStatus === "done")) {
+      if (target.lastStartedAt) {
+        const elapsed = Math.floor((now.getTime() - target.lastStartedAt.getTime()) / 1000);
+        additionalData.totalWorkTime = target.totalWorkTime + elapsed;
+      }
+      additionalData.lastStartedAt = null;
+    }
+
+    // 未着手/一時停止から実行中に変更: 開始時刻を記録
+    if ((oldStatus === "todo" || oldStatus === "paused") && newStatus === "in_progress") {
+      additionalData.lastStartedAt = now;
+    }
+  }
+
   await prisma.studyTask.update({
     where: { id: body.id },
     data: {
@@ -201,6 +227,7 @@ export async function PATCH(request: Request) {
       ...(body.parentId !== undefined ? { parentId: body.parentId } : {}),
       description: body.description !== undefined ? body.description?.trim() ?? null : undefined,
       dueDate: body.date !== undefined ? dueDate ?? null : undefined,
+      ...additionalData,
     },
   });
 
@@ -215,10 +242,14 @@ export async function PATCH(request: Request) {
   // If child is done and all siblings are done, set parent to done
   if (target.parentId && body.status === "done") {
     const remaining = await prisma.studyTask.count({
-      where: { parentId: target.parentId, status: { not: "done" } },
+      where: { 
+        parentId: target.parentId, 
+        status: { not: "done" },
+        id: { not: body.id },  // 自分自身を除外
+      },
     });
     if (remaining === 0) {
-      await prisma.studyTask.updateMany({
+      await prisma.studyTask.update({
         where: { id: target.parentId },
         data: { status: "done" },
       });

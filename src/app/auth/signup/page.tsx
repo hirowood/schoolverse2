@@ -79,7 +79,7 @@ export default function SignUpPage() {
           <input
             id="name"
             type="text"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
+            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="山田 太郎"
@@ -93,7 +93,7 @@ export default function SignUpPage() {
           <input
             id="email"
             type="email"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
+            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
@@ -110,7 +110,7 @@ export default function SignUpPage() {
             <input
               id="password"
               type={showPassword ? "text" : "password"}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
+              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="new-password"
@@ -136,7 +136,7 @@ export default function SignUpPage() {
             <input
               id="confirm"
               type={showConfirm ? "text" : "password"}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
+              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-500"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               autoComplete="new-password"

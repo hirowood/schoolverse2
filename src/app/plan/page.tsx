@@ -118,6 +118,16 @@ export default function Page() {
   >(() => [createChildDraft(getToday())]);
   const [childSaving, setChildSaving] = useState(false);
 
+  // シングルタスクモード（実行中は1つだけ）
+  const [singleTaskMode, setSingleTaskMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("singleTaskMode") === "true";
+    }
+    return false;
+  });
+  const [warningModalOpen, setWarningModalOpen] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{ id: string; status: StudyTask["status"] } | null>(null);
+
   const historyColumnId = `history-${historyDate}`;
   const historyPlaceholderId = "history-placeholder";
   const isHistoryToday = historyDate === today;
@@ -160,7 +170,40 @@ export default function Page() {
     if (total === 0) return null;
     return { done, total, percent: Math.round((done / total) * 100) };
   }, []);
-  const todayProgress = useMemo(() => calculateLeafCompletion(tasksToday), [calculateLeafCompletion, tasksToday]);
+
+  const calculateParentCompletion = useCallback((tasks: StudyTask[]) => {
+    const tree = buildTaskTree(tasks);
+    // Count only parent tasks (top-level tasks without parentId)
+    const parents = tree.filter((t) => !t.parentId);
+    if (parents.length === 0) return null;
+    const done = parents.filter((t) => t.status === "done").length;
+    return { done, total: parents.length, percent: Math.round((done / parents.length) * 100) };
+  }, []);
+
+  const todayLeafProgress = useMemo(() => calculateLeafCompletion(tasksToday), [calculateLeafCompletion, tasksToday]);
+  const todayParentProgress = useMemo(() => calculateParentCompletion(tasksToday), [calculateParentCompletion, tasksToday]);
+
+  // 実行中のタスクがあるかチェック（今日と明日のタスクを全てチェック）
+  const hasInProgressTask = useMemo(() => {
+    const allTasks = [...tasksToday, ...tasksTomorrow];
+    const checkInProgress = (tasks: StudyTask[]): boolean => {
+      for (const task of tasks) {
+        if (task.status === "in_progress") return true;
+        if (task.children?.length && checkInProgress(task.children)) return true;
+      }
+      return false;
+    };
+    return checkInProgress(allTasks);
+  }, [tasksToday, tasksTomorrow]);
+
+  // シングルタスクモードのトグル
+  const toggleSingleTaskMode = useCallback(() => {
+    setSingleTaskMode((prev) => {
+      const next = !prev;
+      localStorage.setItem("singleTaskMode", String(next));
+      return next;
+    });
+  }, []);
 
   const fetchDay = useCallback(async (date: string) => {
     const res = await fetch(`/api/tasks?date=${date}`);
@@ -308,16 +351,77 @@ export default function Page() {
   };
 
   const handleStatus = async (id: string, status: StudyTask["status"]) => {
+    // シングルタスクモードがONで、実行中にしようとしている場合
+    if (singleTaskMode && status === "in_progress") {
+      // 自分自身を除外して実行中のタスクがあるかチェック
+      const allTasks = [...tasksToday, ...tasksTomorrow];
+      const checkInProgressExcludingSelf = (tasks: StudyTask[], targetId: string): boolean => {
+        for (const task of tasks) {
+          // 自分自身以外で実行中のタスクがあるか
+          if (task.id !== targetId && task.status === "in_progress") return true;
+          // 子タスクもチェック
+          if (task.children?.length) {
+            for (const child of task.children) {
+              if (child.id !== targetId && child.status === "in_progress") return true;
+            }
+          }
+        }
+        return false;
+      };
+      const hasOtherInProgress = checkInProgressExcludingSelf(allTasks, id);
+      
+      if (hasOtherInProgress) {
+        // 既に実行中のタスクがあるので警告モーダルを表示
+        setPendingStatusChange({ id, status });
+        setWarningModalOpen(true);
+        return;
+      }
+    }
+
     try {
-      await fetch("/api/tasks", {
+      const res = await fetch("/api/tasks", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status }),
       });
-      refresh();
+      if (!res.ok) {
+        const data = await res.json();
+        console.error("Status update failed:", data);
+        // 特定のエラーコードに応じたメッセージを表示
+        if (data.error === "child_not_done") {
+          setError(PLAN_TEXT.childNotDoneError);
+          return;
+        }
+        throw new Error(data.error || `failed ${res.status}`);
+      }
+      await refresh();
     } catch (e) {
       console.error(e);
       setError(PLAN_TEXT.statusError);
+    }
+  };
+
+  // 警告モーダルで「続行」を押した場合（強制的に実行中にする）
+  const handleForceStatusChange = async () => {
+    if (!pendingStatusChange) return;
+    setWarningModalOpen(false);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pendingStatusChange),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        console.error("Status update failed:", data);
+        throw new Error(data.error || `failed ${res.status}`);
+      }
+      await refresh();
+    } catch (e) {
+      console.error(e);
+      setError(PLAN_TEXT.statusError);
+    } finally {
+      setPendingStatusChange(null);
     }
   };
 
@@ -494,18 +598,44 @@ export default function Page() {
       </header>
 
       {!loading && (
-        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-          <p className="text-sm font-medium text-slate-900">{PLAN_TEXT.todayProgressLabel}</p>
-          {todayProgress ? (
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-semibold text-emerald-600">{todayProgress.percent}%</span>
-              <span className="text-xs text-slate-500">
-                ({todayProgress.done}/{todayProgress.total})
-              </span>
+        <div className="space-y-3">
+          {/* 達成度バー */}
+          <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+            <p className="text-sm font-medium text-slate-900">{PLAN_TEXT.todayProgressLabel}</p>
+            {todayParentProgress ? (
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-semibold text-emerald-600">{todayParentProgress.percent}%</span>
+                <span className="text-xs text-slate-500">
+                  ({todayParentProgress.done}/{todayParentProgress.total})
+                </span>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">{PLAN_TEXT.progressNoTasks}</p>
+            )}
+          </div>
+
+          {/* シングルタスクモードトグル */}
+          <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="flex flex-col">
+              <p className="text-sm font-medium text-slate-900">{PLAN_TEXT.singleTaskModeLabel}</p>
+              <p className="text-xs text-slate-500">{PLAN_TEXT.singleTaskModeDescription}</p>
             </div>
-          ) : (
-            <p className="text-xs text-slate-500">{PLAN_TEXT.progressNoTasks}</p>
-          )}
+            <button
+              type="button"
+              onClick={toggleSingleTaskMode}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 ${
+                singleTaskMode ? "bg-emerald-500" : "bg-slate-200"
+              }`}
+              role="switch"
+              aria-checked={singleTaskMode}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  singleTaskMode ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
         </div>
       )}
 
@@ -525,8 +655,8 @@ export default function Page() {
                 id="today"
                 title={`${PLAN_TEXT.todayBoardTitle} (${today})`}
                 tasks={tasksToday}
-                progress={todayProgress ?? undefined}
-                progressLabel={PLAN_TEXT.todayProgressLabel}
+                progress={todayLeafProgress ?? undefined}
+                progressLabel={PLAN_TEXT.todayLeafProgressLabel}
                 showAddButton
                 onAddClick={() => openModalForDate(today)}
                 onStatusChange={handleStatus}
@@ -828,6 +958,39 @@ export default function Page() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* シングルタスクモード警告モーダル */}
+      <Modal
+        open={warningModalOpen}
+        title={PLAN_TEXT.singleTaskWarningTitle}
+        onClose={() => {
+          setWarningModalOpen(false);
+          setPendingStatusChange(null);
+        }}
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setWarningModalOpen(false);
+                setPendingStatusChange(null);
+              }}
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            >
+              {PLAN_TEXT.singleTaskWarningCancel}
+            </button>
+            <button
+              type="button"
+              onClick={handleForceStatusChange}
+              className="rounded-md bg-amber-500 px-4 py-1.5 text-sm font-medium text-white hover:bg-amber-600"
+            >
+              {PLAN_TEXT.singleTaskWarningContinue}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-sm text-slate-700">{PLAN_TEXT.singleTaskWarningMessage}</p>
       </Modal>
     </main>
   );
