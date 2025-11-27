@@ -6,6 +6,7 @@ import { CREDO_ITEMS } from "@/features/credo/config";
 import type { CredoPracticeFormValue } from "@/features/credo/types";
 import type { StudyTask } from "@/features/plan/types";
 import { addDays, formatLocalIsoDate, getToday, parseLocalDate } from "@/features/plan/utils/date";
+import { Modal } from "@/components/ui/Modal";
 
 type Profile = {
   name?: string;
@@ -161,6 +162,7 @@ export default function DashboardPage() {
   const [detailDesc, setDetailDesc] = useState("");
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -388,6 +390,7 @@ export default function DashboardPage() {
       }
       setDetailTitle("");
       setDetailDesc("");
+      setDetailModalOpen(false);
       await refreshTasks({ silent: true });
     } catch (e) {
       console.error(e);
@@ -616,34 +619,21 @@ export default function DashboardPage() {
                       )}
                       <TaskActions task={todayTopTask} onChange={handleStatusChange} disabled={statusUpdating !== null} />
                       <div className="rounded-md border border-dashed border-slate-300 bg-white px-3 py-2">
-                        <p className="text-[11px] font-semibold text-slate-800">タスクの具体化（子Todo追加）</p>
-                        <div className="mt-1 grid gap-2 sm:grid-cols-2">
-                          <input
-                            type="text"
-                            value={detailTitle}
-                            onChange={(e) => setDetailTitle(e.target.value)}
-                            placeholder="子タスクのタイトル"
-                            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-                          />
-                          <input
-                            type="text"
-                            value={detailDesc}
-                            onChange={(e) => setDetailDesc(e.target.value)}
-                            placeholder="補足メモ（任意）"
-                            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-                          />
-                        </div>
-                        <div className="mt-2 flex items-center gap-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[11px] font-semibold text-slate-800">タスクの具体化（子Todo追加）</p>
                           <button
                             type="button"
-                            onClick={handleAddDetail}
-                            disabled={detailLoading}
-                            className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                            onClick={() => {
+                              setDetailModalOpen(true);
+                              setDetailError(null);
+                            }}
+                            disabled={!todayTopTask}
+                            className="rounded-md bg-slate-900 px-3 py-1 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
                           >
-                            {detailLoading ? "追加中..." : "具体化Todoを追加"}
+                            追加する
                           </button>
-                          {detailError && <span className="text-[11px] text-red-500">{detailError}</span>}
                         </div>
+                        {detailError && <span className="text-[11px] text-red-500">{detailError}</span>}
                       </div>
                     </div>
                   ) : (
@@ -695,6 +685,73 @@ export default function DashboardPage() {
             </>
           )}
         </section>
+
+        <Modal
+          open={detailModalOpen}
+          title="子Todoを追加"
+          onClose={() => {
+            setDetailModalOpen(false);
+            setDetailError(null);
+          }}
+          footer={
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDetailModalOpen(false);
+                  setDetailError(null);
+                }}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleAddDetail}
+                disabled={detailLoading || !todayTopTask}
+                className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+              >
+                {detailLoading ? "追加中..." : "追加"}
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-800" htmlFor="detail-title">
+                タイトル
+              </label>
+              <input
+                id="detail-title"
+                type="text"
+                value={detailTitle}
+                onChange={(e) => setDetailTitle(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                placeholder="子タスクのタイトル"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-800" htmlFor="detail-desc">
+                メモ（任意）
+              </label>
+              <textarea
+                id="detail-desc"
+                value={detailDesc}
+                onChange={(e) => setDetailDesc(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                rows={3}
+                placeholder="補足メモがあれば入力"
+              />
+            </div>
+            {todayTopTask && (
+              <p className="text-xs text-slate-500">
+                追加先: {todayTopTask.title}
+                {todayTopParent && todayTopParent.id !== todayTopTask.id ? `（親: ${todayTopParent.title}）` : ""}
+              </p>
+            )}
+            {detailError && <p className="text-xs text-red-500">{detailError}</p>}
+          </div>
+        </Modal>
 
         <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">今日の目標</h2>
