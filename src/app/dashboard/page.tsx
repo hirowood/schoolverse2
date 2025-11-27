@@ -1,49 +1,629 @@
 "use client";
 
-export default function DashboardPage() {
-  const important = [
-    { title: "今日の学習計画", desc: "AIコーチのプランを確認して、タスクを1つ完了する。" },
-    { title: "クレド実践チェック", desc: "今日のクレドを1つ実践し、メモを残す。" },
-  ];
+import { useEffect, useMemo, useState } from "react";
+import { CREDO_ITEMS } from "@/features/credo/config";
+import type { CredoPracticeFormValue } from "@/features/credo/types";
+import type { StudyTask } from "@/features/plan/types";
+import { addDays, formatLocalIsoDate, getToday, parseLocalDate } from "@/features/plan/utils/date";
 
-  const optional = [
-    { title: "チャット相談", desc: "気分や困りごとをAIコーチに相談する。" },
-    { title: "週次サマリー", desc: "今週の実践率とハイライトをざっと眺める。" },
-  ];
+type Profile = {
+  name?: string;
+  weeklyGoal?: string;
+  activeHours?: string;
+};
+
+type CoachMessage = {
+  id: string;
+  role: "user" | "assistant";
+  message: string;
+  createdAt: string;
+};
+
+const statusLabel: Record<StudyTask["status"], string> = {
+  todo: "未着手",
+  in_progress: "進行中",
+  paused: "一時停止",
+  done: "完了",
+};
+
+const formatDuration = (seconds: number) => {
+  const totalMinutes = Math.floor(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) {
+    return `${hours}時間${minutes.toString().padStart(2, "0")}分`;
+  }
+  return `${minutes}分`;
+};
+
+const nextChildTask = (task?: StudyTask): StudyTask | null => {
+  if (!task?.children?.length) return null;
+  for (const child of task.children) {
+    if (child.status !== "done") return child;
+    const deeper = nextChildTask(child);
+    if (deeper) return deeper;
+  }
+  return null;
+};
+
+const dedupeTasks = (list: StudyTask[]) => {
+  const map = new Map<string, StudyTask>();
+  const walk = (task?: StudyTask) => {
+    if (!task || map.has(task.id)) return;
+    map.set(task.id, task);
+    task.children?.forEach(walk);
+  };
+  list.forEach(walk);
+  return Array.from(map.values());
+};
+
+const effectiveSeconds = (task: StudyTask, now: number) => {
+  let base = task.totalWorkTime ?? 0;
+  if (task.status === "in_progress" && task.lastStartedAt) {
+    const started = new Date(task.lastStartedAt).getTime();
+    if (!Number.isNaN(started)) {
+      base += Math.floor((now - started) / 1000);
+    }
+  }
+  return base;
+};
+
+const startOfWeekIso = (iso: string) => {
+  const d = parseLocalDate(iso);
+  const diffToMonday = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - diffToMonday);
+  return formatLocalIsoDate(d);
+};
+
+const Bar = ({
+  label,
+  value,
+  max,
+  className,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  className: string;
+}) => {
+  const ratio = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+  const width = value > 0 ? Math.max(ratio, 6) : 0;
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-xs text-slate-600">
+        <span>{label}</span>
+        <span className="font-medium text-slate-900">{(value / 3600).toFixed(1)}h</span>
+      </div>
+      <div className="h-2 w-full rounded-full bg-slate-100">
+        <div className={`h-2 rounded-full ${className}`} style={{ width: `${width}%` }} />
+      </div>
+    </div>
+  );
+};
+
+export default function DashboardPage() {
+  const [today, setToday] = useState(getToday());
+  const [tasksToday, setTasksToday] = useState<StudyTask[]>([]);
+  const [allTaskRows, setAllTaskRows] = useState<StudyTask[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [taskError, setTaskError] = useState<string | null>(null);
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  const [goalInput, setGoalInput] = useState("");
+  const [savedGoal, setSavedGoal] = useState("");
+
+  const [condition, setCondition] = useState<{ done: number; total: number; note?: string } | null>(null);
+  const [conditionError, setConditionError] = useState<string | null>(null);
+  const [conditionLoading, setConditionLoading] = useState(false);
+
+  const [messages, setMessages] = useState<CoachMessage[]>([]);
+  const [messageError, setMessageError] = useState<string | null>(null);
+
+  const [nowTick, setNowTick] = useState(() => Date.now());
+
+  const healthCredoIds = useMemo(() => {
+    const keywords = ["睡眠", "体調", "休息", "疲労", "食事"];
+    const matches = CREDO_ITEMS.filter((item) => {
+      const haystack = `${item.category}${item.title}${item.description}`;
+      return keywords.some((kw) => haystack.includes(kw)) || item.category === "睡眠と体調";
+    }).map((item) => item.id);
+    return matches.length ? matches : CREDO_ITEMS.map((item) => item.id);
+  }, []);
+
+  const healthCredoTitles = useMemo(
+    () => healthCredoIds.map((id) => CREDO_ITEMS.find((c) => c.id === id)?.title).filter((t): t is string => Boolean(t)),
+    [healthCredoIds],
+  );
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const iso = getToday();
+      if (iso !== today) {
+        setToday(iso);
+      }
+      setNowTick(Date.now());
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [today]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const key = `dashboard-goal-${today}`;
+    const stored = window.localStorage.getItem(key);
+    if (stored !== null) {
+      setGoalInput(stored);
+      setSavedGoal(stored);
+    } else {
+      setGoalInput("");
+      setSavedGoal("");
+    }
+  }, [today]);
+
+  const handleSaveGoal = () => {
+    if (typeof window === "undefined") return;
+    const key = `dashboard-goal-${today}`;
+    const trimmed = goalInput.trim();
+    window.localStorage.setItem(key, trimmed);
+    setSavedGoal(trimmed);
+  };
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        setTasksLoading(true);
+        const [todayRes, allRes] = await Promise.all([
+          fetch(`/api/tasks?date=${today}`),
+          fetch("/api/tasks"),
+        ]);
+        if (!todayRes.ok) throw new Error(`today failed ${todayRes.status}`);
+        if (!allRes.ok) throw new Error(`all failed ${allRes.status}`);
+        const todayData = (await todayRes.json()) as { tasks: StudyTask[] };
+        const allData = (await allRes.json()) as { tasks: StudyTask[] };
+        if (!active) return;
+        setTasksToday(todayData.tasks);
+        setAllTaskRows(allData.tasks);
+        setTaskError(null);
+      } catch (e) {
+        console.error(e);
+        if (active) setTaskError("学習プランの取得に失敗しました");
+      } finally {
+        if (active) setTasksLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [today]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/settings/profile");
+        if (!res.ok) throw new Error(`failed ${res.status}`);
+        const data = (await res.json()) as Profile;
+        if (!active) return;
+        setProfile(data);
+        setProfileError(null);
+      } catch (e) {
+        console.error(e);
+        if (active) setProfileError("プロフィール情報を取得できませんでした");
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        setConditionLoading(true);
+        const res = await fetch(`/api/credo/practices?date=${today}`);
+        if (!res.ok) {
+          if (res.status === 401) throw new Error("サインインしてください");
+          throw new Error(`failed ${res.status}`);
+        }
+        const data = (await res.json()) as { values?: Record<string, CredoPracticeFormValue> };
+        if (!active) return;
+        const values = data.values ?? {};
+        const done = healthCredoIds.filter((id) => values[id]?.done).length;
+        const total = healthCredoIds.length;
+        const note = healthCredoIds
+          .map((id) => values[id]?.note?.trim())
+          .find((n) => n && n.length > 0);
+        setCondition({ done, total, note: note || undefined });
+        setConditionError(null);
+      } catch (e) {
+        console.error(e);
+        if (active) {
+          setCondition(null);
+          setConditionError((e as Error).message || "体調ログを取得できませんでした");
+        }
+      } finally {
+        if (active) setConditionLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [healthCredoIds, today]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/coach/chat");
+        if (!res.ok) {
+          if (res.status === 401) throw new Error("サインインしてください");
+          throw new Error(`failed ${res.status}`);
+        }
+        const data = (await res.json()) as { messages: CoachMessage[] };
+        if (!active) return;
+        setMessages(data.messages.slice(-6));
+        setMessageError(null);
+      } catch (e) {
+        console.error(e);
+        if (active) setMessageError((e as Error).message || "連絡の取得に失敗しました");
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const allTasks = useMemo(() => dedupeTasks(allTaskRows), [allTaskRows]);
+
+  const todayTopTask = useMemo(() => {
+    const roots = tasksToday.filter((t) => !t.parentId);
+    if (!roots.length) return null;
+    const order: Record<StudyTask["status"], number> = { in_progress: 0, todo: 1, paused: 2, done: 3 };
+    return [...roots].sort((a, b) => order[a.status] - order[b.status]).find((t) => t.status !== "done") ?? roots[0];
+  }, [tasksToday]);
+
+  const todayStats = useMemo(() => {
+    const roots = tasksToday.filter((t) => !t.parentId);
+    const inProgress = roots.filter((t) => t.status === "in_progress").length;
+    const done = roots.filter((t) => t.status === "done").length;
+    return {
+      total: roots.length,
+      inProgress,
+      done,
+      remaining: Math.max(roots.length - done, 0),
+    };
+  }, [tasksToday]);
+
+  const seriesMaps = useMemo(() => {
+    const daily = new Map<string, number>();
+    const weekly = new Map<string, number>();
+    const monthly = new Map<string, number>();
+    const now = nowTick;
+
+    allTasks.forEach((task) => {
+      if (!task.dueDate) return;
+      const dayKey = task.dueDate.slice(0, 10);
+      const value = effectiveSeconds(task, now);
+
+      daily.set(dayKey, (daily.get(dayKey) ?? 0) + value);
+
+      const weekKey = startOfWeekIso(dayKey);
+      weekly.set(weekKey, (weekly.get(weekKey) ?? 0) + value);
+
+      const monthKey = dayKey.slice(0, 7);
+      monthly.set(monthKey, (monthly.get(monthKey) ?? 0) + value);
+    });
+
+    return { daily, weekly, monthly };
+  }, [allTasks, nowTick]);
+
+  const totalSeconds = useMemo(() => {
+    const now = nowTick;
+    return allTasks.reduce((sum, t) => sum + effectiveSeconds(t, now), 0);
+  }, [allTasks, nowTick]);
+
+  const dailySeries = useMemo(() => {
+    const rows: { label: string; value: number }[] = [];
+    for (let i = 6; i >= 0; i -= 1) {
+      const iso = addDays(today, -i);
+      rows.push({
+        label: iso.slice(5),
+        value: seriesMaps.daily.get(iso) ?? 0,
+      });
+    }
+    return rows;
+  }, [seriesMaps.daily, today]);
+
+  const weeklySeries = useMemo(() => {
+    const currentWeek = startOfWeekIso(today);
+    const rows: { label: string; value: number }[] = [];
+    for (let i = 7; i >= 0; i -= 1) {
+      const weekStart = addDays(currentWeek, -7 * i);
+      const date = parseLocalDate(weekStart);
+      const label = `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
+      rows.push({
+        label,
+        value: seriesMaps.weekly.get(weekStart) ?? 0,
+      });
+    }
+    return rows;
+  }, [seriesMaps.weekly, today]);
+
+  const monthlySeries = useMemo(() => {
+    const rows: { label: string; value: number }[] = [];
+    const base = parseLocalDate(today);
+    for (let i = 5; i >= 0; i -= 1) {
+      const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      rows.push({
+        label: key,
+        value: seriesMaps.monthly.get(key) ?? 0,
+      });
+    }
+    return rows;
+  }, [seriesMaps.monthly, today]);
+
+  const totalMax = Math.max(
+    ...dailySeries.map((s) => s.value),
+    ...weeklySeries.map((s) => s.value),
+    ...monthlySeries.map((s) => s.value),
+    0,
+  );
+
+  const planHint =
+    profile?.activeHours === "morning"
+      ? "朝型（6-9時）が集中しやすい設定になっています"
+      : profile?.activeHours === "evening"
+        ? "夜型（18-21時）が集中しやすい設定になっています"
+        : profile?.activeHours === "day"
+          ? "日中（12-15時）が集中しやすい設定になっています"
+          : null;
+
+  const healthPreview = healthCredoTitles.slice(0, 3).join(" / ");
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 px-4 py-8">
+    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-8">
       <header className="space-y-2">
         <p className="text-xs font-medium text-slate-500">Dashboard</p>
         <h1 className="text-3xl font-semibold text-slate-900">ダッシュボード</h1>
         <p className="text-sm text-slate-600">
-          今日やるべき「重要」なことと、余裕があればやりたい「重要じゃない」ことを分けて並べました。
+          プランページ・コーチ・クレドからの実データをまとめて確認できます。今日の一歩と時間の使い方をここで振り返りましょう。
         </p>
       </header>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">重要</h2>
-          <ul className="space-y-2">
-            {important.map((item) => (
-              <li key={item.title} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-sm font-medium text-slate-900">{item.title}</p>
-                <p className="text-xs text-slate-600">{item.desc}</p>
-              </li>
-            ))}
-          </ul>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <section className="lg:col-span-2 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">今日の学習プラン</h2>
+              <p className="text-xs text-slate-600">/plan のタスクから取得しています</p>
+            </div>
+            {taskError && <p className="text-xs text-red-500">{taskError}</p>}
+          </div>
+
+          {tasksLoading ? (
+            <p className="text-sm text-slate-600">読み込み中...</p>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-4">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
+                  <p className="text-xs text-slate-500">残タスク</p>
+                  <p className="text-2xl font-semibold text-slate-900">{todayStats.remaining}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
+                  <p className="text-xs text-slate-500">進行中</p>
+                  <p className="text-2xl font-semibold text-amber-600">{todayStats.inProgress}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
+                  <p className="text-xs text-slate-500">完了</p>
+                  <p className="text-2xl font-semibold text-emerald-600">{todayStats.done}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
+                  <p className="text-xs text-slate-500">合計</p>
+                  <p className="text-2xl font-semibold text-slate-900">{todayStats.total}</p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-medium text-slate-500 mb-1">一番上のタスク</p>
+                {todayTopTask ? (
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-base font-semibold text-slate-900">{todayTopTask.title}</p>
+                      <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white">
+                        {statusLabel[todayTopTask.status]}
+                      </span>
+                      {todayTopTask.dueDate && (
+                        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-700">
+                          {todayTopTask.dueDate.slice(0, 10)} {todayTopTask.dueDate.slice(11, 16)}
+                        </span>
+                      )}
+                    </div>
+                    {todayTopTask.description && (
+                      <p className="text-sm text-slate-700">{todayTopTask.description}</p>
+                    )}
+                    {nextChildTask(todayTopTask) && (
+                      <div className="rounded-md border border-dashed border-slate-300 bg-white px-3 py-2">
+                        <p className="text-[11px] font-semibold text-slate-800">次の小タスク</p>
+                        <p className="text-sm text-slate-900">{nextChildTask(todayTopTask)?.title}</p>
+                        {nextChildTask(todayTopTask)?.description && (
+                          <p className="text-xs text-slate-600">{nextChildTask(todayTopTask)?.description}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-600">今日のタスクはまだ作成されていません</p>
+                )}
+              </div>
+
+              {planHint && <p className="text-[11px] text-slate-500">設定ページより: {planHint}</p>}
+            </>
+          )}
         </section>
 
         <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">重要じゃない</h2>
-          <ul className="space-y-2">
-            {optional.map((item) => (
-              <li key={item.title} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-sm font-medium text-slate-900">{item.title}</p>
-                <p className="text-xs text-slate-600">{item.desc}</p>
-              </li>
+          <h2 className="text-lg font-semibold text-slate-900">今日の目標</h2>
+          {profile?.weeklyGoal && (
+            <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3">
+              <p className="text-[11px] font-medium text-indigo-800">週間目標（設定ページより）</p>
+              <p className="text-sm text-indigo-900">{profile.weeklyGoal}</p>
+            </div>
+          )}
+          {profileError && <p className="text-xs text-red-500">{profileError}</p>}
+          <div className="space-y-2">
+            <textarea
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              rows={4}
+              placeholder="今日のフォーカスや目標をメモ（例: 章末問題を2問解く）"
+              value={goalInput}
+              onChange={(e) => setGoalInput(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={handleSaveGoal}
+              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              目標を保存
+            </button>
+            {savedGoal ? (
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-medium text-slate-600">表示中の目標（{today}）</p>
+                <p className="text-sm text-slate-900">{savedGoal}</p>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">保存するとここに表示されます</p>
+            )}
+          </div>
+        </section>
+      </div>
+
+      <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">学習時間トラッカー</h2>
+            <p className="text-xs text-slate-600">タスクの経過時間（totalWorkTime）を集計しています</p>
+          </div>
+          <div className="rounded-lg bg-slate-900 px-3 py-2 text-right text-white">
+            <p className="text-[11px] uppercase tracking-wide text-slate-200">累計</p>
+            <p className="text-xl font-semibold">{formatDuration(totalSeconds)}</p>
+          </div>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-semibold text-slate-700">月次</p>
+            {monthlySeries.map((row) => (
+              <Bar
+                key={row.label}
+                label={row.label}
+                value={row.value}
+                max={totalMax}
+                className="bg-gradient-to-r from-indigo-400 to-indigo-600"
+              />
             ))}
-          </ul>
+          </div>
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-semibold text-slate-700">週次（週の開始は月曜）</p>
+            {weeklySeries.map((row) => (
+              <Bar
+                key={row.label}
+                label={row.label}
+                value={row.value}
+                max={totalMax}
+                className="bg-gradient-to-r from-emerald-400 to-emerald-600"
+              />
+            ))}
+          </div>
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-semibold text-slate-700">日次（直近7日）</p>
+            {dailySeries.map((row) => (
+              <Bar
+                key={row.label}
+                label={row.label}
+                value={row.value}
+                max={totalMax}
+                className="bg-gradient-to-r from-amber-400 to-amber-600"
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">今日の体調</h2>
+              <p className="text-xs text-slate-600">クレドページのログから計算</p>
+            </div>
+            {conditionError && <p className="text-xs text-red-500">{conditionError}</p>}
+          </div>
+          {conditionLoading ? (
+            <p className="text-sm text-slate-600">読み込み中...</p>
+          ) : condition ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-emerald-100 bg-emerald-50">
+                  <span className="text-lg font-semibold text-emerald-700">
+                    {Math.round((condition.done / condition.total) * 100)}%
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-900">
+                    {condition.done} / {condition.total} を実行
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    体調/セルフケアに関するチェックを完了するとここに反映されます
+                  </p>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                対象: {condition.total} 項目（睡眠・体調・休息系を優先抽出）{healthPreview ? ` / 例: ${healthPreview}` : ""}
+              </p>
+              {condition.note && (
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[11px] font-semibold text-slate-700">メモ</p>
+                  <p className="text-sm text-slate-900">{condition.note}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-600">今日のクレド記録はまだありません</p>
+          )}
+        </section>
+
+        <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">連絡・メモ</h2>
+              <p className="text-xs text-slate-600">AIコーチの最新メッセージを表示</p>
+            </div>
+            {messageError && <p className="text-xs text-red-500">{messageError}</p>}
+          </div>
+          {messages.length === 0 ? (
+            <p className="text-sm text-slate-600">まだメッセージがありません</p>
+          ) : (
+            <div className="space-y-2">
+              {messages
+                .slice(-4)
+                .reverse()
+                .map((msg) => (
+                  <div key={msg.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500">
+                      <span className="font-semibold">{msg.role === "assistant" ? "AIコーチ" : "あなた"}</span>
+                      <span>{new Date(msg.createdAt).toLocaleString()}</span>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-900">{msg.message}</p>
+                  </div>
+                ))}
+            </div>
+          )}
+          <p className="text-[11px] text-slate-500">
+            詳細は /coach でチャットできます。緊急の連絡メモにも使えます。
+          </p>
         </section>
       </div>
     </main>
