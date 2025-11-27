@@ -157,6 +157,11 @@ export default function DashboardPage() {
   const [allTaskRows, setAllTaskRows] = useState<StudyTask[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [taskError, setTaskError] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [addLoading, setAddLoading] = useState(false);
+  const [addTitle, setAddTitle] = useState("");
+  const [addDesc, setAddDesc] = useState("");
+  const [addParentId, setAddParentId] = useState<string | null>(null);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -243,6 +248,43 @@ export default function DashboardPage() {
     window.localStorage.setItem(key, trimmed);
     setSavedGoal(trimmed);
   };
+
+  const handleAddTask = useCallback(async () => {
+    const title = addTitle.trim();
+    const description = addDesc.trim();
+    if (!title) {
+      setAddError("タイトルを入力してください");
+      return;
+    }
+    setAddLoading(true);
+    setAddError(null);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description: description || null,
+          date: today,
+          parentId: addParentId || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setAddError(data.error || "追加に失敗しました");
+        return;
+      }
+      setAddTitle("");
+      setAddDesc("");
+      setAddParentId(null);
+      await refreshTasks({ silent: true });
+    } catch (e) {
+      console.error(e);
+      setAddError("追加に失敗しました。ネットワークをご確認ください。");
+    } finally {
+      setAddLoading(false);
+    }
+  }, [addDesc, addParentId, addTitle, refreshTasks, today]);
 
   useEffect(() => {
     refreshTasks();
@@ -576,6 +618,50 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-medium text-slate-500">Todoリスト（未完了）</p>
                     {statusUpdating && <span className="text-[11px] text-slate-500">更新中...</span>}
+                  </div>
+                  <div className="space-y-2 rounded-md border border-dashed border-slate-300 bg-slate-50 p-3">
+                    <p className="text-xs font-semibold text-slate-700">新規追加</p>
+                    <input
+                      type="text"
+                      value={addTitle}
+                      onChange={(e) => setAddTitle(e.target.value)}
+                      placeholder="タイトル"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={addDesc}
+                      onChange={(e) => setAddDesc(e.target.value)}
+                      placeholder="メモ（任意）"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    />
+                    <label className="text-xs text-slate-600" htmlFor="add-parent">
+                      紐付け先（親タスクだけならそのまま / 子タスクを持つ場合は子として紐付け）
+                    </label>
+                    <select
+                      id="add-parent"
+                      value={addParentId ?? ""}
+                      onChange={(e) => setAddParentId(e.target.value || null)}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    >
+                      <option value="">トップレベルに追加</option>
+                      {rootTasks.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.title} {t.children?.length ? "(子タスクに紐付け)" : "(親タスク)"}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAddTask}
+                        disabled={addLoading}
+                        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                      >
+                        {addLoading ? "追加中..." : "Todoを追加"}
+                      </button>
+                      {addError && <span className="text-xs text-red-500">{addError}</span>}
+                    </div>
                   </div>
                   {todoTasks.length === 0 ? (
                     <p className="text-sm text-slate-600">未完了のタスクはありません</p>
