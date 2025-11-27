@@ -397,21 +397,6 @@ export default function DashboardPage() {
     }
   }, [detailDesc, detailTitle, refreshTasks, today, todayTopTask]);
 
-  // 子Todoがすべて完了したら親（もしくは現在のタスク）を完了にする
-  useEffect(() => {
-    const parent = todayTopParent ?? todayTopTask;
-    if (!parent || currentTodoList.length === 0) return;
-    if (statusUpdating) return;
-    const allDone = currentTodoList.every((c) => c.status === "done");
-    if (!allDone) {
-      autoCompleteRef.current = null;
-      return;
-    }
-    if (autoCompleteRef.current === parent.id) return;
-    autoCompleteRef.current = parent.id;
-    handleStatusChange(parent.id, "done");
-  }, [currentTodoList, handleStatusChange, statusUpdating, todayTopParent, todayTopTask]);
-
   const todayStats = useMemo(() => {
     const inProgress = rootTasks.filter((t) => t.status === "in_progress").length;
     const done = rootTasks.filter((t) => t.status === "done").length;
@@ -539,6 +524,21 @@ export default function DashboardPage() {
     },
     [refreshTasks],
   );
+
+  // 子Todoがすべて完了したら親（もしくは現在のタスク）を完了にする
+  useEffect(() => {
+    const parent = todayTopParent ?? todayTopTask;
+    if (!parent || currentTodoList.length === 0) return;
+    if (statusUpdating) return;
+    const allDone = currentTodoList.every((c) => c.status === "done");
+    if (!allDone) {
+      autoCompleteRef.current = null;
+      return;
+    }
+    if (autoCompleteRef.current === parent.id) return;
+    autoCompleteRef.current = parent.id;
+    handleStatusChange(parent.id, "done");
+  }, [currentTodoList, handleStatusChange, statusUpdating, todayTopParent, todayTopTask]);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-8">
