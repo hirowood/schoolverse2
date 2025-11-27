@@ -161,7 +161,6 @@ export default function DashboardPage() {
   const [addLoading, setAddLoading] = useState(false);
   const [addTitle, setAddTitle] = useState("");
   const [addDesc, setAddDesc] = useState("");
-  const [addParentId, setAddParentId] = useState<string | null>(null);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -266,7 +265,7 @@ export default function DashboardPage() {
           title,
           description: description || null,
           date: today,
-          parentId: addParentId || null,
+          parentId: todayTopTask?.id ?? null,
         }),
       });
       if (!res.ok) {
@@ -276,7 +275,7 @@ export default function DashboardPage() {
       }
       setAddTitle("");
       setAddDesc("");
-      setAddParentId(null);
+      // keep current top task; no parent selector
       await refreshTasks({ silent: true });
     } catch (e) {
       console.error(e);
@@ -284,7 +283,7 @@ export default function DashboardPage() {
     } finally {
       setAddLoading(false);
     }
-  }, [addDesc, addParentId, addTitle, refreshTasks, today]);
+  }, [addDesc, addTitle, refreshTasks, todayTopTask?.id, today]);
 
   useEffect(() => {
     refreshTasks();
@@ -635,22 +634,9 @@ export default function DashboardPage() {
                       placeholder="メモ（任意）"
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     />
-                    <label className="text-xs text-slate-600" htmlFor="add-parent">
-                      紐付け先（親タスクだけならそのまま / 子タスクを持つ場合は子として紐付け）
-                    </label>
-                    <select
-                      id="add-parent"
-                      value={addParentId ?? ""}
-                      onChange={(e) => setAddParentId(e.target.value || null)}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    >
-                      <option value="">トップレベルに追加</option>
-                      {rootTasks.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.title} {t.children?.length ? "(子タスクに紐付け)" : "(親タスク)"}
-                        </option>
-                      ))}
-                    </select>
+                    <p className="text-[11px] text-slate-600">
+                      今やっているタスク（最上段）に紐づくTodoとして追加します。タスクが無い場合はトップレベルに追加されます。
+                    </p>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
