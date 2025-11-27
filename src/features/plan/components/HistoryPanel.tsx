@@ -20,6 +20,7 @@ type Props = {
   onStatusChange: (id: string, status: StudyTask["status"]) => void;
   onEdit?: (task: StudyTask) => void;
   onAddChild?: (task: StudyTask) => void;
+  onDetail?: (task: StudyTask) => void;
 };
 
 /** カレンダーの「選択した日」のカードとタスクリスト。 */
@@ -62,13 +63,14 @@ export const HistoryPanel = ({
             <p className="text-xs text-slate-500">{PLAN_TEXT.todayEmpty}</p>
           ) : (
             tree.map((task) => (
-              <TaskCardReadonly
-                key={task.id}
-                task={task}
-                onStatusChange={onStatusChange}
-                onEdit={onEdit}
-                onAddChild={onAddChild}
-              />
+                <TaskCardReadonly
+                  key={task.id}
+                  task={task}
+                  onStatusChange={onStatusChange}
+                  onEdit={onEdit}
+                  onAddChild={onAddChild}
+                  onDetail={onDetail}
+                />
             ))
           )}
         </div>
@@ -79,13 +81,14 @@ export const HistoryPanel = ({
             <p className="text-xs text-slate-500">{PLAN_TEXT.tomorrowEmpty}</p>
           ) : (
             tree.map((task) => (
-              <TaskCardReadonly
-                key={task.id}
-                task={task}
-                onStatusChange={onStatusChange}
-                onEdit={onEdit}
-                onAddChild={onAddChild}
-              />
+                <TaskCardReadonly
+                  key={task.id}
+                  task={task}
+                  onStatusChange={onStatusChange}
+                  onEdit={onEdit}
+                  onAddChild={onAddChild}
+                  onDetail={onDetail}
+                />
             ))
           )}
         </div>
@@ -109,6 +112,7 @@ export const HistoryPanel = ({
                   onStatusChange={onStatusChange}
                   onEdit={onEdit}
                   onAddChild={onAddChild}
+                  onDetail={onDetail}
                 />
               ))
             )}
