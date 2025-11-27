@@ -361,7 +361,11 @@ export default function DashboardPage() {
     const parent = todayTopParent ?? todayTopTask;
     return parent?.children ?? [];
   }, [todayTopParent, todayTopTask]);
-  const planTodoList = useMemo(() => sortedRootTasks.filter((t) => t.status !== "done"), [sortedRootTasks]);
+  const activeRootId = todayTopParent?.id ?? (todayTopTask && !todayTopParent ? todayTopTask.id : null);
+  const planTodoList = useMemo(
+    () => sortedRootTasks.filter((t) => t.status !== "done" && t.id !== activeRootId),
+    [activeRootId, sortedRootTasks],
+  );
   const autoCompleteRef = useRef<string | null>(null);
 
   const findTaskAndParent = useCallback(
