@@ -1040,7 +1040,7 @@ export default function DashboardPage() {
                 label={row.label}
                 value={row.value}
                 max={totalMax}
-                className="bg-gradient-to-r from-indigo-400 to-indigo-600"
+                className="bg-linear-to-r from-indigo-400 to-indigo-600"
               />
             ))}
           </div>
@@ -1052,7 +1052,7 @@ export default function DashboardPage() {
                 label={row.label}
                 value={row.value}
                 max={totalMax}
-                className="bg-gradient-to-r from-emerald-400 to-emerald-600"
+                className="bg-linear-to-r from-emerald-400 to-emerald-600"
               />
             ))}
           </div>
@@ -1064,7 +1064,7 @@ export default function DashboardPage() {
                 label={row.label}
                 value={row.value}
                 max={totalMax}
-                className="bg-gradient-to-r from-amber-400 to-amber-600"
+                className="bg-linear-to-r from-amber-400 to-amber-600"
               />
             ))}
           </div>
