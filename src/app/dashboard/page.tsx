@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CREDO_ITEMS } from "@/features/credo/config";
 import type { CredoPracticeFormValue } from "@/features/credo/types";
 import type { StudyTask } from "@/features/plan/types";
@@ -101,6 +102,55 @@ const Bar = ({
   );
 };
 
+const TaskActions = ({
+  task,
+  onChange,
+  disabled,
+}: {
+  task: StudyTask;
+  onChange: (id: string, status: StudyTask["status"]) => void;
+  disabled?: boolean;
+}) => (
+  <div className="flex flex-wrap gap-2">
+    <button
+      type="button"
+      onClick={() => onChange(task.id, "in_progress")}
+      disabled={disabled}
+      className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+        task.status === "in_progress"
+          ? "bg-amber-500 text-white"
+          : "border border-slate-300 text-slate-700 hover:bg-slate-100"
+      } ${disabled ? "opacity-60" : ""}`}
+    >
+      実行
+    </button>
+    <button
+      type="button"
+      onClick={() => onChange(task.id, "paused")}
+      disabled={disabled}
+      className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+        task.status === "paused"
+          ? "bg-blue-500 text-white"
+          : "border border-slate-300 text-slate-700 hover:bg-slate-100"
+      } ${disabled ? "opacity-60" : ""}`}
+    >
+      一時停止
+    </button>
+    <button
+      type="button"
+      onClick={() => onChange(task.id, "done")}
+      disabled={disabled}
+      className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+        task.status === "done"
+          ? "bg-emerald-600 text-white"
+          : "border border-slate-300 text-slate-700 hover:bg-slate-100"
+      } ${disabled ? "opacity-60" : ""}`}
+    >
+      完了
+    </button>
+  </div>
+);
+
 export default function DashboardPage() {
   const [today, setToday] = useState(getToday());
   const [tasksToday, setTasksToday] = useState<StudyTask[]>([]);
@@ -122,6 +172,8 @@ export default function DashboardPage() {
   const [messageError, setMessageError] = useState<string | null>(null);
 
   const [nowTick, setNowTick] = useState(() => Date.now());
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   const healthCredoIds = useMemo(() => {
     const keywords = ["睡眠", "体調", "休息", "疲労", "食事"];
@@ -136,6 +188,29 @@ export default function DashboardPage() {
     () => healthCredoIds.map((id) => CREDO_ITEMS.find((c) => c.id === id)?.title).filter((t): t is string => Boolean(t)),
     [healthCredoIds],
   );
+
+  const refreshTasks = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent ?? false;
+    try {
+      if (!silent) setTasksLoading(true);
+      const [todayRes, allRes] = await Promise.all([
+        fetch(`/api/tasks?date=${today}`),
+        fetch("/api/tasks"),
+      ]);
+      if (!todayRes.ok) throw new Error(`today failed ${todayRes.status}`);
+      if (!allRes.ok) throw new Error(`all failed ${allRes.status}`);
+      const todayData = (await todayRes.json()) as { tasks: StudyTask[] };
+      const allData = (await allRes.json()) as { tasks: StudyTask[] };
+      setTasksToday(todayData.tasks);
+      setAllTaskRows(allData.tasks);
+      setTaskError(null);
+    } catch (e) {
+      console.error(e);
+      setTaskError("学習プランの取得に失敗しました");
+    } finally {
+      if (!silent) setTasksLoading(false);
+    }
+  }, [today]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -170,33 +245,8 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        setTasksLoading(true);
-        const [todayRes, allRes] = await Promise.all([
-          fetch(`/api/tasks?date=${today}`),
-          fetch("/api/tasks"),
-        ]);
-        if (!todayRes.ok) throw new Error(`today failed ${todayRes.status}`);
-        if (!allRes.ok) throw new Error(`all failed ${allRes.status}`);
-        const todayData = (await todayRes.json()) as { tasks: StudyTask[] };
-        const allData = (await allRes.json()) as { tasks: StudyTask[] };
-        if (!active) return;
-        setTasksToday(todayData.tasks);
-        setAllTaskRows(allData.tasks);
-        setTaskError(null);
-      } catch (e) {
-        console.error(e);
-        if (active) setTaskError("学習プランの取得に失敗しました");
-      } finally {
-        if (active) setTasksLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [today]);
+    refreshTasks();
+  }, [refreshTasks]);
 
   useEffect(() => {
     let active = true;
@@ -277,25 +327,37 @@ export default function DashboardPage() {
   }, []);
 
   const allTasks = useMemo(() => dedupeTasks(allTaskRows), [allTaskRows]);
+  const rootTasks = useMemo(() => tasksToday.filter((t) => !t.parentId), [tasksToday]);
 
-  const todayTopTask = useMemo(() => {
-    const roots = tasksToday.filter((t) => !t.parentId);
-    if (!roots.length) return null;
+  const sortedRootTasks = useMemo(() => {
     const order: Record<StudyTask["status"], number> = { in_progress: 0, todo: 1, paused: 2, done: 3 };
-    return [...roots].sort((a, b) => order[a.status] - order[b.status]).find((t) => t.status !== "done") ?? roots[0];
-  }, [tasksToday]);
+    return [...rootTasks].sort((a, b) => order[a.status] - order[b.status]);
+  }, [rootTasks]);
+
+  const todayTopTask = useMemo(
+    () => sortedRootTasks.find((t) => t.status !== "done") ?? sortedRootTasks[0] ?? null,
+    [sortedRootTasks],
+  );
+
+  const secondTask = useMemo(() => {
+    if (!todayTopTask) return null;
+    return (
+      sortedRootTasks.filter((t) => t.id !== todayTopTask.id).find((t) => t.status !== "done") ??
+      sortedRootTasks.find((t) => t.id !== todayTopTask.id) ??
+      null
+    );
+  }, [sortedRootTasks, todayTopTask]);
 
   const todayStats = useMemo(() => {
-    const roots = tasksToday.filter((t) => !t.parentId);
-    const inProgress = roots.filter((t) => t.status === "in_progress").length;
-    const done = roots.filter((t) => t.status === "done").length;
+    const inProgress = rootTasks.filter((t) => t.status === "in_progress").length;
+    const done = rootTasks.filter((t) => t.status === "done").length;
     return {
-      total: roots.length,
+      total: rootTasks.length,
       inProgress,
       done,
-      remaining: Math.max(roots.length - done, 0),
+      remaining: Math.max(rootTasks.length - done, 0),
     };
-  }, [tasksToday]);
+  }, [rootTasks]);
 
   const seriesMaps = useMemo(() => {
     const daily = new Map<string, number>();
@@ -384,6 +446,36 @@ export default function DashboardPage() {
 
   const healthPreview = healthCredoTitles.slice(0, 3).join(" / ");
 
+  const handleStatusChange = useCallback(
+    async (id: string, status: StudyTask["status"]) => {
+      setStatusUpdating(id);
+      setStatusError(null);
+      try {
+        const res = await fetch("/api/tasks", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, status }),
+        });
+        if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as { error?: string };
+          if (data.error === "child_not_done") {
+            setStatusError("子タスクが未完了です。先に子タスクを完了してください。");
+          } else {
+            setStatusError("更新に失敗しました。リロードして再度お試しください。");
+          }
+          return;
+        }
+        await refreshTasks({ silent: true });
+      } catch (e) {
+        console.error(e);
+        setStatusError("更新に失敗しました。ネットワークをご確認ください。");
+      } finally {
+        setStatusUpdating(null);
+      }
+    },
+    [refreshTasks],
+  );
+
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-8">
       <header className="space-y-2">
@@ -403,6 +495,8 @@ export default function DashboardPage() {
             </div>
             {taskError && <p className="text-xs text-red-500">{taskError}</p>}
           </div>
+
+          {statusError && <p className="text-xs text-red-500">{statusError}</p>}
 
           {tasksLoading ? (
             <p className="text-sm text-slate-600">読み込み中...</p>
@@ -427,36 +521,87 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-medium text-slate-500 mb-1">一番上のタスク</p>
-                {todayTopTask ? (
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-base font-semibold text-slate-900">{todayTopTask.title}</p>
-                      <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white">
-                        {statusLabel[todayTopTask.status]}
-                      </span>
-                      {todayTopTask.dueDate && (
-                        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-700">
-                          {todayTopTask.dueDate.slice(0, 10)} {todayTopTask.dueDate.slice(11, 16)}
-                        </span>
-                      )}
-                    </div>
-                    {todayTopTask.description && (
-                      <p className="text-sm text-slate-700">{todayTopTask.description}</p>
-                    )}
-                    {nextChildTask(todayTopTask) && (
-                      <div className="rounded-md border border-dashed border-slate-300 bg-white px-3 py-2">
-                        <p className="text-[11px] font-semibold text-slate-800">次の小タスク</p>
-                        <p className="text-sm text-slate-900">{nextChildTask(todayTopTask)?.title}</p>
-                        {nextChildTask(todayTopTask)?.description && (
-                          <p className="text-xs text-slate-600">{nextChildTask(todayTopTask)?.description}</p>
-                        )}
-                      </div>
+              <div className="space-y-3">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-medium text-slate-500">一番上のタスク</p>
+                    {statusUpdating && todayTopTask?.id === statusUpdating && (
+                      <span className="text-[11px] text-slate-500">更新中...</span>
                     )}
                   </div>
-                ) : (
-                  <p className="text-sm text-slate-600">今日のタスクはまだ作成されていません</p>
+                  {todayTopTask ? (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-base font-semibold text-slate-900">{todayTopTask.title}</p>
+                        <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white">
+                          {statusLabel[todayTopTask.status]}
+                        </span>
+                        {todayTopTask.dueDate && (
+                          <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-700">
+                            {todayTopTask.dueDate.slice(0, 10)} {todayTopTask.dueDate.slice(11, 16)}
+                          </span>
+                        )}
+                      </div>
+                      {todayTopTask.description && (
+                        <p className="text-sm text-slate-700">{todayTopTask.description}</p>
+                      )}
+                      <TaskActions task={todayTopTask} onChange={handleStatusChange} disabled={statusUpdating !== null} />
+
+                      {nextChildTask(todayTopTask) && (
+                        <div className="rounded-md border border-dashed border-slate-300 bg-white px-3 py-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[11px] font-semibold text-slate-800">次の小タスク</p>
+                            {statusUpdating && nextChildTask(todayTopTask)?.id === statusUpdating && (
+                              <span className="text-[10px] text-slate-500">更新中...</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-900">{nextChildTask(todayTopTask)?.title}</p>
+                          {nextChildTask(todayTopTask)?.description && (
+                            <p className="text-xs text-slate-600">{nextChildTask(todayTopTask)?.description}</p>
+                          )}
+                          {nextChildTask(todayTopTask) && (
+                            <div className="mt-2">
+                              <TaskActions
+                                task={nextChildTask(todayTopTask)!}
+                                onChange={handleStatusChange}
+                                disabled={statusUpdating !== null}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-600">今日のタスクはまだ作成されていません</p>
+                  )}
+                </div>
+
+                {secondTask && (
+                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-medium text-slate-500">次にやるタスク（2番目）</p>
+                      {statusUpdating && secondTask.id === statusUpdating && (
+                        <span className="text-[11px] text-slate-500">更新中...</span>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-base font-semibold text-slate-900">{secondTask.title}</p>
+                        <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white">
+                          {statusLabel[secondTask.status]}
+                        </span>
+                        {secondTask.dueDate && (
+                          <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700">
+                            {secondTask.dueDate.slice(0, 10)} {secondTask.dueDate.slice(11, 16)}
+                          </span>
+                        )}
+                      </div>
+                      {secondTask.description && (
+                        <p className="text-sm text-slate-700">{secondTask.description}</p>
+                      )}
+                      <TaskActions task={secondTask} onChange={handleStatusChange} disabled={statusUpdating !== null} />
+                    </div>
+                  </div>
                 )}
               </div>
 
