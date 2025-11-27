@@ -92,7 +92,7 @@ describe("/api/coach/chat", () => {
     expect(chatRows.filter((r) => r.userId === "u1")).toHaveLength(2);
     const payload = (await postRes.json()) as { assistantMessage: { message: string; role: string } };
     expect(payload.assistantMessage.role).toBe("assistant");
-    expect(payload.assistantMessage.message).toContain("了解です");
+    expect(payload.assistantMessage.message).toContain("「こんにちは」");
   });
 
   it("returns latest 20 messages sorted asc", async () => {
