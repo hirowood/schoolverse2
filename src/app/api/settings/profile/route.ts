@@ -31,6 +31,9 @@ export async function GET() {
     weeklyGoal: profile?.weeklyGoal ?? "",
     activeHours: profile?.activeHours ?? "day",
     coachTone: profile?.coachTone ?? "gentle",
+    pomodoroEnabled: profile?.pomodoroEnabled ?? false,
+    pomodoroWorkMinutes: profile?.pomodoroWorkMinutes ?? 25,
+    pomodoroBreakMinutes: profile?.pomodoroBreakMinutes ?? 5,
   });
 }
 
@@ -53,6 +56,9 @@ export async function POST(request: Request) {
     weeklyGoal?: string;
     activeHours?: string;
     coachTone?: string;
+    pomodoroEnabled?: boolean;
+    pomodoroWorkMinutes?: number;
+    pomodoroBreakMinutes?: number;
   };
 
   await prisma.$transaction(async (tx) => {
@@ -68,12 +74,18 @@ export async function POST(request: Request) {
         weeklyGoal: body.weeklyGoal ?? null,
         activeHours: body.activeHours ?? "day",
         coachTone: body.coachTone ?? "gentle",
+        pomodoroEnabled: body.pomodoroEnabled ?? false,
+        pomodoroWorkMinutes: body.pomodoroWorkMinutes ?? 25,
+        pomodoroBreakMinutes: body.pomodoroBreakMinutes ?? 5,
       },
       create: {
         userId: user.id!,
         weeklyGoal: body.weeklyGoal ?? null,
         activeHours: body.activeHours ?? "day",
         coachTone: body.coachTone ?? "gentle",
+        pomodoroEnabled: body.pomodoroEnabled ?? false,
+        pomodoroWorkMinutes: body.pomodoroWorkMinutes ?? 25,
+        pomodoroBreakMinutes: body.pomodoroBreakMinutes ?? 5,
       },
     });
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -28,6 +28,16 @@ type ChildCardProps = {
   child: StudyTask;
   onEdit: (task: StudyTask) => void;
 };
+
+type ProfileResponse = Partial<{
+  name: string;
+  weeklyGoal: string;
+  activeHours: "morning" | "day" | "evening";
+  coachTone: "gentle" | "logical";
+  pomodoroEnabled: boolean;
+  pomodoroWorkMinutes: number;
+  pomodoroBreakMinutes: number;
+}>;
 
 const ChildSortableCard = ({ child, onEdit }: ChildCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -87,12 +97,116 @@ const ChildSortableCard = ({ child, onEdit }: ChildCardProps) => {
   );
 };
 
+// 再帰的な子タスク表示コンポーネント
+type ChildTaskCardProps = {
+  task: StudyTask;
+  depth?: number;
+  onOpenDetail: (task: StudyTask) => void;
+  onStatusChange: (id: string, status: StudyTask["status"]) => void;
+};
+
+const ChildTaskCard = ({ task, depth = 0, onOpenDetail, onStatusChange }: ChildTaskCardProps) => {
+  const hasChildren = task.children && task.children.length > 0;
+  const statusColors: Record<StudyTask["status"], string> = {
+    done: "bg-emerald-100 text-emerald-700",
+    in_progress: "bg-amber-100 text-amber-700",
+    paused: "bg-blue-100 text-blue-700",
+    todo: "bg-slate-100 text-slate-700",
+  };
+  const statusLabels: Record<StudyTask["status"], string> = {
+    done: "完了",
+    in_progress: "進行中",
+    paused: "一時停止",
+    todo: "未着手",
+  };
+  const sourceLabel = task.source === "dashboard" ? "📋 ダッシュボード" : null;
+
+  return (
+    <div
+      className={`rounded-md border bg-slate-50 p-3 ${depth > 0 ? "border-slate-200" : "border-slate-300"}`}
+      style={{ marginLeft: depth > 0 ? `${depth * 12}px` : 0 }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-slate-900">{task.title}</span>
+          <span className={`rounded-full px-2 py-0.5 text-[11px] ${statusColors[task.status]}`}>
+            {statusLabels[task.status]}
+          </span>
+          {sourceLabel && (
+            <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] text-indigo-700">
+              {sourceLabel}
+            </span>
+          )}
+          {hasChildren && (
+            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] text-slate-600">
+              子タスク: {task.children!.length}件
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {hasChildren && (
+            <button
+              type="button"
+              onClick={() => onOpenDetail(task)}
+              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100"
+            >
+              詳細
+            </button>
+          )}
+        </div>
+      </div>
+      {task.dueDate && (
+        <p className="mt-1 text-[11px] text-slate-600">
+          予定: {task.dueDate.slice(0, 10)} {task.dueDate.slice(11, 16)}
+        </p>
+      )}
+      {task.description && <p className="mt-1 text-xs text-slate-700">{task.description}</p>}
+      <div className="mt-2 flex flex-wrap gap-1">
+        <button
+          type="button"
+          onClick={() => onStatusChange(task.id, "in_progress")}
+          className={`rounded px-2 py-1 text-[11px] font-medium ${
+            task.status === "in_progress"
+              ? "bg-amber-500 text-white"
+              : "border border-slate-300 text-slate-700 hover:bg-slate-100"
+          }`}
+        >
+          実行
+        </button>
+        <button
+          type="button"
+          onClick={() => onStatusChange(task.id, "paused")}
+          className={`rounded px-2 py-1 text-[11px] font-medium ${
+            task.status === "paused"
+              ? "bg-blue-500 text-white"
+              : "border border-slate-300 text-slate-700 hover:bg-slate-100"
+          }`}
+        >
+          一時停止
+        </button>
+        <button
+          type="button"
+          onClick={() => onStatusChange(task.id, "done")}
+          className={`rounded px-2 py-1 text-[11px] font-medium ${
+            task.status === "done"
+              ? "bg-emerald-600 text-white"
+              : "border border-slate-300 text-slate-700 hover:bg-slate-100"
+          }`}
+        >
+          完了
+        </button>
+      </div>
+    </div>
+  );
+};
+
 /** Study plan page: manage today/tomorrow and calendar with drag & drop */
 export default function Page() {
   const [today, setToday] = useState(getToday());
   const tomorrow = useMemo(() => addDays(today, 1), [today]);
   const [tasksToday, setTasksToday] = useState<StudyTask[]>([]);
   const [tasksTomorrow, setTasksTomorrow] = useState<StudyTask[]>([]);
+  const [dashboardTasks, setDashboardTasks] = useState<StudyTask[]>([]);
   const [historyDate, setHistoryDate] = useState(today);
   const [historyTasks, setHistoryTasks] = useState<StudyTask[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -119,6 +233,15 @@ export default function Page() {
   const [childSaving, setChildSaving] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailTask, setDetailTask] = useState<StudyTask | null>(null);
+  const [detailStack, setDetailStack] = useState<StudyTask[]>([]);
+  const [pomodoroEnabled, setPomodoroEnabled] = useState(false);
+  const [pomodoroWorkMinutes, setPomodoroWorkMinutes] = useState(25);
+  const [pomodoroBreakMinutes, setPomodoroBreakMinutes] = useState(5);
+  const [pomodoroPhase, setPomodoroPhase] = useState<"idle" | "work" | "break">("idle");
+  const [pomodoroSecondsLeft, setPomodoroSecondsLeft] = useState(25 * 60);
+  const pomodoroTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [restModalOpen, setRestModalOpen] = useState(false);
+  const [pomodoroLoading, setPomodoroLoading] = useState(false);
 
   const toggleSingleTaskMode = useCallback(() => {
     setSingleTaskMode((prev) => {
@@ -202,15 +325,18 @@ export default function Page() {
       throw new Error(`fetch failed ${res.status}`);
     }
     const data = (await res.json()) as { tasks: StudyTask[] };
-    return data.tasks.filter((t) => t.source !== "dashboard");
+    return data.tasks;
   }, []);
 
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
       const [t1, t2] = await Promise.all([fetchDay(today), fetchDay(tomorrow)]);
-      setTasksToday(t1);
-      setTasksTomorrow(t2);
+      // 学習プランタスク（source !== "dashboard"）
+      setTasksToday(t1.filter((t) => t.source !== "dashboard"));
+      setTasksTomorrow(t2.filter((t) => t.source !== "dashboard"));
+      // ダッシュボードで追加したタスク（今日分）
+      setDashboardTasks(t1.filter((t) => t.source === "dashboard"));
       setError(null);
     } catch (e) {
       console.error(e);
@@ -220,16 +346,119 @@ export default function Page() {
     }
   }, [fetchDay, today, tomorrow]);
 
+  const collectAllTasks = useCallback(() => {
+    const walk = (nodes: StudyTask[]): StudyTask[] =>
+      nodes.flatMap((n) => [n, ...(n.children?.length ? walk(n.children) : [])]);
+    return [...walk(tasksToday), ...walk(tasksTomorrow), ...walk(dashboardTasks)];
+  }, [dashboardTasks, tasksToday, tasksTomorrow]);
+
+  const pauseAllInProgress = useCallback(async () => {
+    const running = collectAllTasks().filter((t) => t.status === "in_progress");
+    if (!running.length) return;
+    try {
+      await Promise.all(
+        running.map((task) =>
+          fetch("/api/tasks", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: task.id, status: "paused" }),
+          }),
+        ),
+      );
+      await refresh();
+    } catch (err) {
+      console.error(err);
+      setError(PLAN_TEXT.statusError);
+    }
+  }, [collectAllTasks, refresh]);
+
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setPomodoroLoading(true);
+        const res = await fetch("/api/settings/profile");
+        if (!res.ok) throw new Error(`profile ${res.status}`);
+        const data = (await res.json()) as ProfileResponse;
+        const enabled = Boolean(data.pomodoroEnabled);
+        const work = Number(data.pomodoroWorkMinutes ?? 25);
+        const rest = Number(data.pomodoroBreakMinutes ?? 5);
+        const safeWork = Number.isFinite(work) && work > 0 ? work : 25;
+        const safeRest = Number.isFinite(rest) && rest > 0 ? rest : 5;
+        setPomodoroEnabled(enabled);
+        setPomodoroWorkMinutes(safeWork);
+        setPomodoroBreakMinutes(safeRest);
+        setPomodoroPhase(enabled ? "work" : "idle");
+        setPomodoroSecondsLeft(safeWork * 60);
+        setRestModalOpen(false);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setPomodoroLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const clearPomodoroTimer = useCallback(() => {
+    if (pomodoroTimerRef.current) {
+      clearInterval(pomodoroTimerRef.current);
+      pomodoroTimerRef.current = null;
+    }
+  }, []);
+
+  const formatPomodoroTime = useCallback((seconds: number) => {
+    const clamped = Math.max(0, Math.floor(seconds));
+    const mm = String(Math.floor(clamped / 60)).padStart(2, "0");
+    const ss = String(clamped % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
+  }, []);
+
+  useEffect(() => {
+    if (!pomodoroEnabled) {
+      clearPomodoroTimer();
+      setPomodoroPhase("idle");
+      setRestModalOpen(false);
+      return;
+    }
+    if (pomodoroPhase === "idle") {
+      setPomodoroPhase("work");
+      setPomodoroSecondsLeft(Math.max(1, pomodoroWorkMinutes) * 60);
+    }
+    clearPomodoroTimer();
+    pomodoroTimerRef.current = setInterval(() => {
+      setPomodoroSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return clearPomodoroTimer;
+  }, [clearPomodoroTimer, pomodoroEnabled, pomodoroPhase, pomodoroWorkMinutes]);
+
+  useEffect(() => {
+    if (!pomodoroEnabled || pomodoroPhase === "idle") return;
+    if (pomodoroSecondsLeft > 0) return;
+
+    if (pomodoroPhase === "work") {
+      (async () => {
+        await pauseAllInProgress();
+        setPomodoroPhase("break");
+        setPomodoroSecondsLeft(Math.max(1, pomodoroBreakMinutes) * 60);
+        setRestModalOpen(true);
+      })();
+    } else if (pomodoroPhase === "break") {
+      setPomodoroPhase("work");
+      setPomodoroSecondsLeft(Math.max(1, pomodoroWorkMinutes) * 60);
+      setRestModalOpen(false);
+    }
+  }, [pauseAllInProgress, pomodoroBreakMinutes, pomodoroEnabled, pomodoroPhase, pomodoroSecondsLeft, pomodoroWorkMinutes]);
 
   const loadHistory = useCallback(
     async (targetDate: string) => {
       try {
         setHistoryLoading(true);
         const tasks = await fetchDay(targetDate);
-        setHistoryTasks(tasks);
+        setHistoryTasks(tasks.filter((t) => t.source !== "dashboard"));
         setHistoryDate(targetDate);
       } catch (e) {
         console.error(e);
@@ -342,6 +571,10 @@ export default function Page() {
   };
 
   const handleStatus = async (id: string, status: StudyTask["status"]) => {
+    if (pomodoroEnabled && pomodoroPhase === "break" && status === "in_progress") {
+      setError("休憩中は開始できません");
+      return;
+    }
     // シングルタスクモードがONで、実行中にしようとしている場合
     if (singleTaskMode && status === "in_progress") {
       // 自分自身を除外して実行中のタスクがあるかチェック
@@ -391,6 +624,22 @@ export default function Page() {
       setError(PLAN_TEXT.statusError);
     }
   };
+
+  const handleTogglePomodoro = useCallback(() => {
+    setPomodoroEnabled((prev) => {
+      const next = !prev;
+      if (next) {
+        setPomodoroPhase("work");
+        setPomodoroSecondsLeft(Math.max(1, pomodoroWorkMinutes) * 60);
+      } else {
+        clearPomodoroTimer();
+        setPomodoroPhase("idle");
+        setRestModalOpen(false);
+        setPomodoroSecondsLeft(Math.max(1, pomodoroWorkMinutes) * 60);
+      }
+      return next;
+    });
+  }, [clearPomodoroTimer, pomodoroWorkMinutes]);
 
   // 警告モーダルで「続行」を押した場合（強制的に実行中にする）
   const handleForceStatusChange = async () => {
@@ -582,8 +831,37 @@ export default function Page() {
 
   const openDetailModal = (task: StudyTask) => {
     setDetailTask(task);
+    setDetailStack([]);
     setDetailModalOpen(true);
   };
+
+  const handleDetailDrillDown = (task: StudyTask) => {
+    if (detailTask) {
+      setDetailStack((prev) => [...prev, detailTask]);
+    }
+    setDetailTask(task);
+  };
+
+  const handleDetailBack = () => {
+    if (detailStack.length > 0) {
+      const prev = detailStack[detailStack.length - 1];
+      setDetailStack((s) => s.slice(0, -1));
+      setDetailTask(prev);
+    }
+  };
+
+  // 詳細モーダル内で表示するタスクリスト（子タスク + ダッシュボードタスク）
+  const detailChildren = useMemo(() => {
+    if (!detailTask) return [];
+    const children = detailTask.children ?? [];
+    // ダッシュボードで追加したタスクも表示（親タスクと同じ日付の場合のみ）
+    const dashboardForThisTask = dashboardTasks.filter((t) => {
+      // 親タスクとダッシュボードタスクの日付が一致する場合に表示
+      if (!detailTask.dueDate || !t.dueDate) return false;
+      return detailTask.dueDate.slice(0, 10) === t.dueDate.slice(0, 10);
+    });
+    return [...children, ...dashboardForThisTask];
+  }, [detailTask, dashboardTasks]);
 
   return (
     <main className="space-y-4">
@@ -610,6 +888,40 @@ export default function Page() {
             )}
           </div>
 
+          {/* ポモドーロタイマー */}
+          <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-slate-900">ポモドーロタイマー</p>
+              <p className="text-xs text-slate-500">
+                状態:{' '}
+                {pomodoroEnabled
+                  ? pomodoroPhase === "break"
+                    ? "休憩中"
+                    : "作業中"
+                  : "OFF"}
+              </p>
+              <p className="text-xs text-slate-500">
+                残り {formatPomodoroTime(pomodoroSecondsLeft)}（作業 {pomodoroWorkMinutes}分 / 休憩 {pomodoroBreakMinutes}分）
+              </p>
+              {pomodoroLoading && <p className="text-[11px] text-slate-500">設定を読み込み中...</p>}
+            </div>
+            <button
+              type="button"
+              onClick={handleTogglePomodoro}
+              disabled={pomodoroLoading}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 ${
+                pomodoroEnabled ? "bg-emerald-500" : "bg-slate-200"
+              } ${pomodoroLoading ? "opacity-60" : ""}`}
+              role="switch"
+              aria-checked={pomodoroEnabled}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  pomodoroEnabled ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
           {/* シングルタスクモードトグル */}
           <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
             <div className="flex flex-col">
@@ -992,56 +1304,131 @@ export default function Page() {
         <p className="text-sm text-slate-700">{PLAN_TEXT.singleTaskWarningMessage}</p>
       </Modal>
 
+      {/* 休憩モーダル */}
+      <Modal
+        open={restModalOpen}
+        title="休憩です"
+        onClose={() => setRestModalOpen(false)}
+        footer={null}
+      >
+        <p className="text-sm text-slate-700">休憩中は実行できません。タイマー終了までお待ちください。</p>
+      </Modal>
+      {/* 詳細モーダル - 子タスク + ダッシュボードTodo表示 */}
       <Modal
         open={detailModalOpen}
-        title={detailTask ? `${detailTask.title} の詳細` : "詳細"}
+        title={detailTask ? `📋 ${detailTask.title} の詳細` : "詳細"}
         onClose={() => {
           setDetailModalOpen(false);
           setDetailTask(null);
+          setDetailStack([]);
         }}
       >
         {detailTask ? (
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-800">学習プランのTodo</p>
-              <p className="text-xs text-slate-500">子タスクがあれば下に一覧表示します。</p>
-            </div>
-            <div className="space-y-2">
-              {(detailTask.children?.length ? detailTask.children : [detailTask]).map((t) => (
-                <div key={t.id} className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900">{t.title}</span>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] ${
-                          t.status === "done"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : t.status === "in_progress"
-                              ? "bg-amber-100 text-amber-700"
-                              : t.status === "paused"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-slate-100 text-slate-700"
-                        }`}
+          <div className="space-y-4">
+            {/* パンくずナビゲーション */}
+            {detailStack.length > 0 && (
+              <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+                <button
+                  type="button"
+                  onClick={handleDetailBack}
+                  className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                >
+                  ← 戻る
+                </button>
+                <div className="flex items-center gap-1 text-xs text-slate-500">
+                  {detailStack.map((t, i) => (
+                    <span key={t.id}>
+                      {i > 0 && " / "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDetailTask(t);
+                          setDetailStack((s) => s.slice(0, i));
+                        }}
+                        className="text-slate-700 underline hover:text-slate-900"
                       >
-                        {t.status === "done"
-                          ? "完了"
-                          : t.status === "in_progress"
-                            ? "進行中"
-                            : t.status === "paused"
-                              ? "一時停止"
-                              : "未着手"}
-                      </span>
-                    </div>
-                    {t.dueDate && (
-                      <span className="text-[11px] text-slate-600">
-                        {t.dueDate.slice(0, 10)} {t.dueDate.slice(11, 16)}
-                      </span>
-                    )}
-                  </div>
-                  {t.description && <p className="mt-1 text-xs text-slate-700">{t.description}</p>}
+                        {t.title}
+                      </button>
+                    </span>
+                  ))}
+                  <span> / {detailTask.title}</span>
                 </div>
-              ))}
+              </div>
+            )}
+
+            {/* 親タスク情報 */}
+            <div className="rounded-lg border border-slate-300 bg-white p-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold text-slate-900">{detailTask.title}</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs ${
+                    detailTask.status === "done"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : detailTask.status === "in_progress"
+                        ? "bg-amber-100 text-amber-700"
+                        : detailTask.status === "paused"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  {detailTask.status === "done"
+                    ? "完了"
+                    : detailTask.status === "in_progress"
+                      ? "進行中"
+                      : detailTask.status === "paused"
+                        ? "一時停止"
+                        : "未着手"}
+                </span>
+              </div>
+              {detailTask.dueDate && (
+                <p className="mt-1 text-sm text-slate-600">
+                  予定: {detailTask.dueDate.slice(0, 10)} {detailTask.dueDate.slice(11, 16)}
+                </p>
+              )}
+              {detailTask.description && <p className="mt-2 text-sm text-slate-700">{detailTask.description}</p>}
             </div>
+
+            {/* 子タスク一覧 */}
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-800">
+                  子タスク・Todo {detailChildren.length > 0 ? `(${detailChildren.length}件)` : ""}
+                </p>
+              </div>
+              {detailChildren.length === 0 ? (
+                <p className="text-sm text-slate-500">子タスクはありません</p>
+              ) : (
+                <div className="space-y-2">
+                  {detailChildren.map((child) => (
+                    <ChildTaskCard
+                      key={child.id}
+                      task={child}
+                      onOpenDetail={handleDetailDrillDown}
+                      onStatusChange={handleStatus}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ダッシュボードで追加したTodo（別セクション） */}
+            {dashboardTasks.length > 0 && detailStack.length === 0 && (
+              <div className="border-t border-slate-200 pt-4">
+                <p className="mb-2 text-sm font-semibold text-slate-800">
+                  📋 ダッシュボードで追加したTodo（今日）
+                </p>
+                <div className="space-y-2">
+                  {dashboardTasks.map((task) => (
+                    <ChildTaskCard
+                      key={task.id}
+                      task={task}
+                      onOpenDetail={handleDetailDrillDown}
+                      onStatusChange={handleStatus}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-sm text-slate-600">タスクが選択されていません</p>

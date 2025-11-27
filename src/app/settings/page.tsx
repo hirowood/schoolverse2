@@ -7,13 +7,21 @@ type Profile = {
   weeklyGoal: string;
   activeHours: "morning" | "day" | "evening";
   coachTone: "gentle" | "logical";
+  pomodoroEnabled: boolean;
+  pomodoroWorkMinutes: number;
+  pomodoroBreakMinutes: number;
 };
+
+type ProfileResponse = Partial<Profile>;
 
 const DEFAULT_PROFILE: Profile = {
   name: "",
   weeklyGoal: "",
   activeHours: "day",
   coachTone: "gentle",
+  pomodoroEnabled: false,
+  pomodoroWorkMinutes: 25,
+  pomodoroBreakMinutes: 5,
 };
 
 export default function Page() {
@@ -29,12 +37,15 @@ export default function Page() {
         setLoading(true);
         const res = await fetch("/api/settings/profile");
         if (!res.ok) throw new Error(`failed ${res.status}`);
-        const data = (await res.json()) as Profile;
+        const data = (await res.json()) as ProfileResponse;
         setProfile({
           name: data.name ?? "",
           weeklyGoal: data.weeklyGoal ?? "",
           activeHours: (data.activeHours as Profile["activeHours"]) ?? "day",
           coachTone: (data.coachTone as Profile["coachTone"]) ?? "gentle",
+          pomodoroEnabled: Boolean(data.pomodoroEnabled ?? false),
+          pomodoroWorkMinutes: Number(data.pomodoroWorkMinutes ?? 25),
+          pomodoroBreakMinutes: Number(data.pomodoroBreakMinutes ?? 5),
         });
         setError(null);
       } catch (e) {
@@ -141,6 +152,56 @@ export default function Page() {
               <option value="gentle">やさしい</option>
               <option value="logical">ロジカル</option>
             </select>
+          </div>
+        </div>
+
+        <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-800">ポモドーロタイマー</p>
+              <p className="text-xs text-slate-600">作業・休憩のサイクル時間を設定します</p>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-slate-800">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                checked={profile.pomodoroEnabled}
+                onChange={(e) => setProfile((p) => ({ ...p, pomodoroEnabled: e.target.checked }))}
+              />
+              ON/OFF
+            </label>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1">
+              <label htmlFor="pomodoro-work" className="text-xs font-medium text-slate-700">
+                作業時間（分）
+              </label>
+              <input
+                id="pomodoro-work"
+                type="number"
+                min={1}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                value={profile.pomodoroWorkMinutes}
+                onChange={(e) =>
+                  setProfile((p) => ({ ...p, pomodoroWorkMinutes: Number(e.target.value) || 0 }))
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="pomodoro-break" className="text-xs font-medium text-slate-700">
+                休憩時間（分）
+              </label>
+              <input
+                id="pomodoro-break"
+                type="number"
+                min={1}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                value={profile.pomodoroBreakMinutes}
+                onChange={(e) =>
+                  setProfile((p) => ({ ...p, pomodoroBreakMinutes: Number(e.target.value) || 0 }))
+                }
+              />
+            </div>
           </div>
         </div>
 

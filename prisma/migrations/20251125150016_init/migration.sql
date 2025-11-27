@@ -63,25 +63,17 @@ CREATE TABLE "StudyTask" (
     "userId" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT,
+    "source" TEXT NOT NULL DEFAULT 'user',
     "dueDate" TIMESTAMP(3),
     "status" TEXT NOT NULL DEFAULT 'todo',
     "note" TEXT,
+    "parentId" TEXT,
+    "totalWorkTime" INTEGER NOT NULL DEFAULT 0,
+    "lastStartedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "StudyTask_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "TaskSubtask" (
-    "id" TEXT NOT NULL,
-    "taskId" TEXT NOT NULL,
-    "title" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'todo',
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "TaskSubtask_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -109,7 +101,7 @@ CREATE INDEX "StudyTask_userId_dueDate_idx" ON "StudyTask"("userId", "dueDate");
 CREATE INDEX "StudyTask_userId_status_dueDate_idx" ON "StudyTask"("userId", "status", "dueDate");
 
 -- CreateIndex
-CREATE INDEX "TaskSubtask_taskId_status_idx" ON "TaskSubtask"("taskId", "status");
+CREATE INDEX "StudyTask_parentId_idx" ON "StudyTask"("parentId");
 
 -- AddForeignKey
 ALTER TABLE "CredoPracticeLog" ADD CONSTRAINT "CredoPracticeLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -127,4 +119,4 @@ ALTER TABLE "UserProfile" ADD CONSTRAINT "UserProfile_userId_fkey" FOREIGN KEY (
 ALTER TABLE "StudyTask" ADD CONSTRAINT "StudyTask_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TaskSubtask" ADD CONSTRAINT "TaskSubtask_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "StudyTask"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "StudyTask" ADD CONSTRAINT "StudyTask_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "StudyTask"("id") ON DELETE CASCADE ON UPDATE CASCADE;
