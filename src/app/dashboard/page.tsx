@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CREDO_ITEMS } from "@/features/credo/config";
 import type { CredoPracticeFormValue } from "@/features/credo/types";
 import type { StudyTask } from "@/features/plan/types";
@@ -353,6 +353,7 @@ export default function DashboardPage() {
     const parent = todayTopParent ?? todayTopTask;
     return parent?.children ?? [];
   }, [todayTopParent, todayTopTask]);
+  const autoCompleteRef = useRef<string | null>(null);
 
 
   const handleAddDetail = useCallback(async () => {
@@ -395,6 +396,21 @@ export default function DashboardPage() {
       setDetailLoading(false);
     }
   }, [detailDesc, detailTitle, refreshTasks, today, todayTopTask]);
+
+  // 子Todoがすべて完了したら親（もしくは現在のタスク）を完了にする
+  useEffect(() => {
+    const parent = todayTopParent ?? todayTopTask;
+    if (!parent || currentTodoList.length === 0) return;
+    if (statusUpdating) return;
+    const allDone = currentTodoList.every((c) => c.status === "done");
+    if (!allDone) {
+      autoCompleteRef.current = null;
+      return;
+    }
+    if (autoCompleteRef.current === parent.id) return;
+    autoCompleteRef.current = parent.id;
+    handleStatusChange(parent.id, "done");
+  }, [currentTodoList, handleStatusChange, statusUpdating, todayTopParent, todayTopTask]);
 
   const todayStats = useMemo(() => {
     const inProgress = rootTasks.filter((t) => t.status === "in_progress").length;
