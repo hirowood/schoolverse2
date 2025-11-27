@@ -364,6 +364,30 @@ export default function DashboardPage() {
   const autoCompleteRef = useRef<string | null>(null);
   const targetParent = todayTopParent ?? todayTopTask;
 
+  const findTaskAndParent = useCallback(
+    (id: string): { task: StudyTask | null; parent: StudyTask | null } => {
+      for (const root of rootTasks) {
+        if (root.id === id) return { task: root, parent: null };
+        if (root.children?.length) {
+          const stack = [...(root.children ?? [])];
+          while (stack.length) {
+            const cur = stack.pop()!;
+            if (cur.id === id) return { task: cur, parent: root };
+            if (cur.children?.length) stack.push(...cur.children);
+          }
+        }
+      }
+      return { task: null, parent: null };
+    },
+    [rootTasks],
+  );
+
+  const findNextChild = useCallback((parent?: StudyTask | null) => {
+    if (!parent?.children?.length) return null;
+    return parent.children.find((c) => c.status !== "done") ?? null;
+  }, []);
+  const targetParent = todayTopParent ?? todayTopTask;
+
 
   const handleAddDetail = useCallback(async () => {
     if (!targetParent) {
@@ -593,6 +617,41 @@ export default function DashboardPage() {
           }
           return;
         }
+        // 追加の自動遷移ロジック
+        const { task, parent } = findTaskAndParent(id);
+
+        // 親タスクを実行 -> 最初の未完了子を実行状態に
+        if (status === "in_progress" && task && !parent) {
+          const next = findNextChild(task);
+          if (next && next.status !== "in_progress") {
+            await fetch("/api/tasks", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: next.id, status: "in_progress" }),
+            }).catch(console.error);
+          }
+        }
+
+        // 子タスクが完了 -> 次の子を実行、なければ親を完了
+        if (status === "done" && parent) {
+          const next = findNextChild(parent);
+          if (next) {
+            if (next.status !== "in_progress") {
+              await fetch("/api/tasks", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: next.id, status: "in_progress" }),
+              }).catch(console.error);
+            }
+          } else if (parent.status !== "done") {
+            await fetch("/api/tasks", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: parent.id, status: "done" }),
+            }).catch(console.error);
+          }
+        }
+
         await refreshTasks({ silent: true });
       } catch (e) {
         console.error(e);
@@ -601,7 +660,7 @@ export default function DashboardPage() {
         setStatusUpdating(null);
       }
     },
-    [refreshTasks],
+    [findNextChild, findTaskAndParent, refreshTasks],
   );
 
   // 子Todoがすべて完了したら親（もしくは現在のタスク）を完了にする
