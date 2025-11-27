@@ -339,14 +339,10 @@ export default function DashboardPage() {
     [sortedRootTasks],
   );
 
-  const secondTask = useMemo(() => {
-    if (!todayTopTask) return null;
-    return (
-      sortedRootTasks.filter((t) => t.id !== todayTopTask.id).find((t) => t.status !== "done") ??
-      sortedRootTasks.find((t) => t.id !== todayTopTask.id) ??
-      null
-    );
-  }, [sortedRootTasks, todayTopTask]);
+  const todoTasks = useMemo(
+    () => sortedRootTasks.filter((t) => t.status !== "done"),
+    [sortedRootTasks],
+  );
 
   const todayStats = useMemo(() => {
     const inProgress = rootTasks.filter((t) => t.status === "in_progress").length;
@@ -576,33 +572,44 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {secondTask && (
-                  <div className="rounded-lg border border-slate-200 bg-white p-4">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-xs font-medium text-slate-500">次にやるタスク（2番目）</p>
-                      {statusUpdating && secondTask.id === statusUpdating && (
-                        <span className="text-[11px] text-slate-500">更新中...</span>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-base font-semibold text-slate-900">{secondTask.title}</p>
-                        <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white">
-                          {statusLabel[secondTask.status]}
-                        </span>
-                        {secondTask.dueDate && (
-                          <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700">
-                            {secondTask.dueDate.slice(0, 10)} {secondTask.dueDate.slice(11, 16)}
-                          </span>
-                        )}
-                      </div>
-                      {secondTask.description && (
-                        <p className="text-sm text-slate-700">{secondTask.description}</p>
-                      )}
-                      <TaskActions task={secondTask} onChange={handleStatusChange} disabled={statusUpdating !== null} />
-                    </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-slate-500">Todoリスト（未完了）</p>
+                    {statusUpdating && <span className="text-[11px] text-slate-500">更新中...</span>}
                   </div>
-                )}
+                  {todoTasks.length === 0 ? (
+                    <p className="text-sm text-slate-600">未完了のタスクはありません</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {todoTasks.map((task) => (
+                        <div key={task.id} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-semibold text-slate-900">{task.title}</p>
+                              <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white">
+                                {statusLabel[task.status]}
+                              </span>
+                              {task.dueDate && (
+                                <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-700">
+                                  {task.dueDate.slice(0, 10)} {task.dueDate.slice(11, 16)}
+                                </span>
+                              )}
+                            </div>
+                            {statusUpdating === task.id && (
+                              <span className="text-[10px] text-slate-500">更新中...</span>
+                            )}
+                          </div>
+                          {task.description && (
+                            <p className="mt-1 text-xs text-slate-700">{task.description}</p>
+                          )}
+                          <div className="mt-2">
+                            <TaskActions task={task} onChange={handleStatusChange} disabled={statusUpdating !== null} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {planHint && <p className="text-[11px] text-slate-500">設定ページより: {planHint}</p>}
