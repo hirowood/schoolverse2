@@ -60,9 +60,10 @@ export function toNoteRecord(note: Note): NoteRecord {
     tags,
     isShareable: note.isShareable,
     relatedTaskId: note.relatedTaskId,
-    relatedTaskTitle: note.relatedTaskTitle,
-    createdAt: note.createdAt,
-    updatedAt: note.updatedAt,
+    // relatedTaskTitle: note.relatedTaskTitle,
+    relatedTaskTitle: null,  // ★ここを追加
+    createdAt: note.createdAt.toISOString(),
+    updatedAt: note.updatedAt.toISOString(),
   };
 }
 

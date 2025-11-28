@@ -111,14 +111,19 @@ export async function POST(request: NextRequest) {
       title: validation.data.title,
       content: validation.data.content,
       templateType: validation.data.templateType ?? "free",
-      drawingData: validation.data.drawingData ?? Prisma.JsonNull,
+
+      // ★ここを修正
+      drawingData:
+        (validation.data.drawingData as Prisma.InputJsonValue | null | undefined) ??
+        Prisma.JsonNull,
+
       templateData: validation.data.templateData ?? Prisma.JsonNull,
       tags: normalizeTags(validation.data.tags) ?? Prisma.JsonNull,
       isShareable: validation.data.isShareable ?? false,
       imageFiles: validation.data.imageFiles ?? Prisma.JsonNull,
       ocrTexts: validation.data.ocrTexts ?? Prisma.JsonNull,
       relatedTaskId: validation.data.relatedTaskId,
-      relatedTaskTitle: validation.data.relatedTaskTitle,
+      // relatedTaskTitle: validation.data.relatedTaskTitle,
     },
   });
 

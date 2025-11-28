@@ -3,22 +3,32 @@
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 
 interface CameraCaptureProps {
-  onCapture: (imageDataUrl: string) => void;
+  onCapture: (imageDataUrl: string) => void | Promise<void>;
   onClose: () => void;
 }
 
 const isHttps = () =>
-  typeof window !== "undefined" && (window.location.protocol === "https:" || window.location.hostname === "localhost");
+  typeof window !== "undefined" &&
+  (window.location.protocol === "https:" ||
+    window.location.hostname === "localhost");
 
-export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
+export default function CameraCapture({
+  onCapture,
+  onClose,
+}: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
+  const [facingMode, setFacingMode] = useState<"user" | "environment">(
+    "environment"
+  );
   const [isSupported, setIsSupported] = useState(() => isHttps());
-  const [isMobile] = useState(() =>
-    typeof navigator !== "undefined" ? /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) : false
+  const [isMobile] = useState(
+    () =>
+      typeof navigator !== "undefined"
+        ? /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+        : false
   );
   const [captured, setCaptured] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(
@@ -43,25 +53,32 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         audio: false,
       };
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      const mediaStream = await navigator.mediaDevices.getUserMedia(
+        constraints
+      );
       setStream(mediaStream);
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current?.play();
-          };
-        }
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play();
+        };
+      }
     } catch (err) {
       console.error("Camera access error:", err);
       const message = err instanceof Error ? err.message : "";
-      if (message.includes("Permission denied") || message.includes("NotAllowedError")) {
+      if (
+        message.includes("Permission denied") ||
+        message.includes("NotAllowedError")
+      ) {
         setError("カメラの許可が必要です。ブラウザで許可してください。");
       } else if (message.includes("NotFoundError")) {
         setError("カメラが見つかりません。");
         setIsSupported(false);
       } else {
-        setError("カメラにアクセスできません。ファイル選択をご利用ください。");
+        setError(
+          "カメラにアクセスできません。ファイル選択をご利用ください。"
+        );
       }
     }
   }, [facingMode, stream]);
@@ -99,7 +116,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const handleConfirm = useCallback(() => {
     if (!captured) return;
     stream?.getTracks().forEach((track) => track.stop());
-    onCapture(captured);
+    void onCapture(captured);
   }, [captured, onCapture, stream]);
 
   const handleClose = useCallback(() => {
@@ -132,7 +149,9 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2">
       <div className="w-full max-w-3xl rounded-xl bg-white shadow-xl sm:p-4">
         <div className="flex items-center justify-between border-b border-slate-200 p-3">
-          <h2 className="text-lg font-semibold text-slate-900">📷 OCR用カメラ</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            📷 OCR用カメラ
+          </h2>
           <button
             type="button"
             onClick={handleClose}
@@ -144,7 +163,9 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         </div>
         <div className="p-3">
           {error && (
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+              {error}
+            </div>
           )}
           <div className="mt-4 aspect-[4/3] w-full overflow-hidden rounded-lg bg-black">
             {!isSupported && (
@@ -154,7 +175,11 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
             )}
             {captured ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={captured} alt="撮影画像" className="h-full w-full object-contain" />
+              <img
+                src={captured}
+                alt="撮影画像"
+                className="h-full w-full object-contain"
+              />
             ) : (
               <video
                 ref={videoRef}
@@ -162,7 +187,9 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
                 playsInline
                 muted
                 className="h-full w-full object-cover"
-                style={{ transform: facingMode === "user" ? "scaleX(-1)" : "none" }}
+                style={{
+                  transform: facingMode === "user" ? "scaleX(-1)" : "none",
+                }}
               />
             )}
           </div>

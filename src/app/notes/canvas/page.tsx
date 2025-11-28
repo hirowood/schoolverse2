@@ -4,7 +4,16 @@ import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import type { ExcalidrawImperativeAPI, ExcalidrawElement, AppState, BinaryFileData } from "@excalidraw/excalidraw/types/types";
+import type {
+  ExcalidrawImperativeAPI,
+  AppState,
+  BinaryFileData,
+} from "@excalidraw/excalidraw/types";
+import type {
+  ExcalidrawElement,
+  FileId,
+} from "@excalidraw/excalidraw/element/types";
+
 import CameraCapture from "@/components/notes/CameraCapture";
 import OcrProcessor from "@/components/notes/OcrProcessor";
 
@@ -83,19 +92,19 @@ function CanvasPageContent() {
     const reader = new FileReader();
     reader.onload = async (e) => {
       const dataUrl = e.target?.result as string;
-      const id = crypto.randomUUID();
-      
-      // BinaryFileDataの形式で追加
+
+      // ブランド型 FileId にキャスト
+      const id = crypto.randomUUID() as FileId;
+
       const fileData: BinaryFileData = {
-        id,
-        dataURL: dataUrl,
+        id, // FileId
+        dataURL: dataUrl as BinaryFileData["dataURL"],
         mimeType: file.type as BinaryFileData["mimeType"],
         created: Date.now(),
       };
-      
+
       await apiRef.current!.addFiles([fileData]);
-      
-      // 画像要素を作成してシーンに追加
+
       const img = new Image();
       img.onload = () => {
         const element: Partial<ExcalidrawElement> = {
@@ -105,9 +114,9 @@ function CanvasPageContent() {
           y: 100,
           width: Math.min(img.width, 400),
           height: Math.min(img.height, 300),
-          fileId: id,
+          fileId: id, // FileId として OK
         };
-        
+
         const currentElements = apiRef.current!.getSceneElements();
         apiRef.current!.updateScene({
           elements: [...currentElements, element as ExcalidrawElement],
@@ -117,6 +126,7 @@ function CanvasPageContent() {
     };
     reader.readAsDataURL(file);
   }, []);
+
 
   // カメラ撮影完了
   const handleCameraCapture = useCallback(async (dataUrl: string) => {
@@ -352,7 +362,7 @@ function CanvasPageContent() {
       {showCamera && (
         <CameraCapture
           onCapture={handleCameraCapture}
-          onCancel={() => setShowCamera(false)}
+          onClose={() => setShowCamera(false)}
         />
       )}
 
