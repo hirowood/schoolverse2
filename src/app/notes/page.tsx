@@ -809,7 +809,9 @@ export default function NotesPage() {
                     <span>関連タスク: {note.relatedTaskTitle}</span>
                     <button
                       type="button"
-                      onClick={() => setLinkedTask({ id: note.relatedTaskId!, title: note.relatedTaskTitle })}
+                      onClick={() =>
+                        setLinkedTask({ id: note.relatedTaskId!, title: note.relatedTaskTitle ?? undefined })
+                      }
                       className="rounded-full border border-slate-300 px-2 py-0.5 hover:bg-slate-50"
                     >
                       このタスクで絞る
