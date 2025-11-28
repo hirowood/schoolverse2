@@ -1,10 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import OnboardingPanel, { type OnboardingStep } from "@/components/OnboardingPanel";
 import type { WeeklyReportContext, WeeklyReportRecord } from "@/lib/report/types";
 import { formatDuration, startOfWeek, toIsoDate } from "@/lib/report/utils";
 
 const DEFAULT_WEEK_START = toIsoDate(startOfWeek(new Date(), 1));
+const REPORT_ONBOARDING_KEY = "schoolverse2-onboarding-report";
+const REPORT_ONBOARDING_STEPS: OnboardingStep[] = [
+  {
+    title: "週の始まりを確認",
+    detail: "日付セレクタで分析したい週を選び、対象のタスクやクレドを切り替えましょう。",
+  },
+  {
+    title: "AI生成を活用",
+    detail: "「AI生成」ボタンでClaudeに分析を頼み、レポート＋アドバイスを受け取れます。",
+  },
+  {
+    title: "Markdownで共有",
+    detail: "エクスポートからMarkdown形式で支援者に共有、ノートやレポートに貼り付けも可能です。",
+  },
+];
 
 export default function ReportPage() {
   const [requestedWeek, setRequestedWeek] = useState(DEFAULT_WEEK_START);
@@ -15,6 +31,10 @@ export default function ReportPage() {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(REPORT_ONBOARDING_KEY) !== "1";
+  });
 
   const fetchReport = useCallback(async (weekStart: string) => {
     setLoading(true);
@@ -48,6 +68,18 @@ export default function ReportPage() {
   useEffect(() => {
     fetchReport(requestedWeek);
   }, [fetchReport, requestedWeek]);
+
+  const handleDismissOnboarding = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(REPORT_ONBOARDING_KEY, "1");
+    setShowOnboarding(false);
+  }, []);
+
+  const handleShowOnboarding = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(REPORT_ONBOARDING_KEY);
+    setShowOnboarding(true);
+  }, []);
 
   const handleGenerate = useCallback(async () => {
     setIsGenerating(true);
@@ -120,6 +152,25 @@ export default function ReportPage() {
 
   return (
     <div className="space-y-6">
+      {showOnboarding ? (
+        <OnboardingPanel
+          show
+          title="週次レポートの使いかた"
+          description="週の切り替え・AI生成・Markdownエクスポートの順で進めば、支援者共有もスムーズです。"
+          steps={REPORT_ONBOARDING_STEPS}
+          onClose={handleDismissOnboarding}
+        />
+      ) : (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleShowOnboarding}
+            className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Onboardingを再表示
+          </button>
+        </div>
+      )}
       <header className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-slate-500">週次レポート</p>

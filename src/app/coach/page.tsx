@@ -1,4 +1,3 @@
-// src/app/coach/page.tsx
 "use client";
 
 import { useState, type ReactNode } from "react";
@@ -17,29 +16,29 @@ type TabDefinition = {
 const COACH_ONBOARDING_KEY = "schoolverse2-onboarding-coach";
 const COACH_ONBOARDING_STEPS: OnboardingStep[] = [
   {
-    title: "チャットで整理",
-    detail: "AIコーチとのチャットで今日の悩みや目標を入力し、Claude から具体的な助言を得ます。",
+    title: "AIコーチとおしゃべり",
+    detail: "自由な質問を入力すると、Claudeベースのコーチがすぐに応答してくれます。",
   },
   {
-    title: "Plan タブで提案確認",
-    detail: "Plan タブを開くと AI が学習プランを提案。必要に応じてタスク・時間を調整できます。",
+    title: "学習プラン生成",
+    detail: "Planタブでテーマや時間を入力し、AIにプランを作ってもらう流れを試してみましょう。",
   },
   {
-    title: "Usage Guide を活用",
-    detail: "Usage Guide から使い方・コーチトーンのヒントを確認し、操作に慣れましょう。",
+    title: "Usage Guide活用",
+    detail: "使い方ガイドには例文やトーン変更のヒントが載っており、参照するとより便利です。",
   },
 ];
 
 const TAB_DEFINITIONS: TabDefinition[] = [
   {
     id: "chat",
-    label: "?? �`���b�g",
+    label: "AIチャット",
     panelWrapperClassName: "h-[500px]",
     renderPanel: () => <ChatPanel />,
   },
   {
     id: "plan",
-    label: "?? �w�K�v����",
+    label: "学習プラン",
     renderPanel: () => <PlanPanel />,
   },
 ];
@@ -67,16 +66,15 @@ export default function CoachPage() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      {showOnboarding && (
+      {showOnboarding ? (
         <OnboardingPanel
           show
-          title="AIコーチの活用法"
-          description="チャット・プラン・Usage Guide を活用して、日々の学習を整えましょう。"
+          title="AIコーチの使い方"
+          description="チャット・プラン生成・使い方ガイドの使いどころを確認しましょう。"
           steps={COACH_ONBOARDING_STEPS}
           onClose={handleDismissOnboarding}
         />
-      )}
-      {!showOnboarding && (
+      ) : (
         <div className="flex justify-end">
           <button
             type="button"
@@ -87,40 +85,31 @@ export default function CoachPage() {
           </button>
         </div>
       )}
-      {/* ヘッダー */}
+
       <header className="space-y-1">
         <p className="text-xs font-medium text-slate-500">AI Coach</p>
         <h1 className="text-2xl font-semibold">AIコーチ</h1>
         <p className="text-sm text-slate-600">
-          今日の課題や気分を送ると、クレドに沿った一歩を提案します。
+          その日の気分や課題をチャットで共有すると、学習の伴走役としてアドバイスします。
         </p>
       </header>
 
-      {/* 使い方ガイド */}
       <UsageGuide />
 
-      {/* タブ切り替え */}
       <div className="flex border-b border-slate-200">
         {TAB_DEFINITIONS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 text-sm font-medium transition ${
-              activeTab === tab.id
-                ? "border-b-2 border-slate-900 text-slate-900"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
+            className={px-4 py-2 text-sm font-medium transition }
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      {/* タブコンテンツ */}
-      <div
-        className={`flex-1 min-h-0 ${activeTabDefinition.panelWrapperClassName ?? ""}`}
-      >
+      <div className={lex-1 min-h-0 }>
         {activeTabDefinition.renderPanel()}
       </div>
     </div>
