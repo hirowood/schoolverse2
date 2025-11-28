@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import NotesOnboarding from "@/components/notes/NotesOnboarding";
+import SkeletonBlock from "@/components/ui/SkeletonBlock";
 import { NOTE_TEMPLATE_OPTIONS } from "@/lib/notes/templates";
 import { useSearchParams } from "next/navigation";
 import type {
@@ -747,7 +748,9 @@ export default function NotesPage() {
           <span className="text-xs text-slate-500">編集して再保存できます</span>
         </div>
         {loading ? (
-          <p className="mt-3 text-sm text-slate-500">読み込み中...</p>
+          <div className="mt-3">
+            <SkeletonBlock rows={4} />
+          </div>
         ) : notes.length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">まだノートがありません</p>
         ) : (
