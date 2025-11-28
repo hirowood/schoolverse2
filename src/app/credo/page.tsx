@@ -1,6 +1,9 @@
-"use client";
+\"use client";
 
+import OnboardingPanel, { type OnboardingStep } from "@/components/OnboardingPanel";
 import { useEffect, useMemo, useState } from "react";
+
+
 import {
   DndContext,
   PointerSensor,
@@ -22,6 +25,22 @@ import type {
   CredoItem,
   CredoPracticeFormValue,
 } from "@/features/credo/types";
+
+const CREDO_ONBOARDING_KEY = "schoolverse2-onboarding-credo";
+const CREDO_ONBOARDING_STEPS: OnboardingStep[] = [
+  {
+    title: "日次ログを入力",
+    detail: "クレドの11箇条を毎日チェックし、完了・感想を記録します。",
+  },
+  {
+    title: "ランキングで振り返り",
+    detail: "まとめパネルのランキング・未実践タグで集中ポイントを確認。",
+  },
+  {
+    title: "カレンダー/履歴",
+    detail: "カレンダーから日付を切り替えて継続状況を把握しましょう。",
+  },
+];
 
 type SummaryResponse = {
   practicedCount: number;
@@ -154,7 +173,22 @@ export default function Page() {
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(CREDO_ONBOARDING_KEY) !== "1";
+  });
 
+  const handleDismissOnboarding = () => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(CREDO_ONBOARDING_KEY, "1");
+    setShowOnboarding(false);
+  };
+
+  const handleShowOnboarding = () => {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(CREDO_ONBOARDING_KEY);
+    setShowOnboarding(true);
+  };
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   // 日付切り替え時に当日の入力を取得
@@ -328,6 +362,26 @@ export default function Page() {
 
   return (
     <div className="space-y-6">
+      {showOnboarding && (
+        <OnboardingPanel
+          show
+          title="クレド実践の流れ"
+          description="毎日のチェック、ランキング、カレンダーを使って継続的な体調管理をしましょう。"
+          steps={CREDO_ONBOARDING_STEPS}
+          onClose={handleDismissOnboarding}
+        />
+      )}
+      {!showOnboarding && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleShowOnboarding}
+            className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Onboardingを再表示
+          </button>
+        </div>
+      )}
       <section className="space-y-2">
         <h1 className="text-2xl font-semibold">{CREDO_TEXT.pageTitle}</h1>
         <p className="text-sm text-slate-600">{CREDO_TEXT.pageDescription}</p>

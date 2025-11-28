@@ -25,7 +25,23 @@ import { addDays, formatLocalIsoDate, getToday, parseLocalDate, buildTaskTree } 
 import { usePomodoroTimer } from "@/features/plan/hooks/usePomodoroTimer";
 import { createChildDraft, useTaskModal } from "@/features/plan/hooks/useTaskModal";
 import { createTask, deleteTask, fetchTasksByDate, patchTask } from "@/features/plan/services/taskService";
+import OnboardingPanel, { OnboardingStep } from "@/components/OnboardingPanel";
 
+const PLAN_ONBOARDING_KEY = "schoolverse2-onboarding-plan";
+const PLAN_ONBOARDING_STEPS: OnboardingStep[] = [
+  {
+    title: "タスクを俯瞰",
+    detail: "今日・明日のボードでタスクをドラッグして順番や日付を調整できます。",
+  },
+  {
+    title: "ステータスと時間追跡",
+    detail: "ステータス変更で計測も更新。Pomodoro + timer が背景で進行を記録。",
+  },
+  {
+    title: "履歴とカレンダー",
+    detail: "カレンダー/履歴パネルで過去のタスクや時間の流れを振り返りましょう。",
+  },
+];
 type ProfileResponse = Partial<{
   name: string;
   weeklyGoal: string;
@@ -62,6 +78,10 @@ export function PlanPage() {
   const [pomodoroBreakMinutes, setPomodoroBreakMinutes] = useState(5);
   const [restModalOpen, setRestModalOpen] = useState(false);
   const [pomodoroLoading, setPomodoroLoading] = useState(false);
+  const [showPlanOnboarding, setShowPlanOnboarding] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(PLAN_ONBOARDING_KEY) !== "1";
+  });
 
   const {
     modalOpen,
@@ -108,6 +128,18 @@ export function PlanPage() {
   });
   const [warningModalOpen, setWarningModalOpen] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{ id: string; status: StudyTask["status"] } | null>(null);
+
+  const handleDismissPlanOnboarding = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(PLAN_ONBOARDING_KEY, "1");
+    setShowPlanOnboarding(false);
+  }, []);
+
+  const handleShowPlanOnboarding = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(PLAN_ONBOARDING_KEY);
+    setShowPlanOnboarding(true);
+  }, []);
 
   const historyColumnId = `history-${historyDate}`;
   const historyPlaceholderId = "history-placeholder";
@@ -585,6 +617,26 @@ export function PlanPage() {
 
   return (
     <main className="space-y-4">
+      {showPlanOnboarding && (
+        <OnboardingPanel
+          show
+          title="タスクと時間を整える"
+          description="一覧/履歴/時間の流れを順に使って、今週の学習を整理しましょう。"
+          steps={PLAN_ONBOARDING_STEPS}
+          onClose={handleDismissPlanOnboarding}
+        />
+      )}
+      {!showPlanOnboarding && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleShowPlanOnboarding}
+            className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+          >
+            Onboardingを再表示
+          </button>
+        </div>
+      )}
       <header className="space-y-1">
         <p className="text-xs font-medium text-slate-500">{PLAN_TEXT.headerStudyPlan}</p>
         <h1 className="text-2xl font-semibold">{PLAN_TEXT.pageTitle}</h1>

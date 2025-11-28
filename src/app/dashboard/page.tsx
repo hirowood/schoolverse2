@@ -7,6 +7,7 @@ import type { CredoPracticeFormValue } from "@/features/credo/types";
 import type { StudyTask } from "@/features/plan/types";
 import { addDays, formatLocalIsoDate, getToday, parseLocalDate } from "@/features/plan/utils/date";
 import { Modal } from "@/components/ui/Modal";
+import OnboardingPanel, { type OnboardingStep } from "@/components/OnboardingPanel";
 
 type Profile = {
   name?: string;
@@ -20,6 +21,22 @@ type CoachMessage = {
   message: string;
   createdAt: string;
 };
+
+const DASHBOARD_ONBOARDING_KEY = "schoolverse2-onboarding-dashboard";
+const DASHBOARD_ONBOARDING_STEPS: OnboardingStep[] = [
+  {
+    title: "タスクの俯瞰",
+    detail: "今日の Task ボードとステータス更新で、今やるべきことを明確に。",
+  },
+  {
+    title: "時間トラッカー",
+    detail: "Daily/Weekly/Monthly の時間グラフを眺めてペースを把握できます。",
+  },
+  {
+    title: "クレド & 体調",
+    detail: "クレド実践率や体調ハイライト欄で気持ちの波を可視化。",
+  },
+];
 
 const statusLabel: Record<StudyTask["status"], string> = {
   todo: "未着手",
@@ -181,10 +198,32 @@ export default function DashboardPage() {
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
 
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [profileError, setProfileError] = useState<string | null>(null);
+    const [profile, setProfile] = useState<Profile | null>(null);
+    const [profileError, setProfileError] = useState<string | null>(null);
+    const [showOnboarding, setShowOnboarding] = useState(() => {
+      if (typeof window === "undefined") return false;
+      return window.localStorage.getItem(DASHBOARD_ONBOARDING_KEY) !== "1";
+    });
 
-  const [goalInput, setGoalInput] = useState("");
+    useEffect(() => {
+      if (typeof window === "undefined") return;
+      const dismissed = window.localStorage.getItem(DASHBOARD_ONBOARDING_KEY) === "1";
+      setShowOnboarding(!dismissed);
+    }, []);
+
+    const handleDismissOnboarding = useCallback(() => {
+      if (typeof window === "undefined") return;
+      window.localStorage.setItem(DASHBOARD_ONBOARDING_KEY, "1");
+      setShowOnboarding(false);
+    }, []);
+
+    const handleShowOnboarding = useCallback(() => {
+      if (typeof window === "undefined") return;
+      window.localStorage.removeItem(DASHBOARD_ONBOARDING_KEY);
+      setShowOnboarding(true);
+    }, []);
+
+    const [goalInput, setGoalInput] = useState("");
   const [savedGoal, setSavedGoal] = useState("");
 
   const [condition, setCondition] = useState<{ done: number; total: number; note?: string } | null>(null);
@@ -705,6 +744,26 @@ export default function DashboardPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-8">
+      {showOnboarding && (
+        <OnboardingPanel
+          show
+          title="ダッシュボードの見どころ"
+          description="今日のタスク、時間トラッカー、クレド/体調を順に確認しましょう。"
+          steps={DASHBOARD_ONBOARDING_STEPS}
+          onClose={handleDismissOnboarding}
+        />
+      )}
+      {!showOnboarding && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleShowOnboarding}
+            className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Onboarding再表示
+          </button>
+        </div>
+      )}
       <header className="space-y-2">
         <p className="text-xs font-medium text-slate-500">Dashboard</p>
         <h1 className="text-3xl font-semibold text-slate-900">ダッシュボード</h1>
