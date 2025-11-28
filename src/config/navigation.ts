@@ -1,36 +1,44 @@
-// ナビゲーション項目の型
 export type NavItem = {
-  label: string;        // 表示ラベル
-  href: string;         // 画面へのパス
-  description?: string; // 補足説明（任意）
-  icon?: string;        // アイコン（任意）
+  label: string;
+  href: string;
+  description?: string;
+  icon?: string;
 };
 
-// メインサイドバーのナビリスト
 export const MAIN_NAV_ITEMS: NavItem[] = [
   {
     label: "🤖 AIコーチ",
     href: "/coach",
-    description: "AIコーチとの対話・学習プラン生成",
+    description: "AIに相談しながら今日の流れや学習プランを整える",
   },
   {
     label: "📊 ダッシュボード",
     href: "/dashboard",
-    description: "今日のプラン・目標・体調・連絡のまとめ",
+    description: "学習時間・タスク・体調を一画面で把握する",
   },
   {
-    label: "📋 学習プラン",
+    label: "📈 週次レポート",
+    href: "/report",
+    description: "1週間の活動と体調をAIがまとめるレポート",
+  },
+  {
+    label: "🗒️ ノート",
+    href: "/notes",
+    description: "テンプレートに沿って週次振り返りを記録",
+  },
+  {
+    label: "📝 学習プラン",
     href: "/plan",
-    description: "週次・日次の学習プランを管理",
+    description: "タスクを管理しつつ階層・時間を追跡する",
   },
   {
-    label: "✅ クレド実践",
+    label: "💡 クレド",
     href: "/credo",
-    description: "クレド11箇条のチェックと実践ログ",
+    description: "11箇条の実践と体調記録をつける",
   },
   {
     label: "⚙️ 設定",
     href: "/settings",
-    description: "プロフィールや通知の設定",
+    description: "プロフィール・コーチトーン・ポモドーロ設定",
   },
 ];

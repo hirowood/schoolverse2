@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   DndContext,
@@ -1071,28 +1072,34 @@ export function PlanPage() {
 
             {/* 親タスク情報 */}
             <div className="rounded-lg border border-slate-300 bg-white p-4">
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold text-slate-900">{detailTask.title}</span>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs ${
-                    detailTask.status === "done"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : detailTask.status === "in_progress"
-                        ? "bg-amber-100 text-amber-700"
-                        : detailTask.status === "paused"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-slate-100 text-slate-700"
-                  }`}
-                >
-                  {detailTask.status === "done"
-                    ? "完了"
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold text-slate-900">{detailTask.title}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs ${
+                  detailTask.status === "done"
+                    ? "bg-emerald-100 text-emerald-700"
                     : detailTask.status === "in_progress"
-                      ? "進行中"
+                      ? "bg-amber-100 text-amber-700"
                       : detailTask.status === "paused"
-                        ? "一時停止"
-                        : "未着手"}
-                </span>
-              </div>
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-slate-100 text-slate-700"
+                }`}
+              >
+                {detailTask.status === "done"
+                  ? "完了"
+                  : detailTask.status === "in_progress"
+                    ? "進行中"
+                    : detailTask.status === "paused"
+                      ? "一時停止"
+                      : "未着手"}
+              </span>
+              <Link
+                href={`/notes?taskId=${detailTask.id}&taskTitle=${encodeURIComponent(detailTask.title ?? "")}`}
+                className="rounded-full border border-slate-300 px-3 py-1 text-[11px] text-slate-700 hover:bg-slate-50"
+              >
+                📝 このタスクのノート
+              </Link>
+            </div>
               {detailTask.dueDate && (
                 <p className="mt-1 text-sm text-slate-600">
                   予定: {detailTask.dueDate.slice(0, 10)} {detailTask.dueDate.slice(11, 16)}

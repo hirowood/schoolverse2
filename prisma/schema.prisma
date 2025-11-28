@@ -9,17 +9,19 @@ generator client {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
+  id           String   @id @default(cuid())
+  email        String   @unique
   passwordHash String?
-  name        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  credoLogs   CredoPracticeLog[]
+  credoLogs    CredoPracticeLog[]
   chatMessages ChatMessage[]
-  profile     UserProfile?
-  studyTasks  StudyTask[]
+  profile      UserProfile?
+  studyTasks   StudyTask[]
+  weeklyReports WeeklyReport[]
+  notes        Note[]
 }
 
 model CredoItem {
@@ -38,7 +40,7 @@ model CredoPracticeLog {
   credoId   String
   date      DateTime
   done      Boolean
-  note      String     @db.Text
+  note      String   @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -64,14 +66,14 @@ model ChatMessage {
 }
 
 model UserProfile {
-  id          String  @id @default(cuid())
-  userId      String  @unique
-  weeklyGoal  String?
-  activeHours String?
-  coachTone   String?
-  pomodoroEnabled Boolean @default(false)
-  pomodoroWorkMinutes Int @default(25)
-  pomodoroBreakMinutes Int @default(5)
+  id                  String  @id @default(cuid())
+  userId              String  @unique
+  weeklyGoal          String?
+  activeHours         String?
+  coachTone           String?
+  pomodoroEnabled     Boolean @default(false)
+  pomodoroWorkMinutes Int     @default(25)
+  pomodoroBreakMinutes Int    @default(5)
 
   user User @relation(fields: [userId], references: [id])
 }
@@ -86,16 +88,58 @@ model StudyTask {
   status        String    @default("todo")
   note          String?
   parentId      String?
-  totalWorkTime Int       @default(0)  // 累計作業時間（秒）
-  lastStartedAt DateTime?              // 最後に作業を開始した時刻
+  totalWorkTime Int       @default(0)  // Total work time in seconds
+  lastStartedAt DateTime?              // Timestamp when work was last started
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   user     User       @relation(fields: [userId], references: [id])
   parent   StudyTask? @relation("TaskToSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
   children StudyTask[] @relation("TaskToSubtasks")
+  notes    Note[]     @relation("NoteToTask")
 
   @@index([userId, dueDate])
   @@index([userId, status, dueDate])
   @@index([parentId])
+}
+
+model WeeklyReport {
+  id              String   @id @default(cuid())
+  userId          String
+  weekStart       DateTime @db.Date
+  conditionSummary Json?
+  activitySummary  Json?
+  aiAnalysis       Json?
+  nextWeekFocus    Json?
+  supporterExport  Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, weekStart])
+}
+
+model Note {
+  id           String   @id @default(cuid())
+  userId       String
+  title        String?
+  content      String?  @db.Text
+  drawingData  Json?
+  imageFiles   Json?
+  ocrTexts     Json?
+  templateType String?
+  templateData Json?
+  tags         Json?
+  relatedTaskId String?
+  isShareable  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  relatedTask StudyTask? @relation("NoteToTask", fields: [relatedTaskId], references: [id])
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, templateType])
+  @@index([userId, relatedTaskId])
 }
