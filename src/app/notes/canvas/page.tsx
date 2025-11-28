@@ -29,12 +29,23 @@ interface SceneSnapshot {
   appState: Partial<AppState>;
 }
 
+const EMPTY_SCENE: SceneSnapshot = {
+  elements: [],
+  appState: {
+    // 背景はお好みで
+    viewBackgroundColor: "#ffffff",
+    // 変な全画面モードに入らないようにしておく
+    zenModeEnabled: false,
+  },
+};
+
 function CanvasPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const noteId = searchParams.get("id");
   const taskId = searchParams.get("taskId");
   const taskTitle = searchParams.get("taskTitle");
+  const template = searchParams.get("template"); 
 
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
 
@@ -84,6 +95,40 @@ function CanvasPageContent() {
 
     fetchNote();
   }, [noteId]);
+
+  useEffect(() => {
+    if (noteId) return; // 既存ノート編集時は何もしない
+
+    if (template === "5w2h") {
+      setTitle("5W2Hノート");
+      setDescription(
+        [
+          "【5W2H テンプレート】",
+          "Who（誰が）:",
+          "What（何を）:",
+          "Why（なぜ）:",
+          "When（いつ）:",
+          "Where（どこで）:",
+          "How（どのように）:",
+          "How much（いくらで / どれくらい）:",
+        ].join("\n")
+      );
+    } else if (template === "5why") {
+      setTitle("5Whyノート");
+      setDescription(
+        [
+          "【5Why テンプレート】",
+          "課題 / 事象:",
+          "Why 1:",
+          "Why 2:",
+          "Why 3:",
+          "Why 4:",
+          "Why 5:",
+          "対策案:",
+        ].join("\n")
+      );
+    }
+  }, [noteId, template]);
 
   // 画像をキャンバスに追加
   const handleAddImage = useCallback(async (file: File) => {
@@ -343,10 +388,17 @@ function CanvasPageContent() {
           excalidrawAPI={(api) => {
             apiRef.current = api;
           }}
-          initialData={initialScene ? {
-            elements: initialScene.elements,
-            appState: initialScene.appState as Partial<AppState>,
-          } : undefined}
+          initialData={{
+            // 要素は、既存シーンがあればそれを、なければ空
+            elements: initialScene?.elements ?? EMPTY_SCENE.elements,
+            // appState は空シーンをベースに、保存済みのものを上書き
+            appState: {
+              ...EMPTY_SCENE.appState,
+              ...(initialScene?.appState ?? {}),
+              // ここだけは強制的に false にしておく
+              zenModeEnabled: false,
+            },
+          }}
           UIOptions={{
             canvasActions: {
               saveToActiveFile: false,
@@ -357,6 +409,7 @@ function CanvasPageContent() {
           }}
         />
       </div>
+
 
       {/* カメラモーダル */}
       {showCamera && (
