@@ -16,23 +16,23 @@ type TabDefinition = {
 const COACH_ONBOARDING_KEY = "schoolverse2-onboarding-coach";
 const COACH_ONBOARDING_STEPS: OnboardingStep[] = [
   {
-    title: "AIコーチとおしゃべり",
-    detail: "自由な質問を入力すると、Claudeベースのコーチがすぐに応答してくれます。",
+    title: "AIコーチとは？",
+    detail: "ClaudeベースのAIと相談しながら学習プランや振り返りを進めます。",
   },
   {
-    title: "学習プラン生成",
-    detail: "Planタブでテーマや時間を入力し、AIにプランを作ってもらう流れを試してみましょう。",
+    title: "タスク管理",
+    detail: "Planタブで学習タスクの進捗を整理し、AIのアドバイスを反映させましょう。",
   },
   {
-    title: "Usage Guide活用",
-    detail: "使い方ガイドには例文やトーン変更のヒントが載っており、参照するとより便利です。",
+    title: "使い方ガイド",
+    detail: "Usage Guideから操作ヒントを確認して、安心して使いこなせます。",
   },
 ];
 
 const TAB_DEFINITIONS: TabDefinition[] = [
   {
     id: "chat",
-    label: "AIチャット",
+    label: "チャット",
     panelWrapperClassName: "h-[500px]",
     renderPanel: () => <ChatPanel />,
   },
@@ -69,8 +69,8 @@ export default function CoachPage() {
       {showOnboarding ? (
         <OnboardingPanel
           show
-          title="AIコーチの使い方"
-          description="チャット・プラン生成・使い方ガイドの使いどころを確認しましょう。"
+          title="AIコーチのはじめかた"
+          description="初回はこのガイドで基本操作を確認できます。あとで再表示することも可能です。"
           steps={COACH_ONBOARDING_STEPS}
           onClose={handleDismissOnboarding}
         />
@@ -81,7 +81,7 @@ export default function CoachPage() {
             onClick={handleShowOnboarding}
             className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
           >
-            Onboardingを再表示
+            オンボーディングを再表示
           </button>
         </div>
       )}
@@ -90,7 +90,7 @@ export default function CoachPage() {
         <p className="text-xs font-medium text-slate-500">AI Coach</p>
         <h1 className="text-2xl font-semibold">AIコーチ</h1>
         <p className="text-sm text-slate-600">
-          その日の気分や課題をチャットで共有すると、学習の伴走役としてアドバイスします。
+          AIと対話しながら今日の課題や学習の進め方を整理して、次の一歩を決めましょう。
         </p>
       </header>
 
@@ -102,16 +102,18 @@ export default function CoachPage() {
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={px-4 py-2 text-sm font-medium transition }
+            className={`px-4 py-2 text-sm font-medium transition ${
+              activeTab === tab.id
+                ? "border-b-2 border-emerald-500 text-emerald-600"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      <div className={lex-1 min-h-0 }>
-        {activeTabDefinition.renderPanel()}
-      </div>
+      <div className="flex-1 min-h-0">{activeTabDefinition.renderPanel()}</div>
     </div>
   );
 }

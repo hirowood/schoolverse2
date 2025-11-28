@@ -1,4 +1,4 @@
-\"use client";
+"use client";
 
 import OnboardingPanel, { type OnboardingStep } from "@/components/OnboardingPanel";
 import { useEffect, useMemo, useState } from "react";
@@ -29,16 +29,16 @@ import type {
 const CREDO_ONBOARDING_KEY = "schoolverse2-onboarding-credo";
 const CREDO_ONBOARDING_STEPS: OnboardingStep[] = [
   {
-    title: "日次ログを入力",
-    detail: "クレドの11箇条を毎日チェックし、完了・感想を記録します。",
+    title: "クレドとは？",
+    detail: "11箇条を通じて、体調や学習習慣を振り返るフレームです。",
   },
   {
-    title: "ランキングで振り返り",
-    detail: "まとめパネルのランキング・未実践タグで集中ポイントを確認。",
+    title: "記録の流れ",
+    detail: "毎日の実践チェックとメモを保存して、振り返りにつなげましょう。",
   },
   {
-    title: "カレンダー/履歴",
-    detail: "カレンダーから日付を切り替えて継続状況を把握しましょう。",
+    title: "共有のすすめ",
+    detail: "支援者に進捗や気づきを伝えられる共有フローです。",
   },
 ];
 

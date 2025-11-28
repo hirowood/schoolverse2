@@ -24,8 +24,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen flex flex-col bg-[var(--panel)] text-[var(--foreground)]">
       <header className="flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--panel)] px-6 py-4">
         <div className="flex items-center gap-3">
-          <span className="text-xl font-semibold tracking-tight">schoolhouse2</span>
-          <span className="text-xs text-[var(--muted)]">AIコーチとの学習リズム</span>
+          <span className="text-xl font-semibold tracking-tight">schoolverse2</span>
+          <span className="text-xs text-[var(--muted)]">
+            AIと学習をともに歩む生活コーチ
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -33,7 +35,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <>
               <div className="flex flex-col items-end text-right">
                 <span className="text-sm font-medium leading-tight">
-                  {session.user.name ?? session.user.email ?? "学習者"}
+                  {session.user.name ?? session.user.email ?? "ゲスト"}
                 </span>
                 {session.user.email && (
                   <span className="text-[11px] text-[var(--muted)] leading-tight">
@@ -67,7 +69,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={lock rounded-md px-3 py-2 text-sm font-medium transition-colors }
+                className={`block rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive(item.href)
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                }`}
                 aria-current={isActive(item.href) ? "page" : undefined}
               >
                 {item.label}
@@ -79,12 +85,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <main className="flex-1 p-6 pb-24 lg:p-10 lg:pb-0">{children}</main>
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-10 flex items-center justify-between gap-1 border-t border-[var(--border)] bg-white/90 px-3 py-2 shadow-inner lg:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-10 flex items-center gap-1 border-t border-[var(--border)] bg-white/90 px-3 py-2 shadow-inner lg:hidden">
         {MAIN_NAV_ITEMS.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className={lex-1 rounded-lg px-2 py-2 text-center text-[11px] font-semibold transition-colors }
+            className={`flex-1 rounded-lg px-2 py-2 text-center text-[11px] font-semibold transition-colors ${
+              isActive(item.href)
+                ? "bg-slate-900 text-white"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            }`}
           >
             {item.label}
           </Link>

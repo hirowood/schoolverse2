@@ -7,38 +7,38 @@ export type NavItem = {
 
 export const MAIN_NAV_ITEMS: NavItem[] = [
   {
-    label: "🤖 AIコーチ",
+    label: "AIコーチ",
     href: "/coach",
-    description: "AIに相談しながら今日の流れや学習プランを整える",
+    description: "AIコーチとの会話と学習プラン生成を行います",
   },
   {
-    label: "📊 ダッシュボード",
+    label: "ダッシュボード",
     href: "/dashboard",
-    description: "学習時間・タスク・体調を一画面で把握する",
+    description: "今日のタスク・時間トラッカー・体調をまとめて確認",
   },
   {
-    label: "📈 週次レポート",
+    label: "週次レポート",
     href: "/report",
-    description: "1週間の活動と体調をAIがまとめるレポート",
+    description: "AI分析とMarkdownエクスポートで支援者と共有",
   },
   {
-    label: "🗒️ ノート",
+    label: "ノート",
     href: "/notes",
-    description: "テンプレートに沿って週次振り返りを記録",
+    description: "思考の整理・絵や画像・OCRをキャンバスで記録",
   },
   {
-    label: "📝 学習プラン",
+    label: "学習プラン",
     href: "/plan",
-    description: "タスクを管理しつつ階層・時間を追跡する",
+    description: "階層タスクと時間追跡で予定を可視化",
   },
   {
-    label: "💡 クレド",
+    label: "クレド",
     href: "/credo",
-    description: "11箇条の実践と体調記録をつける",
+    description: "11箇条の実践記録と体調サマリー",
   },
   {
-    label: "⚙️ 設定",
+    label: "設定",
     href: "/settings",
-    description: "プロフィール・コーチトーン・ポモドーロ設定",
+    description: "プロフィール、週間目標、コーチ設定を調整",
   },
 ];
