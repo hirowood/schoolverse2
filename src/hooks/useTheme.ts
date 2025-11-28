@@ -29,23 +29,13 @@ const applyTheme = (theme: Theme) => {
   document.documentElement.classList.toggle("light", theme === "light");
 };
 
-export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const stored = readStoredTheme();
-    return stored ?? "light";
-  });
+const getInitialTheme = (): Theme => {
+  const stored = readStoredTheme();
+  return stored ?? resolveSystemTheme();
+};
 
-  useEffect(() => {
-    const stored = readStoredTheme();
-    if (stored) {
-      setTheme(stored);
-      applyTheme(stored);
-      return;
-    }
-    const system = resolveSystemTheme();
-    setTheme(system);
-    applyTheme(system);
-  }, []);
+export function useTheme() {
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   useEffect(() => {
     applyTheme(theme);

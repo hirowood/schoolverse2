@@ -1,66 +1,88 @@
 import { z } from "zod";
-import { NOTE_TEMPLATE_OPTIONS } from "@/lib/notes/templates";
 
-const templateIds = NOTE_TEMPLATE_OPTIONS.map((template) => template.id) as string[];
-const tagsSchema = z.array(z.string().min(1).max(30)).max(8);
-const imageFileSchema = z.object({
-  id: z.string().uuid().optional(),
-  url: z.string().min(1),
-  name: z.string().min(1),
-  width: z.number().int().positive(),
-  height: z.number().int().positive(),
+// 画像ファイル情報
+export const imageFileSchema = z.object({
+  id: z.string().optional(),
+  url: z.string().url(),
+  name: z.string(),
+  width: z.number().positive(),
+  height: z.number().positive(),
 });
-const ocrTextSchema = z.object({
+
+// OCRテキスト情報
+export const ocrTextSchema = z.object({
   imageId: z.string(),
-  text: z.string().min(1),
-  confidence: z.number().min(0).max(1),
-  position: z.object({ x: z.number(), y: z.number() }).optional(),
+  text: z.string(),
+  confidence: z.number().min(0).max(100),
+  position: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+    })
+    .optional(),
 });
-const template5W2H = z.object({
-  what: z.string().min(1),
-  why: z.string().min(1),
-  who: z.string().min(1),
-  when: z.string().min(1),
-  where: z.string().min(1),
-  how: z.string().min(1),
-  howMuch: z.string().min(1),
-});
-const template5Why = z.object({
-  problem: z.string().min(1),
-  why1: z.string().min(1),
-  why2: z.string().min(1),
-  why3: z.string().min(1),
-  why4: z.string().min(1),
-  why5: z.string().min(1),
-  conclusion: z.string().min(1),
-});
-const templateDataSchema = z.union([template5W2H, template5Why]).optional();
 
-const basePayload = z.object({
-  title: z.string().trim().max(120).optional(),
-  content: z.string().trim().max(3000).optional(),
-  drawingData: z.record(z.unknown()).optional(),
-  templateType: z.enum(templateIds).optional(),
-  templateData: templateDataSchema,
-  tags: tagsSchema.optional(),
+// 5W2Hテンプレート
+export const template5W2HSchema = z.object({
+  what: z.string(),
+  why: z.string(),
+  who: z.string(),
+  when: z.string(),
+  where: z.string(),
+  how: z.string(),
+  howMuch: z.string(),
+});
+
+// 5Whyテンプレート
+export const template5WhySchema = z.object({
+  problem: z.string(),
+  why1: z.string(),
+  why2: z.string(),
+  why3: z.string(),
+  why4: z.string(),
+  why5: z.string(),
+  conclusion: z.string(),
+});
+
+// ノート作成スキーマ
+export const noteCreateSchema = z.object({
+  title: z.string().max(200).optional(),
+  content: z.string().max(50000).optional(),
+  templateType: z.enum(["free", "5w2h", "5why", "canvas"]).optional(),
+  drawingData: z.record(z.string(), z.unknown()).optional(),
+  templateData: z.union([template5W2HSchema, template5WhySchema]).optional(),
+  tags: z.array(z.string().max(50)).max(20).optional(),
   isShareable: z.boolean().optional(),
   imageFiles: z.array(imageFileSchema).optional(),
   ocrTexts: z.array(ocrTextSchema).optional(),
-  relatedTaskId: z.string().cuid().optional(),
+  relatedTaskId: z.string().optional(),
+  relatedTaskTitle: z.string().optional(),
 });
 
-export const noteCreateSchema = basePayload.refine((value) => {
-  return Boolean(value.content || value.drawingData || value.templateData);
-}, { message: "content/drawing/templateDataのいずれかは必須です" });
-
-const partialPayload = basePayload.partial();
-export const notePatchSchema = partialPayload.refine((value) => Object.keys(value).length > 0, {
-  message: "更新するフィールドを1つ以上指定してください",
+// ノート更新スキーマ
+export const noteUpdateSchema = z.object({
+  title: z.string().max(200).optional(),
+  content: z.string().max(50000).optional(),
+  templateType: z.enum(["free", "5w2h", "5why", "canvas"]).optional(),
+  drawingData: z.record(z.string(), z.unknown()).optional().nullable(),
+  templateData: z.union([template5W2HSchema, template5WhySchema]).optional().nullable(),
+  tags: z.array(z.string().max(50)).max(20).optional().nullable(),
+  isShareable: z.boolean().optional(),
+  imageFiles: z.array(imageFileSchema).optional().nullable(),
+  ocrTexts: z.array(ocrTextSchema).optional().nullable(),
+  relatedTaskId: z.string().optional().nullable(),
+  relatedTaskTitle: z.string().optional().nullable(),
 });
 
-export const noteDeleteSchema = z.object({
-  id: z.string().cuid(),
+// クエリパラメータスキーマ
+export const noteQuerySchema = z.object({
+  templateType: z.enum(["free", "5w2h", "5why", "canvas"]).optional(),
+  tag: z.string().optional(),
+  search: z.string().max(100).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  offset: z.number().int().min(0).optional(),
 });
 
-export const noteImageSchema = imageFileSchema;
-export const noteOcrSchema = ocrTextSchema;
+export type NoteCreateInput = z.infer<typeof noteCreateSchema>;
+export type NoteUpdateInput = z.infer<typeof noteUpdateSchema>;
+export type NoteQueryInput = z.infer<typeof noteQuerySchema>;

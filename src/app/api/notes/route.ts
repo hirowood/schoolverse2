@@ -1,121 +1,126 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { assertRateLimit } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
-import { noteCreateSchema } from "@/lib/schemas/note";
-import { ensureUser, mapNoteRecord, normalizeTags } from "@/lib/notes/service";
+import { noteCreateSchema, noteQuerySchema } from "@/lib/schemas/note";
+import { toNoteRecord, normalizeTags } from "@/lib/notes/service";
+import { Prisma } from "@prisma/client";
 
-export async function GET(request: Request) {
-  const session = await getServerSession(authOptions);
-  const user = session?.user as { id?: string; email?: string | null } | undefined;
-  if (!user?.id || !user.email) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+// ユーザー確保（存在しなければ作成）
+async function ensureUser(sessionUser: { id?: string; email?: string | null; name?: string | null }): Promise<string> {
+  if (!sessionUser.id) throw new Error("User ID is required");
+  
+  const existing = await prisma.user.findUnique({ where: { id: sessionUser.id } });
+  if (existing) return existing.id;
 
-  try {
-    assertRateLimit(user.id, "/api/notes:get", 120, 60_000);
-  } catch (error) {
-    const err = error as { status?: number };
-    return NextResponse.json({ error: "rate_limited" }, { status: err.status ?? 429 });
-  }
-
-  const userId = await ensureUser({ id: user.id, email: user.email, name: user.name ?? null });
-  if (!userId) {
-    return NextResponse.json({ error: "internal_error" }, { status: 500 });
-  }
-
-  const url = new URL(request.url);
-  const templateType = url.searchParams.get("templateType") ?? undefined;
-  const query = url.searchParams.get("q") ?? undefined;
-  const taskId = url.searchParams.get("taskId") ?? undefined;
-  const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 20), 1), 50);
-  const offset = Math.max(Number(url.searchParams.get("offset") ?? 0), 0);
-
-  const where: Parameters<typeof prisma.note.findMany>[0]["where"] = {
-    userId,
-    ...(templateType ? { templateType } : {}),
-    ...(taskId ? { relatedTaskId: taskId } : {}),
-    ...(query
-      ? {
-          OR: [
-            { title: { contains: query, mode: "insensitive" } },
-            { content: { contains: query, mode: "insensitive" } },
-          ],
-        }
-      : {}),
-  };
-
-  const rows = await prisma.note.findMany({
-    where,
-    orderBy: { updatedAt: "desc" },
-    take: limit,
-    skip: offset,
-    include: { relatedTask: { select: { title: true } } },
+  const created = await prisma.user.create({
+    data: {
+      id: sessionUser.id,
+      email: sessionUser.email ?? `${sessionUser.id}@temp.local`,
+      name: sessionUser.name ?? "User",
+    },
   });
-  return NextResponse.json({ notes: rows.map(mapNoteRecord) });
+  return created.id;
 }
 
-export async function POST(request: Request) {
+// GET: ノート一覧
+export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  const user = session?.user as { id?: string; email?: string | null } | undefined;
-  if (!user?.id || !user.email) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    assertRateLimit(user.id, "/api/notes:post", 30, 60_000);
-  } catch (error) {
-    const err = error as { status?: number };
-    return NextResponse.json({ error: "rate_limited" }, { status: err.status ?? 429 });
+  const { searchParams } = new URL(request.url);
+  const query = noteQuerySchema.safeParse({
+    templateType: searchParams.get("templateType") ?? undefined,
+    tag: searchParams.get("tag") ?? undefined,
+    search: searchParams.get("search") ?? undefined,
+    limit: searchParams.get("limit") ? Number(searchParams.get("limit")) : undefined,
+    offset: searchParams.get("offset") ? Number(searchParams.get("offset")) : undefined,
+  });
+
+  if (!query.success) {
+    return NextResponse.json({ error: "Invalid query parameters", details: query.error.flatten() }, { status: 400 });
+  }
+
+  const userId = await ensureUser({ 
+    id: session.user.id, 
+    email: session.user.email, 
+    name: (session.user as { name?: string }).name ?? null 
+  });
+
+  // 検索条件を構築
+  const where: Prisma.NoteWhereInput = {
+    userId,
+    ...(query.data.templateType && { templateType: query.data.templateType }),
+    ...(query.data.search && {
+      OR: [
+        { title: { contains: query.data.search, mode: "insensitive" as const } },
+        { content: { contains: query.data.search, mode: "insensitive" as const } },
+      ],
+    }),
+  };
+
+  const notes = await prisma.note.findMany({
+    where,
+    orderBy: { updatedAt: "desc" },
+    take: query.data.limit ?? 50,
+    skip: query.data.offset ?? 0,
+  });
+
+  // タグフィルター（JSON配列なのでアプリ側でフィルタ）
+  let filtered = notes;
+  if (query.data.tag) {
+    filtered = notes.filter((n) => {
+      const tags = Array.isArray(n.tags) ? n.tags : [];
+      return tags.includes(query.data.tag!);
+    });
+  }
+
+  return NextResponse.json({ notes: filtered.map(toNoteRecord) });
+}
+
+// POST: ノート作成
+export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const validation = noteCreateSchema.safeParse(body);
   if (!validation.success) {
-    return NextResponse.json(
-      { error: "validation_error", details: validation.error.flatten() },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Validation failed", details: validation.error.flatten() }, { status: 400 });
   }
 
-  const userId = await ensureUser({ id: user.id, email: user.email, name: user.name ?? null });
-  if (!userId) {
-    return NextResponse.json({ error: "internal_error" }, { status: 500 });
-  }
-
-  if (validation.data.relatedTaskId) {
-    const task = await prisma.studyTask.findUnique({
-      where: { id: validation.data.relatedTaskId },
-    });
-    if (!task || task.userId !== userId) {
-      return NextResponse.json({ error: "invalid_related_task" }, { status: 400 });
-    }
-  }
-
-  const payload: Parameters<typeof prisma.note.create>[0]["data"] = {
-    title: validation.data.title ?? null,
-    content: validation.data.content ?? null,
-    drawingData: validation.data.drawingData ?? null,
-    templateType: validation.data.templateType ?? null,
-    templateData: validation.data.templateData ?? null,
-    tags: normalizeTags(validation.data.tags) ?? null,
-    isShareable: validation.data.isShareable ?? false,
-    imageFiles: validation.data.imageFiles ?? null,
-    ocrTexts: validation.data.ocrTexts ?? null,
-    relatedTaskId: validation.data.relatedTaskId ?? null,
-    userId,
-  };
-
-  const created = await prisma.note.create({
-    data: payload,
-    include: { relatedTask: { select: { title: true } } },
+  const userId = await ensureUser({ 
+    id: session.user.id, 
+    email: session.user.email, 
+    name: (session.user as { name?: string }).name ?? null 
   });
-  return NextResponse.json({ note: mapNoteRecord(created) });
+
+  const note = await prisma.note.create({
+    data: {
+      userId,
+      title: validation.data.title,
+      content: validation.data.content,
+      templateType: validation.data.templateType ?? "free",
+      drawingData: validation.data.drawingData ?? Prisma.JsonNull,
+      templateData: validation.data.templateData ?? Prisma.JsonNull,
+      tags: normalizeTags(validation.data.tags) ?? Prisma.JsonNull,
+      isShareable: validation.data.isShareable ?? false,
+      imageFiles: validation.data.imageFiles ?? Prisma.JsonNull,
+      ocrTexts: validation.data.ocrTexts ?? Prisma.JsonNull,
+      relatedTaskId: validation.data.relatedTaskId,
+      relatedTaskTitle: validation.data.relatedTaskTitle,
+    },
+  });
+
+  return NextResponse.json({ note: toNoteRecord(note) }, { status: 201 });
 }

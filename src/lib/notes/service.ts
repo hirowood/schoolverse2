@@ -1,104 +1,133 @@
 import { prisma } from "@/lib/prisma";
-import type { Note, Prisma } from "@prisma/client";
-import type { NoteImageFile, NoteOcrText, NoteRecord, NoteTemplateType } from "./types";
+import { Prisma, Note } from "@prisma/client";
+import type { NoteRecord, NoteImageFile, NoteOcrText, Template5W2H, Template5Why } from "./types";
 
-type UserSession = { id?: string; email?: string | null; name?: string | null };
-
-export async function ensureUser(user: UserSession): Promise<string | null> {
-  if (!user.email) return null;
-  if (!user.id) {
-    const existing = await prisma.user.findUnique({ where: { email: user.email } });
-    if (existing) return existing.id;
-    const created = await prisma.user.create({
-      data: {
-        email: user.email,
-        name: user.name ?? user.email,
-      },
-    });
-    return created.id;
-  }
-  const upserted = await prisma.user.upsert({
-    where: { id: user.id },
-    update: {
-      email: user.email,
-      name: user.name ?? user.email,
-    },
-    create: {
-      id: user.id,
-      email: user.email,
-      name: user.name ?? user.email,
-    },
-  });
-  return upserted.id;
-}
-
-export function normalizeTags(tags?: string[] | null): string[] | null {
+/**
+ * タグを正規化（重複除去、空文字除去）
+ */
+export function normalizeTags(tags: string[] | null | undefined): string[] | null {
   if (!tags || tags.length === 0) return null;
-  const cleaned = tags
-    .map((tag) => tag.trim())
-    .filter((tag) => tag.length > 0)
-    .filter((tag, index, array) => array.indexOf(tag) === index)
-    .slice(0, 8);
-  return cleaned.length > 0 ? cleaned : null;
+  const unique = [...new Set(tags.filter((t) => t.trim().length > 0))];
+  return unique.length > 0 ? unique : null;
 }
 
-export function mapNoteRecord(note: Note & { relatedTask?: { title?: string } | null }): NoteRecord {
-  const imageFiles = Array.isArray(note.imageFiles) ? note.imageFiles : [];
-  const ocrTexts = Array.isArray(note.ocrTexts) ? note.ocrTexts : [];
+/**
+ * Prisma Note を NoteRecord に変換
+ */
+export function toNoteRecord(note: Note): NoteRecord {
+  // JSON フィールドの安全な変換
+  const imageFiles = Array.isArray(note.imageFiles) 
+    ? (note.imageFiles as unknown as NoteImageFile[]) 
+    : [];
+  
+  const ocrTexts = Array.isArray(note.ocrTexts) 
+    ? (note.ocrTexts as unknown as NoteOcrText[]) 
+    : [];
+  
+  const tags = Array.isArray(note.tags) 
+    ? (note.tags as unknown as string[]) 
+    : [];
+
+  // templateData の型ガード
+  let templateData: Template5W2H | Template5Why | null = null;
+  if (note.templateData && typeof note.templateData === 'object' && !Array.isArray(note.templateData)) {
+    const td = note.templateData as Record<string, unknown>;
+    // 5W2H check
+    if ('what' in td && 'why' in td && 'who' in td) {
+      templateData = td as unknown as Template5W2H;
+    }
+    // 5Why check
+    else if ('problem' in td && 'why1' in td) {
+      templateData = td as unknown as Template5Why;
+    }
+  }
+
+  // drawingData の型
+  const drawingData = note.drawingData && typeof note.drawingData === 'object' && !Array.isArray(note.drawingData)
+    ? (note.drawingData as Record<string, unknown>)
+    : null;
+
   return {
     id: note.id,
     userId: note.userId,
     title: note.title,
     content: note.content,
-    drawingData: (note.drawingData as Prisma.JsonObject) ?? null,
-    imageFiles: imageFiles as NoteImageFile[],
-    ocrTexts: ocrTexts as NoteOcrText[],
-    templateType: note.templateType as NoteTemplateType | null,
-    templateData: (note.templateData as Prisma.JsonObject) ?? null,
-    tags: Array.isArray(note.tags) ? (note.tags as string[]) : [],
+    drawingData,
+    imageFiles,
+    ocrTexts,
+    templateType: note.templateType as NoteRecord["templateType"],
+    templateData,
+    tags,
     isShareable: note.isShareable,
-    createdAt: note.createdAt.toISOString(),
-    updatedAt: note.updatedAt.toISOString(),
-    relatedTaskId: note.relatedTaskId ?? null,
-    relatedTaskTitle: note.relatedTask?.title ?? null,
+    relatedTaskId: note.relatedTaskId,
+    relatedTaskTitle: note.relatedTaskTitle,
+    createdAt: note.createdAt,
+    updatedAt: note.updatedAt,
   };
 }
 
-export async function appendImageToNote(
+/**
+ * ノートに画像を追加
+ */
+export async function addImageToNote(
   noteId: string,
-  file: Omit<NoteImageFile, "id"> & { id?: string },
-  userId: string
+  userId: string,
+  imageFile: NoteImageFile
 ): Promise<NoteImageFile[]> {
-  const note = await prisma.note.findFirst({ where: { id: noteId, userId } });
-  if (!note) throw new Error("note_not_found");
-  const existing = Array.isArray(note.imageFiles) ? (note.imageFiles as NoteImageFile[]) : [];
-  const entry: NoteImageFile = {
-    id: file.id ?? crypto.randomUUID(),
-    url: file.url,
-    name: file.name,
-    width: file.width,
-    height: file.height,
+  const note = await prisma.note.findUnique({
+    where: { id: noteId, userId },
+  });
+
+  if (!note) {
+    throw new Error("Note not found");
+  }
+
+  const existing: NoteImageFile[] = Array.isArray(note.imageFiles)
+    ? (note.imageFiles as unknown as NoteImageFile[])
+    : [];
+
+  // IDがなければ生成
+  const newImage: NoteImageFile = {
+    ...imageFile,
+    id: imageFile.id || crypto.randomUUID(),
   };
-  const next = [...existing, entry];
+
+  const next = [...existing, newImage];
+
   await prisma.note.update({
     where: { id: noteId },
-    data: { imageFiles: next },
+    data: { imageFiles: next as unknown as Prisma.InputJsonValue },
   });
+
   return next;
 }
 
-export async function appendOcrToNote(
+/**
+ * ノートにOCRテキストを追加
+ */
+export async function addOcrTextToNote(
   noteId: string,
-  ocr: NoteOcrText,
-  userId: string
+  userId: string,
+  ocrText: NoteOcrText
 ): Promise<NoteOcrText[]> {
-  const note = await prisma.note.findFirst({ where: { id: noteId, userId } });
-  if (!note) throw new Error("note_not_found");
-  const existing = Array.isArray(note.ocrTexts) ? (note.ocrTexts as NoteOcrText[]) : [];
-  const next = [...existing, ocr];
+  const note = await prisma.note.findUnique({
+    where: { id: noteId, userId },
+  });
+
+  if (!note) {
+    throw new Error("Note not found");
+  }
+
+  const existing: NoteOcrText[] = Array.isArray(note.ocrTexts)
+    ? (note.ocrTexts as unknown as NoteOcrText[])
+    : [];
+
+  const next = [...existing, ocrText];
+
   await prisma.note.update({
     where: { id: noteId },
-    data: { ocrTexts: next },
+    data: { ocrTexts: next as unknown as Prisma.InputJsonValue },
   });
+
   return next;
 }

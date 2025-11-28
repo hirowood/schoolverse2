@@ -1,165 +1,166 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { createWorker, type Worker } from "tesseract.js";
+import { useState, useEffect, useCallback } from "react";
+import { createWorker, Worker, LoggerMessage } from "tesseract.js";
+
+/* eslint-disable @next/next/no-img-element */
 
 interface OcrProcessorProps {
-  imageDataUrl: string;
+  imageUrl: string;
   onComplete: (text: string) => void;
-  onClose: () => void;
+  onCancel: () => void;
 }
 
-export default function OcrProcessor({ imageDataUrl, onComplete, onClose }: OcrProcessorProps) {
-  const [progress, setProgress] = useState(0);
+export default function OcrProcessor({ imageUrl, onComplete, onCancel }: OcrProcessorProps) {
   const [status, setStatus] = useState("準備中...");
-  const [extractedText, setExtractedText] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [extractedText, setExtractedText] = useState("");
+  const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const runOcr = useCallback(async () => {
-    setIsProcessing(true);
-    setError(null);
-    setProgress(0);
-    setStatus("OCRエンジンを初期化中...");
     let worker: Worker | null = null;
-
+    
     try {
-      worker = await createWorker({
-        logger: (m) => {
-          if (m.status === "recognizing text") {
+      setIsProcessing(true);
+      setError(null);
+      setStatus("OCRエンジンを初期化中...");
+
+      // Tesseract.js v5 の新しいAPI
+      worker = await createWorker("jpn+eng", 1, {
+        logger: (m: LoggerMessage) => {
+          if (m.status) {
+            setStatus(getStatusText(m.status));
+          }
+          if (typeof m.progress === "number") {
             setProgress(Math.round(m.progress * 100));
-            setStatus("テキストを認識中...");
-          } else if (m.status === "loading language traineddata") {
-            setStatus("言語データを読み込み中...");
-            setProgress(Math.round(m.progress * 50));
-          } else if (m.status === "initializing api") {
-            setStatus("APIを初期化中...");
           }
         },
       });
 
-      await worker.loadLanguage("jpn+eng");
-      await worker.initialize("jpn+eng");
-
-      setStatus("画像を解析中...");
-      const result = await worker.recognize(imageDataUrl);
+      setStatus("テキストを認識中...");
+      const result = await worker.recognize(imageUrl);
+      
       const text = result.data.text.trim();
+      
       if (!text) {
-        setError("テキストを検出できませんでした。画像を確認してください。");
+        setError("テキストが検出されませんでした。画像を確認してください。");
+        setExtractedText("");
       } else {
         setExtractedText(text);
+        setError(null);
       }
     } catch (err) {
       console.error("OCR error:", err);
-      setError(err instanceof Error ? err.message : "OCR処理に失敗しました");
+      setError(err instanceof Error ? err.message : "OCR処理中にエラーが発生しました");
     } finally {
       if (worker) {
         await worker.terminate();
       }
       setIsProcessing(false);
-      setStatus("");
     }
-  }, [imageDataUrl]);
+  }, [imageUrl]);
 
   useEffect(() => {
     runOcr();
   }, [runOcr]);
 
-  const handleConfirm = useCallback(() => {
-    if (extractedText) {
-      onComplete(extractedText);
-    }
-  }, [extractedText, onComplete]);
+  const getStatusText = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      "loading tesseract core": "コアを読み込み中...",
+      "initializing tesseract": "初期化中...",
+      "loading language traineddata": "言語データを読み込み中...",
+      "initializing api": "APIを初期化中...",
+      "recognizing text": "テキストを認識中...",
+    };
+    return statusMap[status] || status;
+  };
 
-  const handleRetry = useCallback(() => {
-    setExtractedText(null);
+  const handleInsert = () => {
+    onComplete(extractedText);
+  };
+
+  const handleRetry = () => {
+    setExtractedText("");
     setError(null);
+    setProgress(0);
     runOcr();
-  }, [runOcr]);
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2 sm:p-4">
-      <div className="relative flex w-full max-w-2xl flex-col rounded-xl bg-white shadow-xl max-h-[90vh]">
-        <div className="flex items-center justify-between border-b border-slate-200 p-3 sm:p-4">
-          <h2 className="text-base font-semibold text-slate-900 sm:text-lg">🔍 OCR テキスト抽出</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-slate-500 hover:bg-slate-100"
-            aria-label="閉じる"
-          >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-auto">
+        <div className="p-4 border-b dark:border-gray-700">
+          <h3 className="text-lg font-semibold">📝 OCR（文字認識）</h3>
         </div>
 
-        <div className="flex-1 overflow-auto p-3 sm:p-4">
-          <div className="mb-4 overflow-hidden rounded-lg border border-slate-200">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imageDataUrl} alt="OCR対象画像" className="max-h-48 w-full object-contain bg-slate-50" />
+        <div className="p-4 space-y-4">
+          {/* プレビュー画像 */}
+          <div className="aspect-video bg-gray-100 dark:bg-gray-700 rounded overflow-hidden">
+            <img
+              src={imageUrl}
+              alt="OCR対象"
+              className="w-full h-full object-contain"
+            />
           </div>
 
+          {/* 処理中 */}
           {isProcessing && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">{status}</p>
-              <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span>{status}</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
-                  className="h-full bg-emerald-500 transition-all duration-300"
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="text-center text-sm text-slate-500">{progress}%</p>
             </div>
           )}
 
-          {error && !isProcessing && (
-            <div className="space-y-3">
-              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
+          {/* エラー */}
+          {error && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg">
+              <p className="text-sm">{error}</p>
               <button
-                type="button"
                 onClick={handleRetry}
-                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="mt-2 text-sm underline hover:no-underline"
               >
-                🔄 再試行
+                再試行
               </button>
             </div>
           )}
 
-          {extractedText && !isProcessing && (
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-slate-700">
-                抽出されたテキスト（編集可能）
-              </label>
+          {/* 抽出結果 */}
+          {!isProcessing && extractedText && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">抽出されたテキスト（編集可能）</label>
               <textarea
                 value={extractedText}
                 onChange={(e) => setExtractedText(e.target.value)}
-                rows={8}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500"
-                placeholder="抽出されたテキスト"
+                className="w-full h-40 p-3 border rounded-lg resize-none text-sm dark:bg-gray-700 dark:border-gray-600"
+                placeholder="抽出されたテキストがここに表示されます..."
               />
-              <p className="text-xs text-slate-500">
-                ※ 必要に応じてテキストを編集してから挿入できます。
-              </p>
             </div>
           )}
         </div>
 
-        <div className="flex gap-3 border-t border-slate-200 p-3 sm:p-4">
+        {/* アクションボタン */}
+        <div className="p-4 border-t dark:border-gray-700 flex gap-2 justify-end">
           <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:py-2"
+            onClick={onCancel}
+            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
           >
             キャンセル
           </button>
-          {extractedText && !isProcessing && (
+          {!isProcessing && extractedText && (
             <button
-              type="button"
-              onClick={handleConfirm}
-              className="flex-1 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-500 sm:py-2"
+              onClick={handleInsert}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              ✅ テキストを挿入
+              キャンバスに挿入
             </button>
           )}
         </div>

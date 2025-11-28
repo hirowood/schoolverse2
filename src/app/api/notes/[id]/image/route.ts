@@ -1,46 +1,40 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { assertRateLimit } from "@/lib/rateLimit";
-import { appendImageToNote } from "@/lib/notes/service";
-import { noteImageSchema } from "@/lib/schemas/note";
+import { addImageToNote } from "@/lib/notes/service";
+import { imageFileSchema } from "@/lib/schemas/note";
 
-type Params = { params: { id: string } };
-
-export async function POST(request: Request, { params }: Params) {
+// POST: 画像追加
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const session = await getServerSession(authOptions);
-  const user = session?.user as { id?: string; email?: string | null } | undefined;
-  if (!user?.id || !user.email) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    assertRateLimit(user.id, "/api/notes/[id]/image:post", 20, 60_000);
-  } catch (error) {
-    const err = error as { status?: number };
-    return NextResponse.json({ error: "rate_limited" }, { status: err.status ?? 429 });
-  }
+  const { id } = await params;
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const validation = noteImageSchema.safeParse(body);
+  const validation = imageFileSchema.safeParse(body);
   if (!validation.success) {
-    return NextResponse.json(
-      { error: "validation_error", details: validation.error.flatten() },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Validation failed", details: validation.error.flatten() }, { status: 400 });
   }
 
   try {
-    const files = await appendImageToNote(params.id, validation.data, user.id);
-    return NextResponse.json({ imageFiles: files });
+    const imageFiles = await addImageToNote(id, session.user.id, validation.data);
+    return NextResponse.json({ imageFiles });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "note_not_found" }, { status: 404 });
+    if (error instanceof Error && error.message === "Note not found") {
+      return NextResponse.json({ error: "Note not found" }, { status: 404 });
+    }
+    throw error;
   }
 }
