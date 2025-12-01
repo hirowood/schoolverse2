@@ -1,29 +1,202 @@
-import type { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types";
-import type { MindMapEdge, MindMapNode } from "./types";
+// Excalidrawとの相互変換ユーティリティ（簡易実装）
+// バージョン間の型互換を考慮し、ExcalidrawElementはゆるくanyとする。
 
-interface ConvertOptions {
+type ExcalidrawElement = any;
+import type { MindMapEdge, MindMapNode, LayoutType } from "./types";
+
+type ConvertOptions = {
   groupNodes?: boolean;
   convertToArrows?: boolean;
   preserveColors?: boolean;
-}
+  layoutType?: LayoutType;
+};
 
 export function mindMapToExcalidraw(
   nodes: MindMapNode[],
   edges: MindMapEdge[],
   options: ConvertOptions = {}
 ): ExcalidrawElement[] {
-  // TODO: 本実装（設計書参照）。現状は空配列で返す。
-  void nodes;
-  void edges;
-  void options;
-  return [];
+  const elements: ExcalidrawElement[] = [];
+  const idMap = new Map<string, string>();
+  const now = Date.now();
+  const seed = () => Math.floor(Math.random() * 100000);
+
+  nodes.forEach((node) => {
+    const shapeId = crypto.randomUUID();
+    idMap.set(node.id, shapeId);
+    const width = node.width ?? 140;
+    const height = node.height ?? 60;
+    const { x, y } = node.position;
+    const shapeType =
+      node.data.shape === "ellipse"
+        ? "ellipse"
+        : node.data.shape === "diamond"
+          ? "diamond"
+          : "rectangle";
+
+    const textElement: ExcalidrawElement = {
+      id: crypto.randomUUID(),
+      type: "text",
+      x: x + 10,
+      y: y + 10,
+      width: width - 20,
+      height: 24,
+      text: node.data.label ?? "ノード",
+      fontSize: node.data.fontSize ?? 14,
+      fontFamily: 1,
+      textAlign: "center",
+      verticalAlign: "middle",
+      baseline: 18,
+      strokeColor: node.data.textColor ?? "#1e293b",
+      backgroundColor: "transparent",
+      fillStyle: "solid",
+      strokeWidth: 1,
+      strokeStyle: "solid",
+      roughness: 0,
+      opacity: 100,
+      groupIds: [],
+      seed: seed(),
+      version: 1,
+      versionNonce: seed(),
+      isDeleted: false,
+      boundElements: null,
+      updated: now,
+      link: null,
+      locked: false,
+    };
+
+    const shapeElement: ExcalidrawElement = {
+      id: shapeId,
+      type: shapeType,
+      x,
+      y,
+      width,
+      height,
+      strokeColor: node.data.borderColor ?? "#e2e8f0",
+      backgroundColor: options.preserveColors ? node.data.backgroundColor ?? "#ffffff" : "#ffffff",
+      fillStyle: "solid",
+      strokeWidth: 2,
+      strokeStyle: "solid",
+      roughness: 0,
+      opacity: 100,
+      groupIds: [],
+      seed: seed(),
+      version: 1,
+      versionNonce: seed(),
+      isDeleted: false,
+      boundElements: [{ id: textElement.id, type: "text" }],
+      updated: now,
+      link: null,
+      locked: false,
+      roundness: shapeType === "rectangle" ? { type: 3 } : undefined,
+    };
+
+    elements.push(shapeElement, textElement);
+  });
+
+  edges.forEach((edge) => {
+    const sourceElementId = idMap.get(edge.source);
+    const targetElementId = idMap.get(edge.target);
+    if (!sourceElementId || !targetElementId) return;
+
+    const arrowElement: ExcalidrawElement = {
+      id: crypto.randomUUID(),
+      type: options.convertToArrows ? "arrow" : "line",
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      points: [
+        [0, 0],
+        [0, 0],
+      ],
+      strokeColor: edge.data?.strokeColor ?? "#94a3b8",
+      backgroundColor: "transparent",
+      fillStyle: "solid",
+      strokeWidth: edge.data?.strokeWidth ?? 2,
+      strokeStyle: "solid",
+      roughness: 0,
+      opacity: 100,
+      groupIds: [],
+      seed: seed(),
+      version: 1,
+      versionNonce: seed(),
+      isDeleted: false,
+      boundElements: null,
+      updated: now,
+      link: null,
+      locked: false,
+      startBinding: { elementId: sourceElementId, focus: 0, gap: 4 },
+      endBinding: { elementId: targetElementId, focus: 0, gap: 4 },
+      startArrowhead: null,
+      endArrowhead: options.convertToArrows ? "arrow" : null,
+      label: edge.data?.label ?? "",
+    };
+
+    elements.push(arrowElement);
+  });
+
+  return elements;
 }
 
 export function excalidrawToMindMap(elements: ExcalidrawElement[]): {
   nodes: MindMapNode[];
   edges: MindMapEdge[];
 } {
-  // TODO: 本実装（設計書参照）。現状は空配列で返す。
-  void elements;
-  return { nodes: [], edges: [] };
+  const nodes: MindMapNode[] = [];
+  const edges: MindMapEdge[] = [];
+
+  const shapes = elements.filter((e: any) => ["rectangle", "ellipse", "diamond"].includes(e.type));
+  shapes.forEach((shape: any, index: number) => {
+    const boundTextId = shape.boundElements?.find((b: any) => b.type === "text")?.id;
+    const textElement = boundTextId
+      ? elements.find((e: any) => e.id === boundTextId)
+      : elements.find(
+          (e: any) =>
+            e.type === "text" &&
+            Math.abs((e.x ?? 0) - (shape.x ?? 0)) < (shape.width ?? 140) &&
+            Math.abs((e.y ?? 0) - (shape.y ?? 0)) < (shape.height ?? 60)
+        );
+
+    nodes.push({
+      id: shape.id,
+      type: index === 0 ? "rootNode" : "mindMapNode",
+      position: { x: shape.x ?? 0, y: shape.y ?? 0 },
+      width: shape.width,
+      height: shape.height,
+      data: {
+        label: textElement?.text ?? "無題",
+        description: undefined,
+        backgroundColor: shape.backgroundColor ?? "#ffffff",
+        borderColor: shape.strokeColor ?? "#e2e8f0",
+        textColor: textElement?.strokeColor ?? "#1e293b",
+        fontSize: textElement?.fontSize ?? 14,
+        shape: shape.type === "ellipse" ? "ellipse" : shape.type === "diamond" ? "diamond" : "rounded",
+        level: 0,
+        isCollapsed: false,
+      },
+    });
+  });
+
+  const lines = elements.filter((e: any) => ["arrow", "line"].includes(e.type));
+  lines.forEach((line: any) => {
+    const startId = line.startBinding?.elementId;
+    const endId = line.endBinding?.elementId;
+    if (startId && endId) {
+      edges.push({
+        id: line.id,
+        source: startId,
+        target: endId,
+        type: "smoothstep",
+        data: {
+          strokeColor: line.strokeColor ?? "#94a3b8",
+          strokeWidth: line.strokeWidth ?? 2,
+          animated: false,
+          label: line.label,
+        },
+      });
+    }
+  });
+
+  return { nodes, edges };
 }
