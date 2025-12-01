@@ -15,6 +15,7 @@ import type {
   MindMapState,
   MindMapTheme,
 } from "./types";
+import { layoutMindMap } from "./layout";
 
 interface MindMapActions {
   initialize: (data: Partial<MindMapState>) => void;
@@ -259,7 +260,14 @@ export const useMindMapStore = create<MindMapState & MindMapActions>()(
       },
 
       autoLayout: () => {
-        // TODO: dagreなどで自動レイアウト計算
+        const state = get();
+        const laidOut = layoutMindMap(state.nodes, state.edges, { layoutType: state.layoutType });
+        get().pushHistory();
+        set({
+          nodes: laidOut.nodes,
+          edges: laidOut.edges,
+          isDirty: true,
+        });
       },
     }),
     { name: "mindmap-store" }
