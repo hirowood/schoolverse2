@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma, Note } from "@prisma/client";
+import { Prisma, Note, StudyTask } from "@prisma/client";
 import type { NoteRecord, NoteImageFile, NoteOcrText, Template5W2H, Template5Why } from "./types";
 
 /**
@@ -11,10 +11,15 @@ export function normalizeTags(tags: string[] | null | undefined): string[] | nul
   return unique.length > 0 ? unique : null;
 }
 
+// リレーション付きNote型
+type NoteWithRelation = Note & {
+  relatedTask?: StudyTask | null;
+};
+
 /**
  * Prisma Note を NoteRecord に変換
  */
-export function toNoteRecord(note: Note): NoteRecord {
+export function toNoteRecord(note: NoteWithRelation): NoteRecord {
   // JSON フィールドの安全な変換
   const imageFiles = Array.isArray(note.imageFiles) 
     ? (note.imageFiles as unknown as NoteImageFile[]) 
@@ -26,6 +31,10 @@ export function toNoteRecord(note: Note): NoteRecord {
   
   const tags = Array.isArray(note.tags) 
     ? (note.tags as unknown as string[]) 
+    : [];
+  
+  const autoTags = Array.isArray(note.autoTags)
+    ? (note.autoTags as unknown as string[])
     : [];
 
   // templateData の型ガード
@@ -55,13 +64,18 @@ export function toNoteRecord(note: Note): NoteRecord {
     drawingData,
     imageFiles,
     ocrTexts,
+    ocrRawText: note.ocrRawText,
+    ocrConfidence: note.ocrConfidence,
+    aiSummary: note.aiSummary,
+    aiAnalysis: note.aiAnalysis && typeof note.aiAnalysis === "object" ? (note.aiAnalysis as Record<string, unknown>) : null,
+    autoTags,
+    analyzedAt: note.analyzedAt ? note.analyzedAt.toISOString() : null,
     templateType: note.templateType as NoteRecord["templateType"],
     templateData,
     tags,
     isShareable: note.isShareable,
     relatedTaskId: note.relatedTaskId,
-    // relatedTaskTitle: note.relatedTaskTitle,
-    relatedTaskTitle: null,  // ★ここを追加
+    relatedTaskTitle: note.relatedTask?.title ?? null,
     createdAt: note.createdAt.toISOString(),
     updatedAt: note.updatedAt.toISOString(),
   };

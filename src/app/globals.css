@@ -28,3 +28,78 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Excalidraw スタイル調整 */
+.excalidraw-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Excalidraw UIサイズ調整 */
+.excalidraw {
+  --ui-font-size: 14px !important;
+}
+
+.excalidraw .App-toolbar {
+  transform: scale(0.85);
+  transform-origin: top left;
+}
+
+.excalidraw .layer-ui__wrapper {
+  font-size: 14px !important;
+}
+
+/* ツールバーアイコンサイズ */
+.excalidraw .ToolIcon_type_button,
+.excalidraw .ToolIcon_type_floating {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.excalidraw .ToolIcon__icon {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+/* サイドパネル調整 */
+.excalidraw .Island {
+  max-width: calc(100vw - 20px);
+  overflow: auto;
+}
+
+/* モバイル対応 */
+@media (max-width: 640px) {
+  .excalidraw .App-toolbar {
+    transform: scale(0.75);
+    transform-origin: top left;
+  }
+  
+  .excalidraw .ToolIcon_type_button,
+  .excalidraw .ToolIcon_type_floating {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  .excalidraw .ToolIcon__icon {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  
+  .excalidraw .layer-ui__wrapper {
+    font-size: 12px !important;
+  }
+}
+
+/* Excalidraw全体のコンテナ制御 */
+.excalidraw-wrapper {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.excalidraw .layer-ui__wrapper__top-right,
+.excalidraw .layer-ui__wrapper__footer {
+  transform: scale(0.9);
+  transform-origin: top right;
+}

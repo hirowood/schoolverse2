@@ -63,6 +63,9 @@ export async function GET(request: NextRequest) {
 
   const notes = await prisma.note.findMany({
     where,
+    include: {
+      relatedTask: true,  // リレーションを取得
+    },
     orderBy: { updatedAt: "desc" },
     take: query.data.limit ?? 50,
     skip: query.data.offset ?? 0,
@@ -111,19 +114,16 @@ export async function POST(request: NextRequest) {
       title: validation.data.title,
       content: validation.data.content,
       templateType: validation.data.templateType ?? "free",
-
-      // ★ここを修正
-      drawingData:
-        (validation.data.drawingData as Prisma.InputJsonValue | null | undefined) ??
-        Prisma.JsonNull,
-
+      drawingData: validation.data.drawingData ?? Prisma.JsonNull,
       templateData: validation.data.templateData ?? Prisma.JsonNull,
       tags: normalizeTags(validation.data.tags) ?? Prisma.JsonNull,
       isShareable: validation.data.isShareable ?? false,
       imageFiles: validation.data.imageFiles ?? Prisma.JsonNull,
       ocrTexts: validation.data.ocrTexts ?? Prisma.JsonNull,
       relatedTaskId: validation.data.relatedTaskId,
-      // relatedTaskTitle: validation.data.relatedTaskTitle,
+    },
+    include: {
+      relatedTask: true,  // リレーションを取得
     },
   });
 

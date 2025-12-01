@@ -14,13 +14,22 @@ import type {
   FileId,
 } from "@excalidraw/excalidraw/element/types";
 
+import "@excalidraw/excalidraw/index.css";
+
 import CameraCapture from "@/components/notes/CameraCapture";
 import OcrProcessor from "@/components/notes/OcrProcessor";
 
 // Excalidrawをdynamic importでSSR無効化
 const Excalidraw = dynamic(
   async () => (await import("@excalidraw/excalidraw")).Excalidraw,
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    ),
+  }
 );
 
 // 型定義
@@ -79,10 +88,10 @@ function CanvasPageContent() {
 
         if (note.drawingData) {
           const elements = Array.isArray(note.drawingData.elements) 
-            ? note.drawingData.elements as ExcalidrawElement[]
+            ? (note.drawingData.elements as ExcalidrawElement[])
             : [];
           const appState = note.drawingData.appState && typeof note.drawingData.appState === 'object'
-            ? note.drawingData.appState as Partial<AppState>
+            ? (note.drawingData.appState as Partial<AppState>)
             : {};
           setInitialScene({ elements, appState });
         }

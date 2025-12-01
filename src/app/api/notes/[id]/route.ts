@@ -20,6 +20,9 @@ export async function GET(
 
   const note = await prisma.note.findUnique({
     where: { id, userId: session.user.id },
+    include: {
+      relatedTask: true,
+    },
   });
 
   if (!note) {
@@ -50,10 +53,7 @@ export async function PATCH(
 
   const validation = noteUpdateSchema.safeParse(body);
   if (!validation.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: validation.error.flatten() },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Validation failed", details: validation.error.flatten() }, { status: 400 });
   }
 
   // 既存ノートの確認
@@ -67,69 +67,35 @@ export async function PATCH(
 
   // 更新データを構築
   const updateData: Prisma.NoteUpdateInput = {};
-
-  if (validation.data.title !== undefined) {
-    updateData.title = validation.data.title;
-  }
-  if (validation.data.content !== undefined) {
-    updateData.content = validation.data.content;
-  }
-  if (validation.data.templateType !== undefined) {
-    updateData.templateType = validation.data.templateType;
-  }
-  if (validation.data.isShareable !== undefined) {
-    updateData.isShareable = validation.data.isShareable;
-  }
-
-  // ★ Prisma の NoteUpdateInput には relatedTaskId / relatedTaskTitle はなく、
-  //    relatedTask (relation) があるのでこちらを使う
-  if (validation.data.relatedTaskId !== undefined) {
-    updateData.relatedTask = validation.data.relatedTaskId
-      ? { connect: { id: validation.data.relatedTaskId } }
-      : { disconnect: true };
-  }
-  // relatedTaskTitle は Prisma の Note モデルに存在しない前提なので削除
-  // if (validation.data.relatedTaskTitle !== undefined) {
-  //   updateData.relatedTaskTitle = validation.data.relatedTaskTitle;
-  // }
-
-  // ★ JSON 系フィールドは Prisma の JSON 型にキャストして渡す
-
+  
+  if (validation.data.title !== undefined) updateData.title = validation.data.title;
+  if (validation.data.content !== undefined) updateData.content = validation.data.content;
+  if (validation.data.templateType !== undefined) updateData.templateType = validation.data.templateType;
+  if (validation.data.isShareable !== undefined) updateData.isShareable = validation.data.isShareable;
+  if (validation.data.relatedTaskId !== undefined) updateData.relatedTaskId = validation.data.relatedTaskId;
+  
   if (validation.data.drawingData !== undefined) {
-    updateData.drawingData = (validation.data.drawingData ?? Prisma.JsonNull) as
-      | Prisma.NullableJsonNullValueInput
-      | Prisma.InputJsonValue;
+    updateData.drawingData = validation.data.drawingData ?? Prisma.JsonNull;
   }
-
   if (validation.data.templateData !== undefined) {
-    updateData.templateData = (validation.data.templateData ?? Prisma.JsonNull) as
-      | Prisma.NullableJsonNullValueInput
-      | Prisma.InputJsonValue;
+    updateData.templateData = validation.data.templateData ?? Prisma.JsonNull;
   }
-
   if (validation.data.tags !== undefined) {
-    const normalized = normalizeTags(validation.data.tags);
-    updateData.tags = (normalized ?? Prisma.JsonNull) as
-      | Prisma.NullableJsonNullValueInput
-      | Prisma.InputJsonValue;
+    updateData.tags = normalizeTags(validation.data.tags) ?? Prisma.JsonNull;
   }
-
   if (validation.data.imageFiles !== undefined) {
-    updateData.imageFiles = (validation.data.imageFiles ?? Prisma.JsonNull) as
-      | Prisma.NullableJsonNullValueInput
-      | Prisma.InputJsonValue;
+    updateData.imageFiles = validation.data.imageFiles ?? Prisma.JsonNull;
   }
-
   if (validation.data.ocrTexts !== undefined) {
-    updateData.ocrTexts = (validation.data.ocrTexts ?? Prisma.JsonNull) as
-      | Prisma.NullableJsonNullValueInput
-      | Prisma.InputJsonValue;
+    updateData.ocrTexts = validation.data.ocrTexts ?? Prisma.JsonNull;
   }
 
   const note = await prisma.note.update({
-    // ★ セキュリティ的にも userId を where に含めるほうが安全
-    where: { id, userId: session.user.id },
+    where: { id },
     data: updateData,
+    include: {
+      relatedTask: true,
+    },
   });
 
   return NextResponse.json({ note: toNoteRecord(note) });
@@ -155,9 +121,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Note not found" }, { status: 404 });
   }
 
-  await prisma.note.delete({
-    where: { id, userId: session.user.id },
-  });
+  await prisma.note.delete({ where: { id } });
 
   return NextResponse.json({ success: true });
 }

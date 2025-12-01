@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createWorker, Worker, LoggerMessage } from "tesseract.js";
-
-/* eslint-disable @next/next/no-img-element */
+import { createWorker, Worker } from "tesseract.js";
 
 interface OcrProcessorProps {
   imageUrl: string;
@@ -26,9 +24,9 @@ export default function OcrProcessor({ imageUrl, onComplete, onCancel }: OcrProc
       setError(null);
       setStatus("OCRエンジンを初期化中...");
 
-      // Tesseract.js v5 の新しいAPI
+      // Tesseract.js v6 API
       worker = await createWorker("jpn+eng", 1, {
-        logger: (m: LoggerMessage) => {
+        logger: (m) => {
           if (m.status) {
             setStatus(getStatusText(m.status));
           }
@@ -97,6 +95,7 @@ export default function OcrProcessor({ imageUrl, onComplete, onCancel }: OcrProc
         <div className="p-4 space-y-4">
           {/* プレビュー画像 */}
           <div className="aspect-video bg-gray-100 dark:bg-gray-700 rounded overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imageUrl}
               alt="OCR対象"

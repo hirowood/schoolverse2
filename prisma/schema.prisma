@@ -1,56 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String?
-  name         String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  credoLogs    CredoPracticeLog[]
-  chatMessages ChatMessage[]
-  profile      UserProfile?
-  studyTasks   StudyTask[]
+  id            String             @id @default(cuid())
+  email         String             @unique
+  passwordHash  String?
+  name          String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  chatMessages  ChatMessage[]
+  credoLogs     CredoPracticeLog[]
+  notes         Note[]
+  studyTasks    StudyTask[]
+  profile       UserProfile?
   weeklyReports WeeklyReport[]
-  notes        Note[]
+  mindMaps      MindMap[]
 }
 
 model CredoItem {
-  id          String   @id
-  order       Int
-  category    String
-  title       String
-  description String
-
+  id           String             @id
+  order        Int
+  category     String
+  title        String
+  description  String
   practiceLogs CredoPracticeLog[]
 }
 
 model CredoPracticeLog {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
   credoId   String
   date      DateTime
   done      Boolean
-  note      String   @db.Text
+  note      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  credo     CredoItem @relation(fields: [credoId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user  User      @relation(fields: [userId], references: [id])
-  credo CredoItem @relation(fields: [credoId], references: [id])
-
+  @@unique([userId, credoId, date])
   @@index([userId, date])
   @@index([userId, credoId, date])
-  @@unique([userId, credoId, date])
 }
 
 model ChatMessage {
@@ -59,44 +56,41 @@ model ChatMessage {
   role      String
   message   String
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
 }
 
 model UserProfile {
-  id                  String  @id @default(cuid())
-  userId              String  @unique
-  weeklyGoal          String?
-  activeHours         String?
-  coachTone           String?
-  pomodoroEnabled     Boolean @default(false)
-  pomodoroWorkMinutes Int     @default(25)
-  pomodoroBreakMinutes Int    @default(5)
-
-  user User @relation(fields: [userId], references: [id])
+  id                   String  @id @default(cuid())
+  userId               String  @unique
+  weeklyGoal           String?
+  activeHours          String?
+  coachTone            String?
+  pomodoroBreakMinutes Int     @default(5)
+  pomodoroEnabled      Boolean @default(false)
+  pomodoroWorkMinutes  Int     @default(25)
+  user                 User    @relation(fields: [userId], references: [id])
 }
 
 model StudyTask {
-  id            String    @id @default(cuid())
+  id            String      @id @default(cuid())
   userId        String
   title         String
   description   String?
-  source        String    @default("user")
+  source        String      @default("user")
   dueDate       DateTime?
-  status        String    @default("todo")
+  status        String      @default("todo")
   note          String?
   parentId      String?
-  totalWorkTime Int       @default(0)  // Total work time in seconds
-  lastStartedAt DateTime?              // Timestamp when work was last started
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  user     User       @relation(fields: [userId], references: [id])
-  parent   StudyTask? @relation("TaskToSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
-  children StudyTask[] @relation("TaskToSubtasks")
-  notes    Note[]     @relation("NoteToTask")
+  totalWorkTime Int         @default(0)
+  lastStartedAt DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  notes         Note[]      @relation("NoteToTask")
+  parent        StudyTask?  @relation("TaskToSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  children      StudyTask[] @relation("TaskToSubtasks")
+  user          User        @relation(fields: [userId], references: [id])
 
   @@index([userId, dueDate])
   @@index([userId, status, dueDate])
@@ -104,42 +98,135 @@ model StudyTask {
 }
 
 model WeeklyReport {
-  id              String   @id @default(cuid())
-  userId          String
-  weekStart       DateTime @db.Date
+  id               String   @id @default(cuid())
+  userId           String
+  weekStart        DateTime @db.Date
   conditionSummary Json?
   activitySummary  Json?
   aiAnalysis       Json?
   nextWeekFocus    Json?
   supporterExport  Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, weekStart])
 }
 
 model Note {
-  id           String   @id @default(cuid())
-  userId       String
-  title        String?
-  content      String?  @db.Text
-  drawingData  Json?
-  imageFiles   Json?
-  ocrTexts     Json?
-  templateType String?
-  templateData Json?
-  tags         Json?
+  id            String       @id @default(cuid())
+  userId        String
+  title         String?
+  content       String?
+  drawingData   Json?
+  imageFiles    Json?
+  ocrTexts      Json?
+  templateType  String?
+  templateData  Json?
+  tags          Json?
+  isShareable   Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   relatedTaskId String?
-  isShareable  Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
-  relatedTask StudyTask? @relation("NoteToTask", fields: [relatedTaskId], references: [id])
+  aiAnalysis    Json?
+  aiSummary     String?
+  analyzedAt    DateTime?
+  autoTags      String[]     @default([])
+  ocrConfidence Float?
+  ocrRawText    String?
+  relatedTask   StudyTask?   @relation("NoteToTask", fields: [relatedTaskId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
+  ocrHistories  OcrHistory[]
+  mindMap       MindMap?
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, templateType])
   @@index([userId, relatedTaskId])
+}
+
+model OcrHistory {
+  id            String   @id @default(cuid())
+  noteId        String
+  imageUrl      String
+  rawText       String
+  confidence    Float
+  processedText String?
+  createdAt     DateTime @default(now())
+  note          Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+}
+
+model MindMap {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String       @default("無題のマインドマップ")
+  description   String?
+  viewportX     Float        @default(0)
+  viewportY     Float        @default(0)
+  viewportZoom  Float        @default(1)
+  theme         String       @default("default")
+  layoutType    String       @default("radial")
+  noteId        String?      @unique
+  note          Note?        @relation(fields: [noteId], references: [id], onDelete: SetNull)
+  nodes         MindMapNode[]
+  edges         MindMapEdge[]
+  isTemplate    Boolean      @default(false)
+  isShareable   Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([noteId])
+}
+
+model MindMapNode {
+  id              String        @id @default(cuid())
+  mindMapId       String
+  mindMap         MindMap       @relation(fields: [mindMapId], references: [id], onDelete: Cascade)
+  type            String        @default("mindMapNode")
+  positionX       Float
+  positionY       Float
+  width           Float?
+  height          Float?
+  label           String
+  description     String?
+  backgroundColor String        @default("#ffffff")
+  borderColor     String        @default("#e2e8f0")
+  textColor       String        @default("#1e293b")
+  fontSize        Int           @default(14)
+  shape           String        @default("rounded")
+  level           Int           @default(0)
+  parentId        String?
+  isCollapsed     Boolean       @default(false)
+  linkedNoteId    String?
+  sortOrder       Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  outgoingEdges   MindMapEdge[] @relation("SourceNode")
+  incomingEdges   MindMapEdge[] @relation("TargetNode")
+
+  @@index([mindMapId])
+  @@index([parentId])
+}
+
+model MindMapEdge {
+  id          String      @id @default(cuid())
+  mindMapId   String
+  mindMap     MindMap     @relation(fields: [mindMapId], references: [id], onDelete: Cascade)
+  sourceId    String
+  targetId    String
+  sourceNode  MindMapNode @relation("SourceNode", fields: [sourceId], references: [id], onDelete: Cascade)
+  targetNode  MindMapNode @relation("TargetNode", fields: [targetId], references: [id], onDelete: Cascade)
+  type        String      @default("smoothstep")
+  strokeColor String      @default("#94a3b8")
+  strokeWidth Float       @default(2)
+  animated    Boolean     @default(false)
+  label       String?
+  createdAt   DateTime    @default(now())
+
+  @@index([mindMapId])
+  @@index([sourceId])
+  @@index([targetId])
 }
