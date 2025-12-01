@@ -11,6 +11,7 @@ type FileId = string;
 type BinaryFileData = any;
 type AppState = any;
 type ExcalidrawImperativeAPI = any;
+type ExcalidrawAPI = any;
 
 import "@excalidraw/excalidraw/index.css";
 
