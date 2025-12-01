@@ -13,8 +13,6 @@ type AppState = any;
 type ExcalidrawImperativeAPI = any;
 type ExcalidrawAPI = any;
 
-import "@excalidraw/excalidraw/index.css";
-
 import CameraCapture from "@/components/notes/CameraCapture";
 import OcrProcessor from "@/components/notes/OcrProcessor";
 
