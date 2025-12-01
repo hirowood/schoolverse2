@@ -3,6 +3,7 @@
 interface Props {
   onAddRoot: () => void;
   onAddChild: () => void;
+  onEdit: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onLayout: () => void;
@@ -15,6 +16,7 @@ interface Props {
 export default function MindMapToolbar({
   onAddRoot,
   onAddChild,
+  onEdit,
   onUndo,
   onRedo,
   onLayout,
@@ -26,10 +28,13 @@ export default function MindMapToolbar({
   return (
     <div className="flex flex-wrap gap-2 items-center rounded-lg border border-slate-200 bg-white p-2 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <button className="toolbar-btn" onClick={onAddRoot}>
-        ➕ ルート
+        🟦 ルート
       </button>
       <button className="toolbar-btn" onClick={onAddChild} disabled={!selectedNodeId}>
         🌿 子ノード
+      </button>
+      <button className="toolbar-btn" onClick={onEdit} disabled={!selectedNodeId}>
+        ✏️ 編集
       </button>
       <button className="toolbar-btn" onClick={onDelete} disabled={!selectedNodeId}>
         🗑 削除

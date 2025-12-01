@@ -16,6 +16,7 @@ import { useMindMapStore } from "@/lib/mindmap/store";
 import type { MindMapEdge, MindMapNode, MindMapState } from "@/lib/mindmap/types";
 import MindMapNodeCard from "./MindMapNode";
 import MindMapToolbar from "./MindMapToolbar";
+import NodeEditor from "./NodeEditor";
 
 type Props = {
   initialState?: Partial<MindMapState>;
@@ -50,6 +51,7 @@ export default function MindMapCanvas({ initialState }: Props) {
   const initialNodesRef = useRef<Map<string, MindMapNode>>(new Map());
   const initialEdgesRef = useRef<Map<string, MindMapEdge>>(new Map());
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
     if (initialState) {
@@ -187,11 +189,12 @@ export default function MindMapCanvas({ initialState }: Props) {
       <MindMapToolbar
         onAddRoot={() => addNode(null, "新しいノード")}
         onAddChild={() => addNode(selectedNodeId, "子ノード")}
+        onEdit={() => setEditorOpen(true)}
         onUndo={undo}
         onRedo={redo}
         onLayout={autoLayout}
         onDelete={() => selectedNodeId && deleteNode(selectedNodeId)}
-    onFitView={() => rfInstance?.fitView(fitViewOptions)}
+        onFitView={() => rfInstance?.fitView(fitViewOptions)}
         isDirty={isDirty || saving}
         selectedNodeId={selectedNodeId}
       />
@@ -221,6 +224,17 @@ export default function MindMapCanvas({ initialState }: Props) {
           {error}
         </div>
       )}
+      <NodeEditor
+        open={editorOpen && !!selectedNodeId}
+        nodeId={selectedNodeId}
+        data={nodes.find((n) => n.id === selectedNodeId)?.data ?? null}
+        onClose={() => setEditorOpen(false)}
+        onSave={(data) => {
+          if (!selectedNodeId) return;
+          updateNode(selectedNodeId, data);
+          setEditorOpen(false);
+        }}
+      />
     </div>
   );
 }
