@@ -1,29 +1,16 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-// Excalidraw v0.17は型エクスポートが限定的なため、必要最小の型をローカルで定義
-type ExcalidrawElement = {
-  id: string;
-  type: string;
-  [key: string]: any;
-};
+// Excalidraw v0.17は型エクスポートが限定的なため、必要最小の型をローカルで緩く定義
+type ExcalidrawElement = any;
 type FileId = string;
-type BinaryFileData = {
-  id: FileId;
-  dataURL: string;
-  mimeType: string;
-  created: number;
-};
-type AppState = Record<string, any>;
-type ExcalidrawImperativeAPI = {
-  getSceneElements: () => readonly ExcalidrawElement[];
-  getAppState: () => AppState;
-  updateScene: (scene: { elements: ExcalidrawElement[] }) => void;
-  addFiles: (files: BinaryFileData[]) => Promise<void>;
-};
+type BinaryFileData = any;
+type AppState = any;
+type ExcalidrawImperativeAPI = any;
 
 import "@excalidraw/excalidraw/index.css";
 
@@ -406,19 +393,21 @@ function CanvasPageContent() {
       <div className="flex-1 min-h-0">
         <Excalidraw
           excalidrawAPI={(api) => {
-            apiRef.current = api;
+            apiRef.current = api as ExcalidrawAPI | null;
           }}
-          initialData={{
-            // 要素は、既存シーンがあればそれを、なければ空
-            elements: initialScene?.elements ?? EMPTY_SCENE.elements,
-            // appState は空シーンをベースに、保存済みのものを上書き
-            appState: {
-              ...EMPTY_SCENE.appState,
-              ...(initialScene?.appState ?? {}),
-              // ここだけは強制的に false にしておく
-              zenModeEnabled: false,
-            },
-          }}
+          initialData={
+            {
+              // 要素は、既存シーンがあればそれを、なければ空
+              elements: (initialScene?.elements ?? EMPTY_SCENE.elements) as any,
+              // appState は空シーンをベースに、保存済みのものを上書き
+              appState: {
+                ...EMPTY_SCENE.appState,
+                ...(initialScene?.appState ?? {}),
+                // ここだけは強制的に false にしておく
+                zenModeEnabled: false,
+              },
+            } as any
+          }
           UIOptions={{
             canvasActions: {
               saveToActiveFile: false,
