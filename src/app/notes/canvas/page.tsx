@@ -4,15 +4,26 @@ import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import type {
-  ExcalidrawImperativeAPI,
-  AppState,
-  BinaryFileData,
-} from "@excalidraw/excalidraw/types";
-import type {
-  ExcalidrawElement,
-  FileId,
-} from "@excalidraw/excalidraw/element/types";
+// Excalidraw v0.17は型エクスポートが限定的なため、必要最小の型をローカルで定義
+type ExcalidrawElement = {
+  id: string;
+  type: string;
+  [key: string]: any;
+};
+type FileId = string;
+type BinaryFileData = {
+  id: FileId;
+  dataURL: string;
+  mimeType: string;
+  created: number;
+};
+type AppState = Record<string, any>;
+type ExcalidrawImperativeAPI = {
+  getSceneElements: () => readonly ExcalidrawElement[];
+  getAppState: () => AppState;
+  updateScene: (scene: { elements: ExcalidrawElement[] }) => void;
+  addFiles: (files: BinaryFileData[]) => Promise<void>;
+};
 
 import "@excalidraw/excalidraw/index.css";
 
