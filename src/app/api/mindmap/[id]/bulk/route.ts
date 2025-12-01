@@ -38,6 +38,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         for (const n of parsed.data.nodes.create) {
           await tx.mindMapNode.create({
             data: {
+              ...(n.id ? { id: n.id } : {}),
               mindMapId: params.id,
               type: "mindMapNode",
               label: n.label,
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         for (const e of parsed.data.edges.create) {
           await tx.mindMapEdge.create({
             data: {
+              ...(e.id ? { id: e.id } : {}),
               mindMapId: params.id,
               sourceId: e.sourceId,
               targetId: e.targetId,

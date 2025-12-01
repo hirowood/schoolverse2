@@ -24,6 +24,7 @@ export const mindMapUpdateSchema = z.object({
 });
 
 export const mindMapNodeInputSchema = z.object({
+  id: z.string().optional(),
   parentId: z.string().nullable().optional(),
   label: z.string().min(1),
   description: z.string().optional(),
@@ -42,6 +43,7 @@ export const mindMapNodeUpdateSchema = mindMapNodeInputSchema.partial().extend({
 });
 
 export const mindMapEdgeInputSchema = z.object({
+  id: z.string().optional(),
   sourceId: z.string(),
   targetId: z.string(),
   type: z.enum(["smoothstep", "straight", "bezier"]).optional(),
