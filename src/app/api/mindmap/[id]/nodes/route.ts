@@ -5,17 +5,18 @@ import { prisma } from "@/lib/prisma";
 import { mindMapNodeInputSchema } from "@/lib/schemas/mindmap";
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(request: NextRequest, context: RouteParams) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await context.params;
   const mindMap = await prisma.mindMap.findFirst({
-    where: { id: params.id, userId: session.user.id },
+    where: { id, userId: session.user.id },
     include: { nodes: true },
   });
   if (!mindMap) return NextResponse.json({ error: "Not found" }, { status: 404 });

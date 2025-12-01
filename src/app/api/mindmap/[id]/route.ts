@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { mindMapUpdateSchema } from "@/lib/schemas/mindmap";
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 async function getOwnedMindMap(id: string, userId: string) {
@@ -15,23 +15,25 @@ async function getOwnedMindMap(id: string, userId: string) {
   });
 }
 
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export async function GET(_request: NextRequest, context: RouteParams) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const mindMap = await getOwnedMindMap(params.id, session.user.id);
+  const { id } = await context.params;
+  const mindMap = await getOwnedMindMap(id, session.user.id);
   if (!mindMap) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ mindMap });
 }
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(request: NextRequest, context: RouteParams) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const mindMap = await getOwnedMindMap(params.id, session.user.id);
+  const { id } = await context.params;
+  const mindMap = await getOwnedMindMap(id, session.user.id);
   if (!mindMap) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   let body: unknown;
@@ -59,7 +61,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 
   const updated = await prisma.mindMap.update({
-    where: { id: params.id },
+    where: { id },
     data,
     include: { nodes: true, edges: true, note: { select: { id: true, title: true } } },
   });
@@ -67,17 +69,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   return NextResponse.json({ success: true, mindMap: updated });
 }
 
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export async function DELETE(_request: NextRequest, context: RouteParams) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await context.params;
   const mindMap = await prisma.mindMap.findFirst({
-    where: { id: params.id, userId: session.user.id },
+    where: { id, userId: session.user.id },
   });
   if (!mindMap) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await prisma.mindMap.delete({ where: { id: params.id } });
+  await prisma.mindMap.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

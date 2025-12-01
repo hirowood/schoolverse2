@@ -5,17 +5,18 @@ import { prisma } from "@/lib/prisma";
 import { mindMapBulkUpdateSchema } from "@/lib/schemas/mindmap";
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(request: NextRequest, context: RouteParams) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await context.params;
   const mindMap = await prisma.mindMap.findFirst({
-    where: { id: params.id, userId: session.user.id },
+    where: { id, userId: session.user.id },
   });
   if (!mindMap) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           await tx.mindMapNode.create({
             data: {
               ...(n.id ? { id: n.id } : {}),
-              mindMapId: params.id,
+              mindMapId: id,
               type: "mindMapNode",
               label: n.label,
               description: n.description,
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           await tx.mindMapEdge.create({
             data: {
               ...(e.id ? { id: e.id } : {}),
-              mindMapId: params.id,
+              mindMapId: id,
               sourceId: e.sourceId,
               targetId: e.targetId,
               type: e.type ?? "smoothstep",
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
       if (parsed.data.viewport) {
         await tx.mindMap.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             viewportX: parsed.data.viewport.x,
             viewportY: parsed.data.viewport.y,
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
 
       const latest = await tx.mindMap.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: { nodes: true, edges: true },
       });
       return latest;

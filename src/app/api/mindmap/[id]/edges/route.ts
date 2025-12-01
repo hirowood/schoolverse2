@@ -5,17 +5,18 @@ import { prisma } from "@/lib/prisma";
 import { mindMapEdgeInputSchema } from "@/lib/schemas/mindmap";
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(request: NextRequest, context: RouteParams) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await context.params;
   const mindMap = await prisma.mindMap.findFirst({
-    where: { id: params.id, userId: session.user.id },
+    where: { id, userId: session.user.id },
   });
   if (!mindMap) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const created = await prisma.mindMapEdge.create({
     data: {
-      mindMapId: params.id,
+      mindMapId: id,
       sourceId: parsed.data.sourceId,
       targetId: parsed.data.targetId,
       type: parsed.data.type ?? "smoothstep",

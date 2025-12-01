@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
@@ -6,7 +6,7 @@ import NotesOnboarding from "@/components/notes/NotesOnboarding";
 import SkeletonBlock from "@/components/ui/SkeletonBlock";
 import OcrEnhanced from "@/components/notes/OcrEnhanced";
 import AiAnalyzer from "@/components/notes/AiAnalyzer";
-import AutoTagger from "@/components/notes/AutoTagger";
+// import AutoTagger from "@/components/notes/AutoTagger";
 import { NOTE_TEMPLATE_OPTIONS } from "@/lib/notes/templates";
 import { useSearchParams } from "next/navigation";
 import type { OcrResult } from "@/lib/ocr/recognizer";
@@ -479,7 +479,8 @@ export default function NotesPage() {
   }, [ocrEnhancedImage]);
 
   // OCR後のAI分析
-  const handleOcrAnalyze = useCallback(async (text: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleOcrAnalyze = useCallback(async (_text: string) => {
     // 保存済みノートの場合のみAI分析を実行
     if (selectedNote?.id) {
       await handleAnalyze(selectedNote.id);
@@ -586,6 +587,14 @@ export default function NotesPage() {
         <p className="text-sm text-slate-600 dark:text-slate-300">
           テンプレートとキャンバスを使って、週次レポートの素材や学習の考察を残しましょう。
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link
+            href="/mindmap"
+            className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 dark:border-slate-600 dark:text-slate-200 dark:hover:border-slate-400"
+          >
+ マインドマップへ移動
+          </Link>
+        </div>
       </header>
 
       {showOnboarding && (
@@ -659,7 +668,7 @@ export default function NotesPage() {
         <label className="mt-4 flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
           本文
           <textarea
-            className="min-h-[160px] rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700"
+            className="min-h-40 rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="気づきや学習プラン、感情などを追加しましょう"
@@ -1152,3 +1161,7 @@ export default function NotesPage() {
     </div>
   );
 }
+
+
+
+

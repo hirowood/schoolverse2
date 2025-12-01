@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { mindMapNodeUpdateSchema } from "@/lib/schemas/mindmap";
 
 interface RouteParams {
-  params: { id: string; nodeId: string };
+  params: Promise<{ id: string; nodeId: string }>;
 }
 
 async function ensureOwnership(mindMapId: string, userId: string) {
@@ -15,12 +15,13 @@ async function ensureOwnership(mindMapId: string, userId: string) {
   return mindMap;
 }
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(request: NextRequest, context: RouteParams) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const mindMap = await ensureOwnership(params.id, session.user.id);
+  const { id, nodeId } = await context.params;
+  const mindMap = await ensureOwnership(id, session.user.id);
   if (!mindMap) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   let body: unknown;
@@ -35,20 +36,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 
   const updated = await prisma.mindMapNode.update({
-    where: { id: params.nodeId },
+    where: { id: nodeId },
     data: parsed.data,
   });
   return NextResponse.json({ success: true, node: updated });
 }
 
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export async function DELETE(_request: NextRequest, context: RouteParams) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const mindMap = await ensureOwnership(params.id, session.user.id);
+  const { id, nodeId } = await context.params;
+  const mindMap = await ensureOwnership(id, session.user.id);
   if (!mindMap) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await prisma.mindMapNode.delete({ where: { id: params.nodeId } });
+  await prisma.mindMapNode.delete({ where: { id: nodeId } });
   return NextResponse.json({ success: true });
 }
