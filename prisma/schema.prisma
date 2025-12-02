@@ -22,6 +22,7 @@ model User {
   profile       UserProfile?
   weeklyReports WeeklyReport[]
   mindMaps      MindMap[]
+  learningChatSessions LearningChatSession[]
 }
 
 model CredoItem {
@@ -229,4 +230,54 @@ model MindMapEdge {
   @@index([mindMapId])
   @@index([sourceId])
   @@index([targetId])
+}
+
+model LearningChatSession {
+  id              String                @id @default(cuid())
+  userId          String
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String                @default("新しい相談")
+  mode            String                @default("learning")
+  category        String?
+  contextSummary  String?               @db.Text
+  totalTokens     Int                   @default(0)
+  isActive        Boolean               @default(true)
+  isPinned        Boolean               @default(false)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  messages        LearningChatMessage[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, mode])
+}
+
+model LearningChatMessage {
+  id         String               @id @default(cuid())
+  sessionId  String
+  session    LearningChatSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role       String
+  content    String               @db.Text
+  tokenCount Int                  @default(0)
+  model      String?
+  rating     Int?
+  feedback   String?
+  category   String?
+  codeBlocks Json?
+  createdAt  DateTime             @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
+model SystemPromptTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  mode      String
+  category  String?
+  prompt    String   @db.Text
+  isActive  Boolean  @default(true)
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([mode, category, version])
 }

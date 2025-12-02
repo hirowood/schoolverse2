@@ -9,41 +9,46 @@ export const MAIN_NAV_ITEMS: NavItem[] = [
   {
     label: "AIコーチ",
     href: "/coach",
-    description: "AIコーチとの会話で学習プランを相談しましょう",
+    description: "AIコーチとの対話で学習計画を進めましょう",
+  },
+  {
+    label: "学習チャット",
+    href: "/learning-chat",
+    description: "専門モードで学習や進路の相談を整理",
   },
   {
     label: "ダッシュボード",
     href: "/dashboard",
-    description: "タスク・時間トラッカー・進捗をまとめて確認",
+    description: "タスク・時間トラッカー・休息状況をまとめて確認",
   },
   {
-    label: "週次レポート",
+    label: "サマリーレポート",
     href: "/report",
-    description: "AI分析とMarkdownエクスポートで保護者と共有",
+    description: "AI要約のMarkdownレポートで振り返り",
   },
   {
     label: "ノート",
     href: "/notes",
-    description: "思考の整理・描画・OCRでキャプチャして記録",
+    description: "スケッチやOCR付きノートで学びを記録",
   },
   {
     label: "マインドマップ",
     href: "/mindmap",
-    description: "ノートを視覚的にまとめてアイデアを整理",
+    description: "アイデアを広げて整理するラピッドマッピング",
   },
   {
     label: "学習プラン",
     href: "/plan",
-    description: "学習タスクと時間追跡で予定を立てる",
+    description: "学習タスクと優先順位を可視化",
   },
   {
     label: "クレド",
     href: "/credo",
-    description: "11個の信条の実践記録とサマリー",
+    description: "11の行動原則とサマリー",
   },
   {
     label: "設定",
     href: "/settings",
-    description: "プロフィール、サブ目標、コーチ設定を調整",
+    description: "プロフィール・目標・コーチ設定",
   },
 ];
