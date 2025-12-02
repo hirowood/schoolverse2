@@ -26,7 +26,7 @@ interface Props {
   edges: MindMapEdge[];
   selectedNodeId: string | null;
   onSelectNode: (id: string) => void;
-  onUpdateWBS: (nodeId: string, wbs: Partial<MindMapNode["data"]["wbs"]>) => void;
+  onUpdateWBS: (nodeId: string, wbs: Partial<NonNullable<MindMapNode["data"]["wbs"]>>) => void;
 }
 
 type SortField = "wbsCode" | "label" | "status" | "priority" | "progress" | "startDate" | "endDate";
