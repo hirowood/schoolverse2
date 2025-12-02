@@ -1,5 +1,31 @@
 import type { Edge, Node, Viewport } from "reactflow";
 
+// WBS関連の型定義
+export type TaskStatus = "not_started" | "in_progress" | "completed" | "on_hold" | "cancelled";
+export type TaskPriority = "low" | "medium" | "high" | "critical";
+
+export interface WBSData {
+  // 基本情報
+  assignee?: string;           // 担当者
+  startDate?: string;          // 開始日 (YYYY-MM-DD)
+  endDate?: string;            // 終了日 (YYYY-MM-DD)
+  dueDate?: string;            // 期限 (YYYY-MM-DD)
+  
+  // 進捗管理
+  status: TaskStatus;          // ステータス
+  progress: number;            // 進捗率 (0-100)
+  
+  // 工数管理
+  estimatedHours?: number;     // 見積もり工数（時間）
+  actualHours?: number;        // 実績工数（時間）
+  
+  // 優先度・その他
+  priority: TaskPriority;      // 優先度
+  wbsCode?: string;            // WBSコード (例: 1.2.3)
+  notes?: string;              // 備考
+  tags?: string[];             // タグ
+}
+
 export interface MindMapNodeData {
   label: string;
   description?: string;
@@ -11,6 +37,10 @@ export interface MindMapNodeData {
   level: number;
   isCollapsed: boolean;
   linkedNoteId?: string;
+  childCount?: number;
+  
+  // WBS拡張
+  wbs?: WBSData;
 }
 
 export type MindMapNode = Node<MindMapNodeData, "mindMapNode" | "rootNode" | "groupNode">;
@@ -32,6 +62,7 @@ export interface HistoryEntry {
 
 export type MindMapTheme = "default" | "dark" | "colorful" | "minimal";
 export type LayoutType = "radial" | "tree" | "horizontal" | "vertical";
+export type ViewMode = "mindmap" | "wbs" | "timeline";
 
 export interface MindMapState {
   id: string | null;
@@ -41,6 +72,7 @@ export interface MindMapState {
   viewport: Viewport;
   theme: MindMapTheme;
   layoutType: LayoutType;
+  viewMode: ViewMode;
   selectedNodeId: string | null;
   isEditing: boolean;
   isDirty: boolean;
@@ -49,6 +81,23 @@ export interface MindMapState {
     future: HistoryEntry[];
   };
 }
+
+// ステータスの表示設定
+export const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bgColor: string }> = {
+  not_started: { label: "未着手", color: "#64748b", bgColor: "#f1f5f9" },
+  in_progress: { label: "進行中", color: "#3b82f6", bgColor: "#dbeafe" },
+  completed: { label: "完了", color: "#22c55e", bgColor: "#dcfce7" },
+  on_hold: { label: "保留", color: "#f59e0b", bgColor: "#fef3c7" },
+  cancelled: { label: "中止", color: "#ef4444", bgColor: "#fee2e2" },
+};
+
+// 優先度の表示設定
+export const PRIORITY_CONFIG: Record<TaskPriority, { label: string; color: string; icon: string }> = {
+  low: { label: "低", color: "#94a3b8", icon: "▽" },
+  medium: { label: "中", color: "#3b82f6", icon: "◇" },
+  high: { label: "高", color: "#f59e0b", icon: "△" },
+  critical: { label: "最優先", color: "#ef4444", icon: "▲" },
+};
 
 export const THEME_PRESETS: Record<
   MindMapTheme,
@@ -97,4 +146,11 @@ export const LAYOUT_CONFIG: Record<
   tree: { direction: "TB", nodeSpacing: 80, levelSpacing: 120 },
   horizontal: { direction: "LR", nodeSpacing: 60, levelSpacing: 200 },
   vertical: { direction: "TB", nodeSpacing: 100, levelSpacing: 100 },
+};
+
+// デフォルトWBSデータ
+export const DEFAULT_WBS_DATA: WBSData = {
+  status: "not_started",
+  progress: 0,
+  priority: "medium",
 };

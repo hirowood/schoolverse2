@@ -14,8 +14,11 @@ import type {
   MindMapNode,
   MindMapState,
   MindMapTheme,
+  ViewMode,
+  WBSData,
 } from "./types";
 import { layoutMindMap } from "./layout";
+import { DEFAULT_WBS_DATA } from "./types";
 
 interface MindMapActions {
   initialize: (data: Partial<MindMapState>) => void;
@@ -31,6 +34,7 @@ interface MindMapActions {
   setViewport: (viewport: { x: number; y: number; zoom: number }) => void;
   setTheme: (theme: MindMapTheme) => void;
   setLayoutType: (layout: LayoutType) => void;
+  setViewMode: (mode: ViewMode) => void;
   setTitle: (title: string) => void;
   undo: () => void;
   redo: () => void;
@@ -39,7 +43,15 @@ interface MindMapActions {
   markDirty: () => void;
   markClean: () => void;
   toggleCollapse: (nodeId: string) => void;
+  expandAll: () => void;
+  collapseAll: () => void;
   autoLayout: () => void;
+  // WBS機能
+  updateWBS: (nodeId: string, wbs: Partial<WBSData>) => void;
+  calculateProgress: (nodeId: string) => number;
+  // ヘルパー
+  getChildCount: (nodeId: string) => number;
+  getDescendantIds: (nodeId: string) => string[];
 }
 
 const initialState: MindMapState = {
@@ -49,7 +61,8 @@ const initialState: MindMapState = {
   edges: [],
   viewport: { x: 0, y: 0, zoom: 1 },
   theme: "default",
-  layoutType: "radial",
+  layoutType: "tree",
+  viewMode: "mindmap",
   selectedNodeId: null,
   isEditing: false,
   isDirty: false,
@@ -64,9 +77,24 @@ export const useMindMapStore = create<MindMapState & MindMapActions>()(
       ...initialState,
 
       initialize: (data) => {
+        const edges = data.edges || [];
+        // ノードに子ノード数とデフォルトWBSを追加
+        const nodesWithData = (data.nodes || []).map((node) => {
+          const childCount = edges.filter((e) => e.source === node.id).length;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              childCount,
+              wbs: node.data.wbs || { ...DEFAULT_WBS_DATA },
+            },
+          };
+        });
+
         set({
           ...initialState,
           ...data,
+          nodes: nodesWithData,
           history: { past: [], future: [] },
         });
       },
@@ -98,33 +126,45 @@ export const useMindMapStore = create<MindMapState & MindMapActions>()(
           position,
           data: {
             label,
-            backgroundColor: "#ffffff",
-            borderColor: "#e2e8f0",
-            textColor: "#1e293b",
+            backgroundColor: level === 0 ? "#3b82f6" : "#ffffff",
+            borderColor: level === 0 ? "#2563eb" : "#e2e8f0",
+            textColor: level === 0 ? "#ffffff" : "#1e293b",
             fontSize: level === 0 ? 18 : 14,
             shape: "rounded",
             level,
             isCollapsed: false,
+            childCount: 0,
+            wbs: { ...DEFAULT_WBS_DATA },
           },
         };
 
         get().pushHistory();
-        set((state) => ({
-          nodes: [...state.nodes, newNode],
-          edges: parentId
-            ? [
-                ...state.edges,
-                {
-                  id: `edge-${parentId}-${id}`,
-                  source: parentId,
-                  target: id,
-                  type: "smoothstep",
-                  data: { strokeColor: "#94a3b8", strokeWidth: 2, animated: false },
-                },
-              ]
-            : state.edges,
-          isDirty: true,
-        }));
+        set((state) => {
+          const updatedNodes = parentId
+            ? state.nodes.map((n) =>
+                n.id === parentId
+                  ? { ...n, data: { ...n.data, childCount: (n.data.childCount || 0) + 1 } }
+                  : n
+              )
+            : state.nodes;
+
+          return {
+            nodes: [...updatedNodes, newNode],
+            edges: parentId
+              ? [
+                  ...state.edges,
+                  {
+                    id: `edge-${parentId}-${id}`,
+                    source: parentId,
+                    target: id,
+                    type: "smoothstep",
+                    data: { strokeColor: "#94a3b8", strokeWidth: 2, animated: false },
+                  },
+                ]
+              : state.edges,
+            isDirty: true,
+          };
+        });
         return id;
       },
 
@@ -146,9 +186,18 @@ export const useMindMapStore = create<MindMapState & MindMapActions>()(
         };
         const idsToDelete = new Set(getDescendantIds(id));
 
+        const parentEdge = state.edges.find((e) => e.target === id);
+        const parentId = parentEdge?.source;
+
         get().pushHistory();
         set((state) => ({
-          nodes: state.nodes.filter((n) => !idsToDelete.has(n.id)),
+          nodes: state.nodes
+            .filter((n) => !idsToDelete.has(n.id))
+            .map((n) =>
+              n.id === parentId
+                ? { ...n, data: { ...n.data, childCount: Math.max(0, (n.data.childCount || 0) - 1) } }
+                : n
+            ),
           edges: state.edges.filter((e) => !idsToDelete.has(e.source) && !idsToDelete.has(e.target)),
           selectedNodeId: state.selectedNodeId === id ? null : state.selectedNodeId,
           isDirty: true,
@@ -172,27 +221,50 @@ export const useMindMapStore = create<MindMapState & MindMapActions>()(
       addEdge: (connection) => {
         if (!connection.source || !connection.target) return;
         get().pushHistory();
-        set((state) => ({
-          edges: [
-            ...state.edges,
-            {
-              id: `edge-${connection.source}-${connection.target}`,
-              source: connection.source,
-              target: connection.target,
-              type: "smoothstep",
-              data: { strokeColor: "#94a3b8", strokeWidth: 2, animated: false },
-            },
-          ],
-          isDirty: true,
-        }));
+        set((state) => {
+          const updatedNodes = state.nodes.map((n) =>
+            n.id === connection.source
+              ? { ...n, data: { ...n.data, childCount: (n.data.childCount || 0) + 1 } }
+              : n
+          );
+
+          return {
+            nodes: updatedNodes,
+            edges: [
+              ...state.edges,
+              {
+                id: `edge-${connection.source}-${connection.target}`,
+                source: connection.source,
+                target: connection.target,
+                type: "smoothstep",
+                data: { strokeColor: "#94a3b8", strokeWidth: 2, animated: false },
+              },
+            ],
+            isDirty: true,
+          };
+        });
       },
 
       deleteEdge: (id) => {
+        const state = get();
+        const edge = state.edges.find((e) => e.id === id);
+
         get().pushHistory();
-        set((state) => ({
-          edges: state.edges.filter((e) => e.id !== id),
-          isDirty: true,
-        }));
+        set((state) => {
+          const updatedNodes = edge
+            ? state.nodes.map((n) =>
+                n.id === edge.source
+                  ? { ...n, data: { ...n.data, childCount: Math.max(0, (n.data.childCount || 0) - 1) } }
+                  : n
+              )
+            : state.nodes;
+
+          return {
+            nodes: updatedNodes,
+            edges: state.edges.filter((e) => e.id !== id),
+            isDirty: true,
+          };
+        });
       },
 
       selectNode: (id) => set({ selectedNodeId: id }),
@@ -201,7 +273,12 @@ export const useMindMapStore = create<MindMapState & MindMapActions>()(
 
       setTheme: (theme) => set({ theme, isDirty: true }),
 
-      setLayoutType: (layoutType) => set({ layoutType, isDirty: true }),
+      setLayoutType: (layoutType) => {
+        set({ layoutType, isDirty: true });
+        get().autoLayout();
+      },
+
+      setViewMode: (viewMode) => set({ viewMode }),
 
       setTitle: (title) => set({ title, isDirty: true }),
 
@@ -259,6 +336,34 @@ export const useMindMapStore = create<MindMapState & MindMapActions>()(
         }));
       },
 
+      expandAll: () => {
+        get().pushHistory();
+        set((state) => ({
+          nodes: state.nodes.map((node) => ({
+            ...node,
+            data: { ...node.data, isCollapsed: false },
+          })),
+          isDirty: true,
+        }));
+      },
+
+      collapseAll: () => {
+        const state = get();
+        const nodesWithChildren = new Set(state.edges.map((e) => e.source));
+
+        get().pushHistory();
+        set((state) => ({
+          nodes: state.nodes.map((node) => ({
+            ...node,
+            data: {
+              ...node.data,
+              isCollapsed: nodesWithChildren.has(node.id) ? true : node.data.isCollapsed,
+            },
+          })),
+          isDirty: true,
+        }));
+      },
+
       autoLayout: () => {
         const state = get();
         const laidOut = layoutMindMap(state.nodes, state.edges, { layoutType: state.layoutType });
@@ -268,6 +373,52 @@ export const useMindMapStore = create<MindMapState & MindMapActions>()(
           edges: laidOut.edges,
           isDirty: true,
         });
+      },
+
+      // WBS機能
+      updateWBS: (nodeId, wbs) => {
+        set((state) => ({
+          nodes: state.nodes.map((node) =>
+            node.id === nodeId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    wbs: { ...(node.data.wbs || DEFAULT_WBS_DATA), ...wbs },
+                  },
+                }
+              : node
+          ),
+          isDirty: true,
+        }));
+      },
+
+      calculateProgress: (nodeId) => {
+        const state = get();
+        const childIds = state.edges.filter((e) => e.source === nodeId).map((e) => e.target);
+
+        if (childIds.length === 0) {
+          const node = state.nodes.find((n) => n.id === nodeId);
+          return node?.data.wbs?.progress || 0;
+        }
+
+        const childProgresses = childIds.map((cid) => get().calculateProgress(cid));
+        return Math.round(childProgresses.reduce((sum, p) => sum + p, 0) / childProgresses.length);
+      },
+
+      // ヘルパー
+      getChildCount: (nodeId) => {
+        const state = get();
+        return state.edges.filter((e) => e.source === nodeId).length;
+      },
+
+      getDescendantIds: (nodeId) => {
+        const state = get();
+        const getDescendants = (id: string): string[] => {
+          const childIds = state.edges.filter((e) => e.source === id).map((e) => e.target);
+          return [id, ...childIds.flatMap(getDescendants)];
+        };
+        return getDescendants(nodeId).slice(1);
       },
     }),
     { name: "mindmap-store" }

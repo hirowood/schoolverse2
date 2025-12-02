@@ -103,3 +103,111 @@ body {
   transform: scale(0.9);
   transform-origin: top right;
 }
+
+/* ===========================================
+   ReactFlow マインドマップ スタイル
+   =========================================== */
+
+/* ハンドル（接続ポイント）のベーススタイル */
+.react-flow__handle {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+  background-color: #94a3b8 !important;
+  border: 2px solid white !important;
+  transition: all 0.2s ease !important;
+  opacity: 0.6;
+}
+
+/* ノードホバー時にハンドルを表示 */
+.react-flow__node:hover .react-flow__handle {
+  opacity: 1;
+}
+
+/* ハンドルホバー時 */
+.react-flow__handle:hover {
+  background-color: #3b82f6 !important;
+  transform: scale(1.3);
+  opacity: 1;
+}
+
+/* 接続中のハンドル */
+.react-flow__handle.connecting {
+  background-color: #3b82f6 !important;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* 有効な接続先ハンドル */
+.react-flow__handle.valid {
+  background-color: #22c55e !important;
+}
+
+/* 無効な接続先ハンドル */
+.react-flow__handle.invalid {
+  background-color: #ef4444 !important;
+}
+
+/* 選択中のノードのハンドル */
+.react-flow__node.selected .react-flow__handle {
+  background-color: #3b82f6 !important;
+  opacity: 1;
+}
+
+/* 接続線のスタイル */
+.react-flow__connection-path {
+  stroke: #3b82f6 !important;
+  stroke-width: 2px !important;
+}
+
+/* エッジ（線）のスタイル */
+.react-flow__edge-path {
+  stroke: #94a3b8;
+  stroke-width: 2px;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #3b82f6;
+  stroke-width: 3px;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #64748b;
+  stroke-width: 3px;
+}
+
+/* パルスアニメーション */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+/* ダークモード対応 */
+:root[data-theme="dark"] .react-flow__handle {
+  border-color: #1e293b !important;
+}
+
+:root[data-theme="dark"] .react-flow__edge-path {
+  stroke: #64748b;
+}
+
+:root[data-theme="dark"] .react-flow__background {
+  background-color: #0f172a;
+}
+
+:root[data-theme="dark"] .react-flow__minimap {
+  background-color: #1e293b;
+}
+
+:root[data-theme="dark"] .react-flow__controls button {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+:root[data-theme="dark"] .react-flow__controls button:hover {
+  background-color: #334155;
+}
