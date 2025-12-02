@@ -35,6 +35,9 @@ export function MessageList({ messages, isLoading = false, hasMore = false, onLo
       {isLoading && messages.length === 0 ? (
         <p className="text-center text-sm text-slate-500">読み込み中...</p>
       ) : null}
+      {!isLoading && messages.length === 0 ? (
+        <p className="text-center text-sm text-slate-500">まだメッセージがありません。最初の質問を送ってみてください。</p>
+      ) : null}
       {hasMore && (
         <button
           type="button"
