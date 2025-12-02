@@ -2,3 +2,4 @@
 export * from "./coachChat";
 export * from "./coachPlan";
 export * from "./learningChat";
+export * from "./userChat";

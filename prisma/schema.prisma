@@ -23,6 +23,8 @@ model User {
   weeklyReports WeeklyReport[]
   mindMaps      MindMap[]
   learningChatSessions LearningChatSession[]
+  chatRoomMemberships ChatRoomMember[]
+  chatRoomMessages    ChatRoomMessage[]
 }
 
 model CredoItem {
@@ -280,4 +282,62 @@ model SystemPromptTemplate {
   updatedAt DateTime @updatedAt
 
   @@unique([mode, category, version])
+}
+
+model ChatRoom {
+  id            String            @id @default(cuid())
+  type          String            // dm | group
+  title         String?
+  createdBy     String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  lastMessageAt DateTime?
+  members       ChatRoomMember[]
+  messages      ChatRoomMessage[]
+
+  @@index([type])
+  @@index([createdBy])
+  @@index([lastMessageAt(sort: Desc)])
+}
+
+model ChatRoomMember {
+  id         String   @id @default(cuid())
+  roomId     String
+  userId     String
+  role       String   @default("member") // member | admin
+  joinedAt   DateTime @default(now())
+  lastSeenAt DateTime?
+  room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
+}
+
+model ChatRoomMessage {
+  id          String        @id @default(cuid())
+  roomId      String
+  senderId    String
+  content     String        @db.Text
+  messageType String        @default("text")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  room        ChatRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender      User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  reads       ChatRoomRead[]
+
+  @@index([roomId, createdAt])
+  @@index([senderId])
+}
+
+model ChatRoomRead {
+  id        String          @id @default(cuid())
+  messageId String
+  userId    String
+  readAt    DateTime        @default(now())
+  message   ChatRoomMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId, readAt])
 }

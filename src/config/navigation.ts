@@ -17,6 +17,11 @@ export const MAIN_NAV_ITEMS: NavItem[] = [
     description: "専門モードで学習や進路の相談を整理",
   },
   {
+    label: "ユーザーチャット",
+    href: "/user-chat",
+    description: "他のユーザーとのDM/グループチャット",
+  },
+  {
     label: "ダッシュボード",
     href: "/dashboard",
     description: "タスク・時間トラッカー・休息状況をまとめて確認",
