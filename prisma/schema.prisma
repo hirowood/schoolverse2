@@ -25,6 +25,7 @@ model User {
   learningChatSessions LearningChatSession[]
   chatRoomMemberships ChatRoomMember[]
   chatRoomMessages    ChatRoomMessage[]
+  chatRoomReads       ChatRoomRead[]
 }
 
 model CredoItem {
