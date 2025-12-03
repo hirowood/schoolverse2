@@ -225,7 +225,14 @@ export default function CurriculumMapPage() {
                       />
                       <NodeList label="言語" nodes={filtered.languages} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
                       <NodeList label="Web/Framework" nodes={filtered.web} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
-                      <NodeList label="React" nodes={filtered.react} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
+                      <NodeList
+                        label="React"
+                        nodes={filtered.react}
+                        onSelect={setSelectedNode}
+                        selectedId={selectedNode?.id}
+                        linkTo={(node) => `/curriculum/react/${node.id}`}
+                        router={router}
+                      />
                       <NodeList label="Next.js" nodes={filtered.nextjs} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
                       <NodeList label="AI/ML/LLM" nodes={filtered.ai} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
                       <NodeList label="事務・業務効率(DX/AX)" nodes={filtered.office} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
