@@ -19,6 +19,7 @@ export type CurriculumLine = {
     milestoneExample?: string;
   }>;
   missions?: string[];
+  missionDetails?: LineMission[];
 };
 
 export type CareerLine = {
@@ -27,6 +28,15 @@ export type CareerLine = {
   what: string;
   linkedCurriculumIds: string[];
   sampleMissions?: string[];
+};
+
+export type LineMission = {
+  id: string;
+  title: string;
+  description: string;
+  expectedOutputs?: string[];
+  tools?: string[];
+  tags?: string[];
 };
 
 export type CurriculumMap = {

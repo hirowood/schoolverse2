@@ -1,0 +1,117 @@
+import { CurriculumLine } from "./types";
+
+export const CURRICULUM_LINES: CurriculumLine[] = [
+  {
+    id: "fe-line",
+    title: "フロントエンドライン",
+    summary: "UI/UXを実装できるようになる",
+    units: [
+      { id: "fe-1", title: "HTML/CSS基礎", description: "レイアウト・レスポンシブ・フォーム" },
+      { id: "fe-2", title: "JavaScript基礎", description: "DOM操作・イベント・非同期" },
+      { id: "fe-3", title: "React基礎", description: "コンポーネント・Hooks基本" },
+      { id: "fe-4", title: "状態管理・API連携", description: "Zustand/Queryなど" },
+      { id: "fe-5", title: "UI/UX・a11y", description: "フォーム設計・アクセシビリティ" },
+      { id: "fe-6", title: "テスト・パフォーマンス", description: "Unit/E2E・メモ化" },
+    ],
+    missions: ["学習ダッシュボード実装", "学習ロググラフ表示"],
+    missionDetails: [
+      {
+        id: "fe-m1",
+        title: "学習ダッシュボードUIを作る",
+        description: "カードレイアウトで学習時間と進捗を表示し、レスポンシブ対応する。",
+        expectedOutputs: ["カード/グラフコンポーネント", "レスポンシブCSS", "ダミーデータ表示"],
+        tools: ["React", "Next.js", "Tailwind"],
+        tags: ["dashboard", "responsive"],
+      },
+      {
+        id: "fe-m2",
+        title: "学習ロググラフ表示",
+        description: "API（mock可）から取得した学習時間を週次グラフで可視化する。",
+        expectedOutputs: ["棒グラフ/折れ線グラフ", "ローディング/エラー表示"],
+        tools: ["React", "Chartライブラリ"],
+        tags: ["data-viz", "api"],
+      },
+    ],
+  },
+  {
+    id: "be-line",
+    title: "バックエンドライン",
+    summary: "APIとデータを設計・提供する",
+    units: [
+      { id: "be-1", title: "HTTP/REST概念" },
+      { id: "be-2", title: "フレームワーク入門" },
+      { id: "be-3", title: "DB設計・SQL" },
+      { id: "be-4", title: "認証・認可" },
+      { id: "be-5", title: "エラー/ログ設計" },
+      { id: "be-6", title: "レイヤード設計" },
+    ],
+    missions: ["学習ログAPI実装", "ミッションCRUD実装"],
+    missionDetails: [
+      {
+        id: "be-m1",
+        title: "学習ログAPIを設計・実装",
+        description: "RESTで学習セッションを登録/一覧/更新できるAPIを作る。",
+        expectedOutputs: ["OpenAPI/YAML", "CRUDエンドポイント", "バリデーション/認証"],
+        tools: ["Node/Express or Next Route Handler", "Prisma"],
+        tags: ["api", "crud", "auth"],
+      },
+      {
+        id: "be-m2",
+        title: "ミッションCRUD + 評価サマリー",
+        description: "ミッション（実務ごっこ）のCRUDと、評価サマリー取得APIを実装。",
+        expectedOutputs: ["CRUD", "集計クエリ", "テストコード(任意)"],
+        tools: ["Node/Express or Next Route Handler", "Prisma"],
+        tags: ["mission", "aggregation"],
+      },
+    ],
+  },
+  {
+    id: "infra-line",
+    title: "インフラ/クラウドライン",
+    summary: "安全に届け続ける基礎を学ぶ",
+    units: [
+      { id: "inf-1", title: "サーバ/OS/プロセス" },
+      { id: "inf-2", title: "ネットワーク基礎" },
+      { id: "inf-3", title: "クラウド入門" },
+      { id: "inf-4", title: "デプロイ実践" },
+      { id: "inf-5", title: "監視・ログ" },
+      { id: "inf-6", title: "セキュリティ超入門" },
+    ],
+    missions: ["テスト環境立ち上げ", "障害原因の整理ワーク"],
+    missionDetails: [
+      {
+        id: "inf-m1",
+        title: "テスト環境を立ち上げる",
+        description: "Next.jsアプリをテスト環境へデプロイし、動作確認フローを文書化。",
+        expectedOutputs: ["デプロイ手順", "動作確認チェックリスト", "簡易モニタリング設定"],
+        tools: ["Vercel/AWS/GCP", "ログ/モニタリングサービス"],
+        tags: ["deploy", "monitoring"],
+      },
+      {
+        id: "inf-m2",
+        title: "障害対応シナリオ",
+        description: "障害想定のタイムラインを作成し、原因候補と調査手順を整理する。",
+        expectedOutputs: ["インシデントメモ", "原因候補リスト", "調査コマンド例"],
+        tools: ["Doc/Notion等"],
+        tags: ["incident", "postmortem"],
+      },
+    ],
+  },
+  {
+    id: "fullstack-line",
+    title: "フルスタック・連携",
+    summary: "小さなプロダクトを一気通貫でつくる",
+    units: [{ id: "fs-1", title: "設計〜実装〜デプロイ一気通貫" }],
+    missions: ["学習ログアプリを設計・実装・デプロイ"],
+    missionDetails: [
+      {
+        id: "fs-m1",
+        title: "学習ログアプリ一気通貫",
+        description: "フロント・API・DB・デプロイまで一通り行う小規模プロダクトを仕上げる。",
+        expectedOutputs: ["要件メモ", "UIモック", "API/DBスキーマ", "デプロイURL"],
+        tools: ["Next.js", "Prisma", "PostgreSQL", "Vercel"],
+        tags: ["fullstack", "deploy"],
+      },
+    ],
+  },
+];
