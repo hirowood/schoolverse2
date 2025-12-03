@@ -114,6 +114,7 @@ export default function CurriculumMapPage() {
       nextjs: filterNodes(data.contentLines.nextjs),
       ai: filterNodes(data.contentLines.ai),
       office: filterNodes(data.contentLines.officeDxAx),
+      thinking: filterNodes(data.contentLines.thinking),
       roleLines: roleLinesSource.map(filterLine).filter(Boolean) as CurriculumLine[],
       careers: {
         engineer: data.careers.engineer.map(filterCareer).filter(Boolean) as CareerLine[],
@@ -132,7 +133,8 @@ export default function CurriculumMapPage() {
       filtered.react.length +
       filtered.nextjs.length +
       filtered.ai.length +
-      filtered.office.length,
+      filtered.office.length +
+      filtered.thinking.length,
     roleLines: filtered.roleLines.length,
     careers: filtered.careers.engineer.length + filtered.careers.office.length + filtered.careers.axDxData.length,
   };
@@ -190,7 +192,7 @@ export default function CurriculumMapPage() {
                   コンテンツライン <Badge count={counts.content + counts.roleLines} />
                 </h2>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Card title="資格 / 言語 / Web / AI / 事務・DX/AX">
+                  <Card title="資格 / 言語 / Web / AI / 事務・DX/AX / 思考">
                     <div className="space-y-4">
                       <NodeList label="資格" nodes={filtered.certifications} />
                       <NodeList label="言語" nodes={filtered.languages} />
@@ -199,6 +201,7 @@ export default function CurriculumMapPage() {
                       <NodeList label="Next.js" nodes={filtered.nextjs} />
                       <NodeList label="AI/ML" nodes={filtered.ai} />
                       <NodeList label="事務・DX/AX" nodes={filtered.office} />
+                      <NodeList label="思考スキル" nodes={filtered.thinking} />
                     </div>
                   </Card>
                   <Card title="役割別ライン（ユニット概要とミッション例）">
