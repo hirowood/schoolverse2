@@ -85,6 +85,14 @@ export default function HomePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-slate-950 text-slate-50 px-4">
       <div className="max-w-2xl text-center space-y-4">
+        <div className="flex justify-end">
+          <a
+            href="/curriculum-map"
+            className="rounded-lg border border-slate-200/30 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-50 shadow-sm hover:bg-white/20"
+          >
+            カリキュラムマップへ
+          </a>
+        </div>
         <h1 className="text-3xl md:text-4xl font-bold">Schoolverse2</h1>
         <p className="text-lg">「AI学習コーチ × クレド実践」のための学びのハブ</p>
         <p className="text-sm text-slate-300">
