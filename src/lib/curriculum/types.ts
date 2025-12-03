@@ -37,6 +37,7 @@ export type LineMission = {
   expectedOutputs?: string[];
   tools?: string[];
   tags?: string[];
+  effortMinutes?: number;
 };
 
 export type CurriculumMap = {

@@ -17,6 +17,18 @@ export default function CurriculumMapPage() {
   const [error, setError] = useState<string | null>(null);
   const [showHitsOnly, setShowHitsOnly] = useState(false);
 
+  const fetchLines = async (query?: string) => {
+    try {
+      const qs = query ? `?q=${encodeURIComponent(query)}` : "";
+      const res = await fetch(`/api/curriculum/lines${qs}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setRemoteLines(json.data ?? null);
+    } catch {
+      setRemoteLines(null);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -40,22 +52,9 @@ export default function CurriculumMapPage() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      try {
-        const res = await fetch("/api/curriculum/lines");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        if (!cancelled) setRemoteLines(json.data ?? null);
-      } catch {
-        if (!cancelled) setRemoteLines(null);
-      }
-    };
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    fetchLines(keyword);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyword]);
 
   const data = remoteMap ?? CURRICULUM_MAP;
   const terms = keyword
@@ -164,6 +163,9 @@ export default function CurriculumMapPage() {
               <Tabs value={sectionFilter} onChange={setSectionFilter} />
               <SearchModeToggle value={searchMode} onChange={setSearchMode} />
               <HitToggle value={showHitsOnly} onChange={setShowHitsOnly} />
+              {remoteLines === null && (
+                <p className="text-[11px] text-amber-600">ライン詳細の同期に失敗しました（ローカル定義を使用）</p>
+              )}
             </div>
           </div>
         </header>
@@ -201,12 +203,12 @@ export default function CurriculumMapPage() {
                   </Card>
                   <Card title="役割別ライン（ユニット概要とミッション例）">
                     <div className="space-y-4">
-                      {filtered.roleLines.map((line) => (
-                        <RoleLine key={line.id} line={line} />
-                      ))}
-                      {filtered.roleLines.length === 0 && <p className="text-xs text-slate-500">該当なし</p>}
-                    </div>
-                  </Card>
+              {filtered.roleLines.map((line) => (
+                <RoleLine key={line.id} line={line} />
+              ))}
+              {filtered.roleLines.length === 0 && <p className="text-xs text-slate-500">該当なし</p>}
+            </div>
+          </Card>
                 </div>
               </section>
             )}

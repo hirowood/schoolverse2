@@ -22,6 +22,8 @@ export const CURRICULUM_LINES: CurriculumLine[] = [
         expectedOutputs: ["カード/グラフコンポーネント", "レスポンシブCSS", "ダミーデータ表示"],
         tools: ["React", "Next.js", "Tailwind"],
         tags: ["dashboard", "responsive"],
+        effortMinutes: 180,
+        tags: ["dashboard", "responsive"],
       },
       {
         id: "fe-m2",
@@ -30,6 +32,7 @@ export const CURRICULUM_LINES: CurriculumLine[] = [
         expectedOutputs: ["棒グラフ/折れ線グラフ", "ローディング/エラー表示"],
         tools: ["React", "Chartライブラリ"],
         tags: ["data-viz", "api"],
+        effortMinutes: 120,
       },
     ],
   },
