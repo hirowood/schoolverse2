@@ -70,16 +70,99 @@ export const CURRICULUM_MAP: CurriculumMap = {
       {
         id: "react",
         name: "Reactカリキュラム",
+        description: "PART→CHAPTER→ミニ課題でアウトプットするハンズオン形式。初心者が『入力→小さな出力』を繰り返し、最終的にオリジナルアプリまで進む流れ。",
         children: [
-          { id: "react-intro", name: "入門" },
-          { id: "react-basic", name: "初級" },
-          { id: "react-mid", name: "中級" },
-          { id: "react-adv", name: "上級" },
-          { id: "react-expert", name: "エキスパート" },
-        ],
-      },
-    ],
-    nextjs: [
+          {
+            id: "react-part1",
+            name: "PART 1 Reactの基本を学ぶ（Week1）",
+            children: [
+              { id: "react-1-1", name: "1-1 Reactはどんなもの？（45〜60分）", description: "Reactの役割と特徴を理解する。従来のWebサイトとSPAの違いをノートに描き、1〜3行で自分の言葉にする。" },
+              { id: "react-1-2", name: "1-2 Reactで何ができる？（30〜45分）", description: "Reactが使われていそうなサービスを3〜5個挙げ、フォーム＋一覧UIの例を観察。作ってみたいアプリのアイデアをメモする。" },
+              { id: "react-1-3", name: "1-3 Reactを学ぶメリット（30〜45分）", description: "就職・ポートフォリオ・自作ツールなど目的を言語化し、VueではなくReactを選ぶ理由を自分視点でまとめる。" },
+              { id: "react-1-4", name: "1-4 開発環境を構築する（Node / VSCode / Vite）（60〜90分）", description: "Node/VSCをセットアップし、ViteでReactプロジェクトを作成してdevサーバを起動する。", sampleCode: "# プロジェクト作成
+npm create vite@latest my-react-app -- --template react-ts
+cd my-react-app
+npm install
+npm run dev" },
+              { id: "react-1-5", name: "1-5 はじめてのReactアプリ『Hello React』（45〜60分）", description: "Vite初期コードを書き換え、Hello Reactと名前入りメッセージを表示。ホットリロードを体験する。", sampleCode: "// src/App.tsx
+export default function App() {
+  const name = 'Hiroki';
+  return <h1>Hello, {name}!</h1>;
+}" },
+              { id: "react-2-1", name: "2-1 JSXの基本（60〜90分）", description: "1つのルート要素・className・{}でJSを書くルールを練習し、プロフィール画面を作成。" },
+              { id: "react-2-2", name: "2-2 コンポーネントの基本（自己紹介カード）（90〜120分）", description: "functionコンポーネントを複数配置し再利用性を体感。『コンポーネントとは』を図解で整理。", sampleCode: "function ProfileCard({ name, bio }: { name: string; bio: string }) {
+  return (
+    <div className='card'>
+      <h3>{name}</h3>
+      <p>{bio}</p>
+    </div>
+  );
+}" },
+              { id: "react-2-3", name: "2-3 イベントの基本（60〜90分）", description: "onClickでメッセージを変えるボタンを実装し、ハンドラの書き方を練習。", sampleCode: "export default function Clicker() {
+  const handleClick = () => alert('Clicked!');
+  return <button onClick={handleClick}>押す</button>;
+}" },
+              { id: "react-3-1", name: "3-1 useStateと宣言的UI（90〜120分）", description: "カウンター(+1/-1)でstate更新と再描画の流れを理解。prev => 形式も確認。", sampleCode: "const [count, setCount] = useState(0);
+return (
+  <div>
+    <p>{count}</p>
+    <button onClick={() => setCount((p) => p + 1)}>+1</button>
+  </div>
+);" },
+              { id: "react-3-2", name: "3-2 配列表示とmap（90〜120分）", description: "mapとkeyの意味を学び、文字列配列のリスト表示を実装。", sampleCode: "const friends = ['Aki', 'Mio', 'Ken'];
+return <ul>{friends.map((n) => <li key={n}>{n}</li>)}</ul>;" },
+              { id: "react-3-3", name: "3-3 条件分岐表示（60〜90分）", description: "&&と三項演算子で表示/非表示を切り替え、残タスク0なら祝福メッセージを出すUIを作る。" },
+              { id: "react-mini-a", name: "ミニアプリA：カウンター＆いいねボタン（90〜120分）", description: "stateを2〜3種類持たせる小アプリ。READMEに学びを書き、スクショを残す。" }
+            ]
+          },
+          {
+            id: "react-part2",
+            name: "PART 2 小さなWebアプリを作る（Week2〜3）",
+            children: [
+              { id: "react-4-1", name: "4-1 ToDo概要と画面設計（60〜90分）", description: "紙でレイアウトと機能を書き出し、コンポーネント分割案を決める。" },
+              { id: "react-4-2", name: "4-2 タスク一覧表示（90〜120分）", description: "tasks配列をstateに持ち、mapでTaskItem表示。keyにidを使う。" },
+              { id: "react-4-3", name: "4-3 タスク追加フォーム（90〜120分）", description: "onChangeで入力値を保持し、onSubmitで配列に追加する。" },
+              { id: "react-4-4", name: "4-4 完了・削除機能（90〜120分）", description: "チェックでdone切替、削除で除外、完了タスクのスタイル変更。" },
+              { id: "react-mini-b", name: "ミニアプリB：シンプルToDo完成（60〜90分）", description: "軽くリファクタしREADMEに使い方と学びを記載、スクショ保存。" },
+              { id: "react-5-1", name: "5-1 気分ログ要件・設計（60〜90分）", description: "記録項目を決めてフォーム＋一覧のスケッチを描く。" },
+              { id: "react-5-2", name: "5-2 複数フィールドのフォーム（90〜120分）", description: "気分スコアとコメントをstate管理し、簡単なバリデーションを入れる。" },
+              { id: "react-5-3", name: "5-3 ログ一覧とフィルタ（90〜120分）", description: "カード表示・気分3以上フィルタ・日付ソートを実装。" },
+              { id: "react-mini-c", name: "ミニアプリC：気分メモ完成（60〜90分）", description: "アプリ名を決め、READMEに目的と対象ユーザーを書く。自分で1件記録。" }
+            ]
+          },
+          {
+            id: "react-part3",
+            name: "PART 3 状態を賢く扱う（Week3）",
+            children: [
+              { id: "react-6-1", name: "6-1 状態のリフトアップ（90〜120分）", description: "Accordionなどで開閉状態を親に集約し、『誰がどのデータの持ち主か』を整理する。" },
+              { id: "react-6-2", name: "6-2 Contextでグローバルステート（90〜120分）", description: "createContext/useContextでテーマやユーザー名を配布し、propsバケツリレーとの違いを理解。" }
+            ]
+          },
+          {
+            id: "react-part4",
+            name: "PART 4 オリジナルReactアプリに挑戦（Week4）",
+            children: [
+              { id: "react-7-1", name: "7-1 アイデア出し（45〜60分）", description: "困りごと10個を書き出し、Reactで作れそうな3つに絞る。" },
+              { id: "react-7-2", name: "7-2 アイデアを決める（45〜60分）", description: "ターゲットと必須/あれば嬉しい機能に分解し、価値を3行で書く。" },
+              { id: "react-7-3", name: "7-3 画面・コンポーネント設計（90〜120分）", description: "ワイヤーフレームとコンポーネントツリー、stateの持ち主を決める。" },
+              { id: "react-8-1", name: "8-1 実装（4〜6時間）", description: "必須機能を完成させ、小さいコンポーネントに分割。余裕があれば＋α機能を追加。" },
+              { id: "react-8-2", name: "8-2 エラー読解練習（90〜120分）", description: "典型エラーの原因と修正をメモし、スクショを残す。" },
+              { id: "react-8-3", name: "8-3 アプリを説明する（60〜90分）", description: "README/スライドに目的・課題・構成をまとめ、3〜5分の説明シナリオを作る。" }
+            ]
+          },
+          {
+            id: "react-part5",
+            name: "PART 5 Next.js & API連携（発展）",
+            children: [
+              { id: "react-9-1", name: "9-1 Next.jsとは（45〜60分）", description: "React単体との役割差とApp Routerの構造を理解し、1行で要約する。" },
+              { id: "react-9-2", name: "9-2 Next.jsを動かす（60〜90分）", description: "create-next-appでプロジェクトを作り、Hello Next.jsを表示。" },
+              { id: "react-10-1", name: "10-1 fetchでAPI呼び出し（90〜120分）", description: "公開APIをfetchし、useEffectで初回ロード＋ローディング/エラー表示を実装。" },
+              { id: "react-10-2", name: "10-2 APIデータ一覧＋簡易ルーティング（90〜120分）", description: "一覧表示とIDリンクの詳細ページを作り、クライアントfetchとサーバー取得の違いを理解。" }
+            ]
+          }
+        ]
+      }
+    ],nextjs: [
       {
         id: "nextjs",
         name: "Next.jsカリキュラム",
@@ -315,3 +398,7 @@ export const CURRICULUM_MAP: CurriculumMap = {
   ],
   pitfalls: ["機能とコンテンツの混在に注意", "時間制約を無視した過密プランを避ける"],
 };
+
+
+
+
