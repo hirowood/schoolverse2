@@ -7,6 +7,7 @@ type Classified = {
   lines: string[];
   interests: string[];
   risks: string[];
+  tagHints: string[];
 };
 
 const keywordToCareer: Record<string, string[]> = {
@@ -27,20 +28,35 @@ const keywordToCareer: Record<string, string[]> = {
   "data": ["DATA"],
   "分析": ["DATA"],
   "ai": ["AI_DEV"],
+  "調べる": ["THINKING"],
+  "メモ": ["THINKING"],
+  "仮説": ["THINKING"],
+  "論理": ["THINKING"],
+  "批判": ["THINKING"],
+  "水平思考": ["THINKING"],
+  "思考": ["THINKING"],
+  "考え方": ["THINKING"],
 };
 
 const keywordToTags: Record<string, string[]> = {
   react: ["REACT_COMPONENT", "JS_BASIC"],
-  "next": ["NEXT_ROUTING", "REACT_COMPONENT"],
+  next: ["NEXT_ROUTING", "REACT_COMPONENT"],
   "3d": ["THREEJS_BASIC", "WEBGL_INTRO"],
-  "vba": ["VBA_MACRO", "EXCEL_FUNCTION"],
-  "excel": ["EXCEL_BASIC"],
-  "gas": ["GAS_BASIC"],
-  "security": ["SEC_WEB_BASICS", "NETWORK_BASIC"],
-  "docker": ["DOCKER_BASIC"],
-  "api": ["HTTP_REST", "API_DESIGN"],
-  "sql": ["SQL_BASIC"],
-  "infra": ["LINUX_BASIC", "NETWORK_BASIC"],
+  vba: ["VBA_MACRO", "EXCEL_FUNCTION"],
+  excel: ["EXCEL_BASIC"],
+  gas: ["GAS_BASIC"],
+  security: ["SEC_WEB_BASICS", "NETWORK_BASIC"],
+  docker: ["DOCKER_BASIC"],
+  api: ["HTTP_REST", "API_DESIGN"],
+  sql: ["SQL_BASIC"],
+  infra: ["LINUX_BASIC", "NETWORK_BASIC"],
+  調べる: ["RESEARCH_KEYWORDING", "RESEARCH_AI_POSITIONING"],
+  メモ: ["NOTE_5W2H", "NOTE_BRAIN_DUMP"],
+  仮説: ["HYPOTHESIS_GENERATION", "HYPOTHESIS_TESTING"],
+  論理: ["LOGIC_MECE", "LOGIC_PREP"],
+  批判: ["CRITICAL_PREMISE_CHECK"],
+  水平思考: ["LATERAL_IDEA_GENERATION"],
+  思考: ["RESEARCH_KEYWORDING", "NOTE_5W2H", "HYPOTHESIS_GENERATION"],
 };
 
 const careerToLines: Record<string, string[]> = {
@@ -53,6 +69,7 @@ const careerToLines: Record<string, string[]> = {
   INFRA: ["infra-line"],
   DATA: [],
   AI_DEV: ["fe-line", "be-line"],
+  THINKING: ["thinking-line"],
 };
 
 const careerToSkillTags: Record<string, string[]> = {
@@ -65,6 +82,16 @@ const careerToSkillTags: Record<string, string[]> = {
   INFRA: ["LINUX_BASIC", "NETWORK_BASIC", "DEPLOY_BASIC"],
   DATA: ["SQL_BASIC", "DATA_VIZ"],
   AI_DEV: ["AI_PROMPTING", "RAG_BASIC"],
+  THINKING: [
+    "RESEARCH_KEYWORDING",
+    "RESEARCH_SOURCE_JUDGEMENT",
+    "NOTE_5W2H",
+    "NOTE_HYPOTHESIS_FLAG",
+    "HYPOTHESIS_GENERATION",
+    "HYPOTHESIS_TESTING",
+    "LOGIC_MECE",
+    "CRITICAL_PREMISE_CHECK",
+  ],
 };
 
 function classifyGoal(input: GoalInput): Classified {
@@ -107,6 +134,7 @@ function classifyGoal(input: GoalInput): Classified {
     lines: Array.from(lines),
     interests,
     risks,
+    tagHints: Array.from(tagHints),
   };
 }
 
@@ -211,10 +239,7 @@ export function generateRoadmap(input: GoalInput): Roadmap {
   const classified = classifyGoal(input);
   const targetLines = pickLines(classified.lines);
   let targetSkills = buildTargetSkills(targetLines);
-  const tagHints = Object.entries(keywordToTags)
-    .filter(([kw]) => input.free_text.toLowerCase().includes(kw))
-    .flatMap(([, tags]) => tags);
-  targetSkills = mergeSkillTags(targetSkills, tagHints);
+  targetSkills = mergeSkillTags(targetSkills, classified.tagHints);
   const gapSkills = computeGap(targetSkills, input.diagnostic_result);
   const phases = buildPhases(targetLines, input.weekly_study_time);
 
