@@ -70,50 +70,66 @@ export const CURRICULUM_MAP: CurriculumMap = {
       {
         id: "react",
         name: "Reactカリキュラム",
-        description: "PART→CHAPTER→ミニ課題でアウトプットするハンズオン形式。初心者が『入力→小さな出力』を繰り返し、最終的にオリジナルアプリまで進む流れ。",
+        description:
+          "PART→CHAPTER→ミニ課題でアウトプットするハンズオン形式。初心者が『入力→小さな出力』を繰り返し、最終的にオリジナルアプリまで進む流れ。",
         children: [
           {
             id: "react-part1",
             name: "PART 1 Reactの基本を学ぶ（Week1）",
             children: [
-              { id: "react-1-1", name: "1-1 Reactはどんなもの？（45〜60分）", description: "Reactの役割と特徴を理解する。従来のWebサイトとSPAの違いをノートに描き、1〜3行で自分の言葉にする。" },
-              { id: "react-1-2", name: "1-2 Reactで何ができる？（30〜45分）", description: "Reactが使われていそうなサービスを3〜5個挙げ、フォーム＋一覧UIの例を観察。作ってみたいアプリのアイデアをメモする。" },
-              { id: "react-1-3", name: "1-3 Reactを学ぶメリット（30〜45分）", description: "就職・ポートフォリオ・自作ツールなど目的を言語化し、VueではなくReactを選ぶ理由を自分視点でまとめる。" },
-              { id: "react-1-4", name: "1-4 開発環境を構築する（Node / VSCode / Vite）（60〜90分）", description: "Node/VSCをセットアップし、ViteでReactプロジェクトを作成してdevサーバを起動する。", sampleCode: "# プロジェクト作成
-npm create vite@latest my-react-app -- --template react-ts
-cd my-react-app
-npm install
-npm run dev" },
-              { id: "react-1-5", name: "1-5 はじめてのReactアプリ『Hello React』（45〜60分）", description: "Vite初期コードを書き換え、Hello Reactと名前入りメッセージを表示。ホットリロードを体験する。", sampleCode: "// src/App.tsx
-export default function App() {
-  const name = 'Hiroki';
-  return <h1>Hello, {name}!</h1>;
-}" },
-              { id: "react-2-1", name: "2-1 JSXの基本（60〜90分）", description: "1つのルート要素・className・{}でJSを書くルールを練習し、プロフィール画面を作成。" },
-              { id: "react-2-2", name: "2-2 コンポーネントの基本（自己紹介カード）（90〜120分）", description: "functionコンポーネントを複数配置し再利用性を体感。『コンポーネントとは』を図解で整理。", sampleCode: "function ProfileCard({ name, bio }: { name: string; bio: string }) {
-  return (
-    <div className='card'>
-      <h3>{name}</h3>
-      <p>{bio}</p>
-    </div>
-  );
-}" },
-              { id: "react-2-3", name: "2-3 イベントの基本（60〜90分）", description: "onClickでメッセージを変えるボタンを実装し、ハンドラの書き方を練習。", sampleCode: "export default function Clicker() {
-  const handleClick = () => alert('Clicked!');
-  return <button onClick={handleClick}>押す</button>;
-}" },
-              { id: "react-3-1", name: "3-1 useStateと宣言的UI（90〜120分）", description: "カウンター(+1/-1)でstate更新と再描画の流れを理解。prev => 形式も確認。", sampleCode: "const [count, setCount] = useState(0);
-return (
-  <div>
-    <p>{count}</p>
-    <button onClick={() => setCount((p) => p + 1)}>+1</button>
-  </div>
-);" },
-              { id: "react-3-2", name: "3-2 配列表示とmap（90〜120分）", description: "mapとkeyの意味を学び、文字列配列のリスト表示を実装。", sampleCode: "const friends = ['Aki', 'Mio', 'Ken'];
-return <ul>{friends.map((n) => <li key={n}>{n}</li>)}</ul>;" },
+              {
+                id: "react-1-1",
+                name: "1-1 Reactはどんなもの？（45〜60分）",
+                description: "Reactの役割と特徴を理解する。従来のWebサイトとSPAの違いをノートに描き、1〜3行で自分の言葉にする。",
+              },
+              {
+                id: "react-1-2",
+                name: "1-2 Reactで何ができる？（30〜45分）",
+                description: "Reactが使われていそうなサービスを3〜5個挙げ、フォーム＋一覧UIの例を観察。作ってみたいアプリのアイデアをメモする。",
+              },
+              {
+                id: "react-1-3",
+                name: "1-3 Reactを学ぶメリット（30〜45分）",
+                description: "就職・ポートフォリオ・自作ツールなど目的を言語化し、VueではなくReactを選ぶ理由を自分視点でまとめる。",
+              },
+              {
+                id: "react-1-4",
+                name: "1-4 開発環境を構築する（Node / VSCode / Vite）（60〜90分）",
+                description: "Node/VSCをセットアップし、ViteでReactプロジェクトを作成してdevサーバを起動する。",
+              },
+              {
+                id: "react-1-5",
+                name: "1-5 はじめてのReactアプリ『Hello React』（45〜60分）",
+                description: "Vite初期コードを書き換え、Hello Reactと名前入りメッセージを表示。ホットリロードを体験する。",
+              },
+              {
+                id: "react-2-1",
+                name: "2-1 JSXの基本（60〜90分）",
+                description: "1つのルート要素・className・{}でJSを書くルールを練習し、プロフィール画面を作成。",
+              },
+              {
+                id: "react-2-2",
+                name: "2-2 コンポーネントの基本（自己紹介カード）（90〜120分）",
+                description: "functionコンポーネントを複数配置し再利用性を体感。『コンポーネントとは』を図解で整理。",
+              },
+              {
+                id: "react-2-3",
+                name: "2-3 イベントの基本（60〜90分）",
+                description: "onClickでメッセージを変えるボタンを実装し、ハンドラの書き方を練習。",
+              },
+              {
+                id: "react-3-1",
+                name: "3-1 useStateと宣言的UI（90〜120分）",
+                description: "カウンター(+1/-1)でstate更新と再描画の流れを理解。prev => 形式も確認。",
+              },
+              {
+                id: "react-3-2",
+                name: "3-2 配列表示とmap（90〜120分）",
+                description: "mapとkeyの意味を学び、文字列配列のリスト表示を実装。",
+              },
               { id: "react-3-3", name: "3-3 条件分岐表示（60〜90分）", description: "&&と三項演算子で表示/非表示を切り替え、残タスク0なら祝福メッセージを出すUIを作る。" },
-              { id: "react-mini-a", name: "ミニアプリA：カウンター＆いいねボタン（90〜120分）", description: "stateを2〜3種類持たせる小アプリ。READMEに学びを書き、スクショを残す。" }
-            ]
+              { id: "react-mini-a", name: "ミニアプリA：カウンター＆いいねボタン（90〜120分）", description: "stateを2〜3種類持たせる小アプリ。READMEに学びを書き、スクショを残す。" },
+            ],
           },
           {
             id: "react-part2",
@@ -398,6 +414,7 @@ return <ul>{friends.map((n) => <li key={n}>{n}</li>)}</ul>;" },
   ],
   pitfalls: ["機能とコンテンツの混在に注意", "時間制約を無視した過密プランを避ける"],
 };
+
 
 
 
