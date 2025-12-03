@@ -6,6 +6,7 @@ import type { CurriculumLine, CurriculumNode, CareerLine } from "@/lib/curriculu
 
 export default function CurriculumMapPage() {
   const [keyword, setKeyword] = useState("");
+  const [sectionFilter, setSectionFilter] = useState<"all" | "curriculum" | "career">("all");
   const data = CURRICULUM_MAP;
   const term = keyword.trim().toLowerCase();
 
@@ -17,7 +18,7 @@ export default function CurriculumMapPage() {
         .map((n) => {
           const childMatches = n.children ? filterNodes(n.children) : [];
           const selfMatch = match(n.name) || match(n.description);
-          if (selfMatch || childMatches.length > 0 || term === "") {
+          if (selfMatch || childMatches.length > 0 || term === "" || sectionFilter === "career") {
             return { ...n, children: childMatches.length ? childMatches : n.children };
           }
           return null;
@@ -28,14 +29,14 @@ export default function CurriculumMapPage() {
       const unitHit = line.units.some((u) => match(u.title) || match(u.description));
       const missionHit = line.missions?.some((m) => match(m));
       const selfHit = match(line.title) || match(line.summary);
-      if (term === "" || selfHit || unitHit || missionHit) return line;
+      if (term === "" || selfHit || unitHit || missionHit || sectionFilter === "career") return line;
       return null;
     };
 
     const filterCareer = (c: CareerLine): CareerLine | null => {
       const hit =
         match(c.name) || match(c.what) || c.linkedCurriculumIds.some((id) => match(id)) || c.sampleMissions?.some(match);
-      return term === "" || hit ? c : null;
+      return term === "" || hit || sectionFilter === "curriculum" ? c : null;
     };
 
     return {
@@ -57,7 +58,8 @@ export default function CurriculumMapPage() {
   }, [data, term]);
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-8">
+    <HighlightProvider keyword={keyword}>
+      <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-8">
       <header className="space-y-3">
         <div className="space-y-1">
           <p className="text-sm text-slate-500">MECE Curriculum Map</p>
@@ -66,13 +68,24 @@ export default function CurriculumMapPage() {
             カテゴリ / ライン / 職種の対応関係をひと目で確認できます。学習パスやクエスト生成の土台として使うことを想定しています。
           </p>
         </div>
-        <div className="w-full md:w-96">
-          <input
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="キーワードで絞り込み（例: React, DX, QA, BI ...）"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-          />
+        <div className="flex flex-col md:flex-row gap-2 md:items-center">
+          <div className="w-full md:w-96">
+            <input
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="キーワードで絞り込み（例: React, DX, QA, BI ...）"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+            />
+          </div>
+          <div className="flex gap-2">
+            <FilterButton label="全て" active={sectionFilter === "all"} onClick={() => setSectionFilter("all")} />
+            <FilterButton
+              label="カテゴリのみ"
+              active={sectionFilter === "curriculum"}
+              onClick={() => setSectionFilter("curriculum")}
+            />
+            <FilterButton label="職種のみ" active={sectionFilter === "career"} onClick={() => setSectionFilter("career")} />
+          </div>
         </div>
       </header>
 
@@ -137,7 +150,8 @@ export default function CurriculumMapPage() {
           </ul>
         </Card>
       </section>
-    </div>
+      </div>
+    </HighlightProvider>
   );
 }
 
@@ -178,7 +192,9 @@ function NodeList({ label, nodes }: { label: string; nodes: CurriculumNode[] }) 
               key={node.id}
               className="text-xs px-3 py-2 rounded-lg border border-slate-200 bg-slate-50/70 min-w-[120px]"
             >
-              <p className="font-semibold text-slate-800">{node.name}</p>
+              <p className="font-semibold text-slate-800">
+                <Highlight text={node.name} />
+              </p>
               {node.children && node.children.length > 0 && (
                 <p className="text-[11px] text-slate-600 mt-1 line-clamp-2">
                   {node.children.map((c) => c.name).join(" / ")}
@@ -197,20 +213,24 @@ function RoleLine({ line }: { line: CurriculumLine }) {
     <div className="rounded-lg border border-slate-200 p-3 bg-slate-50/60 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold text-slate-800">{line.title}</p>
-          <p className="text-xs text-slate-600">{line.summary}</p>
+          <p className="text-sm font-semibold text-slate-800">
+            <Highlight text={line.title} />
+          </p>
+          <p className="text-xs text-slate-600">
+            <Highlight text={line.summary} />
+          </p>
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
         {line.units.map((u) => (
           <span key={u.id} className="text-[11px] px-2 py-1 rounded-full bg-white border border-slate-200">
-            {u.title}
+            <Highlight text={u.title} />
           </span>
         ))}
       </div>
       {line.missions && line.missions.length > 0 && (
         <p className="text-[11px] text-slate-600">
-          ミッション例: {line.missions.join(" / ")}
+          ミッション例: <Highlight text={line.missions.join(" / ")} />
         </p>
       )}
     </div>
@@ -227,13 +247,19 @@ function CareerColumn({ title, items }: { title: string; items: CareerLine[] }) 
         <div className="space-y-2">
           {items.map((c) => (
             <div key={c.id} className="border border-slate-200 rounded-md p-2 bg-slate-50/80 space-y-1">
-              <p className="text-sm font-semibold text-slate-800">{c.name}</p>
-              <p className="text-[12px] text-slate-600">{c.what}</p>
+              <p className="text-sm font-semibold text-slate-800">
+                <Highlight text={c.name} />
+              </p>
+              <p className="text-[12px] text-slate-600">
+                <Highlight text={c.what} />
+              </p>
               <p className="text-[11px] text-slate-600">
-                対応カリキュラム: {c.linkedCurriculumIds.join(", ")}
+                対応カリキュラム: <Highlight text={c.linkedCurriculumIds.join(", ")} />
               </p>
               {c.sampleMissions && c.sampleMissions.length > 0 && (
-                <p className="text-[11px] text-slate-600">ミッション例: {c.sampleMissions.join(" / ")}</p>
+                <p className="text-[11px] text-slate-600">
+                  ミッション例: <Highlight text={c.sampleMissions.join(" / ")} />
+                </p>
               )}
             </div>
           ))}
@@ -252,11 +278,15 @@ function Hierarchy({ nodes }: { nodes: CurriculumNode[] }) {
         <ul className="space-y-1">
           {nodes.map((n) => (
             <li key={n.id}>
-              <span className="font-semibold">{n.name}</span>
+              <span className="font-semibold">
+                <Highlight text={n.name} />
+              </span>
               {n.children && n.children.length > 0 && (
                 <ul className="ml-4 list-disc space-y-1 text-xs text-slate-600">
                   {n.children.map((c) => (
-                    <li key={c.id}>{c.name}</li>
+                    <li key={c.id}>
+                      <Highlight text={c.name} />
+                    </li>
                   ))}
                 </ul>
               )}
@@ -266,4 +296,57 @@ function Hierarchy({ nodes }: { nodes: CurriculumNode[] }) {
       )}
     </div>
   );
+}
+
+function FilterButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full px-3 py-1 text-xs border transition ${
+        active ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-700 border-slate-200"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function Highlight({ text }: { text: string }) {
+  const { keyword } = useHighlightContext();
+  if (!keyword) return <>{text}</>;
+  const lower = text.toLowerCase();
+  const term = keyword.toLowerCase();
+  const idx = lower.indexOf(term);
+  if (idx === -1) return <>{text}</>;
+  const before = text.slice(0, idx);
+  const match = text.slice(idx, idx + term.length);
+  const after = text.slice(idx + term.length);
+  return (
+    <>
+      {before}
+      <mark className="bg-yellow-200 text-slate-900 rounded px-[1px]">{match}</mark>
+      {after}
+    </>
+  );
+}
+
+// 簡易コンテキストで検索語を共有
+import { createContext, useContext } from "react";
+
+const HighlightContext = createContext<{ keyword: string }>({ keyword: "" });
+
+function HighlightProvider({ keyword, children }: { keyword: string; children: React.ReactNode }) {
+  return <HighlightContext.Provider value={{ keyword }}>{children}</HighlightContext.Provider>;
+}
+
+function useHighlightContext() {
+  return useContext(HighlightContext);
 }
