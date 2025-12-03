@@ -11,6 +11,13 @@ const BodySchema = z.object({
   current_skill_snapshot: z.string().optional(),
   preferred_career_type: z.array(z.string()).optional(),
   mental_safety_level: z.number().min(1).max(5).optional(),
+  diagnostic_result: z
+    .object({
+      strengths: z.array(z.string()).optional(),
+      weaknesses: z.array(z.string()).optional(),
+      skill_tags: z.record(z.number()).optional(),
+    })
+    .optional(),
 });
 
 export async function POST(req: Request) {

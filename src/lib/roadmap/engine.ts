@@ -1,6 +1,6 @@
 import { CURRICULUM_LINES } from "@/lib/curriculum/lines-data";
 import type { CurriculumLine } from "@/lib/curriculum/types";
-import { GoalInput, GoalIntent, Roadmap, RoadmapPhase, TargetSkillSet } from "./types";
+import { GoalInput, GoalIntent, Roadmap, RoadmapPhase, TargetSkillSet, DiagnosticResult } from "./types";
 
 type Classified = {
   careers: string[];
@@ -29,6 +29,20 @@ const keywordToCareer: Record<string, string[]> = {
   "ai": ["AI_DEV"],
 };
 
+const keywordToTags: Record<string, string[]> = {
+  react: ["REACT_COMPONENT", "JS_BASIC"],
+  "next": ["NEXT_ROUTING", "REACT_COMPONENT"],
+  "3d": ["THREEJS_BASIC", "WEBGL_INTRO"],
+  "vba": ["VBA_MACRO", "EXCEL_FUNCTION"],
+  "excel": ["EXCEL_BASIC"],
+  "gas": ["GAS_BASIC"],
+  "security": ["SEC_WEB_BASICS", "NETWORK_BASIC"],
+  "docker": ["DOCKER_BASIC"],
+  "api": ["HTTP_REST", "API_DESIGN"],
+  "sql": ["SQL_BASIC"],
+  "infra": ["LINUX_BASIC", "NETWORK_BASIC"],
+};
+
 const careerToLines: Record<string, string[]> = {
   FRONTEND: ["fe-line"],
   BACKEND: ["be-line"],
@@ -41,16 +55,35 @@ const careerToLines: Record<string, string[]> = {
   AI_DEV: ["fe-line", "be-line"],
 };
 
+const careerToSkillTags: Record<string, string[]> = {
+  FRONTEND: ["HTML_BASIC", "CSS_LAYOUT", "JS_BASIC", "REACT_COMPONENT"],
+  BACKEND: ["HTTP_REST", "API_DESIGN", "DB_SCHEMA", "PRISMA_BASIC"],
+  FULLSTACK: ["HTML_BASIC", "CSS_LAYOUT", "JS_BASIC", "HTTP_REST", "DB_SCHEMA"],
+  WEB_3D: ["THREEJS_BASIC", "WEBGL_INTRO", "JS_BASIC"],
+  OFFICE_IT: ["EXCEL_BASIC", "EXCEL_FUNCTION", "VBA_MACRO", "BUSINESS_FLOW"],
+  SECURITY_ENGINEER: ["SEC_WEB_BASICS", "NETWORK_BASIC", "LINUX_BASIC"],
+  INFRA: ["LINUX_BASIC", "NETWORK_BASIC", "DEPLOY_BASIC"],
+  DATA: ["SQL_BASIC", "DATA_VIZ"],
+  AI_DEV: ["AI_PROMPTING", "RAG_BASIC"],
+};
+
 function classifyGoal(input: GoalInput): Classified {
   const text = input.free_text.toLowerCase();
   const hits = new Set<string>();
   const interests: string[] = [];
   const risks: string[] = [];
+  const tagHints = new Set<string>();
 
   Object.entries(keywordToCareer).forEach(([kw, careers]) => {
     if (text.includes(kw)) {
       careers.forEach((c) => hits.add(c));
       interests.push(kw);
+    }
+  });
+
+  Object.entries(keywordToTags).forEach(([kw, tags]) => {
+    if (text.includes(kw)) {
+      tags.forEach((t) => tagHints.add(t));
     }
   });
 
@@ -86,8 +119,31 @@ function buildTargetSkills(lines: CurriculumLine[]): TargetSkillSet {
   const tags = new Set<string>();
   lines.forEach((line) => {
     line.units.forEach((u) => tags.add(u.title));
+    line.missionDetails?.forEach((m) => m.tags?.forEach((t) => tags.add(t)));
+  });
+  lines.forEach((line) => {
+    const careers = Object.keys(careerToLines).filter((c) => careerToLines[c]?.includes(line.id));
+    careers.forEach((c) => careerToSkillTags[c]?.forEach((t) => tags.add(t)));
   });
   return Array.from(tags).map((tag) => ({ tag, level: 1, priority: "must" as const }));
+}
+
+function mergeSkillTags(base: TargetSkillSet, extra: string[]): TargetSkillSet {
+  const existing = new Map(base.map((s) => [s.tag, s]));
+  extra.forEach((tag) => {
+    if (!existing.has(tag)) {
+      existing.set(tag, { tag, level: 1, priority: "must" });
+    }
+  });
+  return Array.from(existing.values());
+}
+
+function computeGap(target: TargetSkillSet, diagnostic?: DiagnosticResult): TargetSkillSet {
+  if (!diagnostic?.skill_tags) return target;
+  return target.filter((t) => {
+    const current = diagnostic.skill_tags?.[t.tag] ?? 0;
+    return current < t.level;
+  });
 }
 
 function phase(title: string, opts: Partial<RoadmapPhase>): RoadmapPhase {
@@ -154,7 +210,12 @@ function buildPhases(lines: CurriculumLine[], weekly: number | undefined): Roadm
 export function generateRoadmap(input: GoalInput): Roadmap {
   const classified = classifyGoal(input);
   const targetLines = pickLines(classified.lines);
-  const targetSkills = buildTargetSkills(targetLines);
+  let targetSkills = buildTargetSkills(targetLines);
+  const tagHints = Object.entries(keywordToTags)
+    .filter(([kw]) => input.free_text.toLowerCase().includes(kw))
+    .flatMap(([, tags]) => tags);
+  targetSkills = mergeSkillTags(targetSkills, tagHints);
+  const gapSkills = computeGap(targetSkills, input.diagnostic_result);
   const phases = buildPhases(targetLines, input.weekly_study_time);
 
   const summary = `目標: ${input.free_text}\n候補ライン: ${targetLines.map((l) => l.title).join(", ") || "未決定"}\n` +
@@ -184,5 +245,7 @@ export function generateRoadmap(input: GoalInput): Roadmap {
     intent,
     targetLines,
     careers: classified.careers,
+    targetSkills,
+    gapSkills,
   };
 }

@@ -9,6 +9,7 @@ export type GoalInput = {
   current_skill_snapshot?: string;
   preferred_career_type?: string[];
   mental_safety_level?: number; // 1-5
+  diagnostic_result?: DiagnosticResult;
 };
 
 export type GoalIntent = {
@@ -55,4 +56,6 @@ export type Roadmap = {
   intent: GoalIntent;
   targetLines: CurriculumLine[];
   careers: string[];
+  targetSkills: TargetSkillSet;
+  gapSkills: TargetSkillSet;
 };
