@@ -42,7 +42,7 @@ export default function ReportPage() {
         const payload = await response.json().catch(() => null);
         throw new Error(payload?.error ?? "週次レポートを取得できませんでした");
       }
-      const data = await response.json() as {
+      const data = (await response.json()) as {
         context: WeeklyReportContext;
         report: WeeklyReportRecord | null;
       };
@@ -97,7 +97,7 @@ export default function ReportPage() {
         const payload = await response.json().catch(() => null);
         throw new Error(payload?.error ?? "レポート生成に失敗しました");
       }
-      const data = await response.json() as {
+      const data = (await response.json()) as {
         context: WeeklyReportContext;
         report: WeeklyReportRecord;
       };
@@ -146,12 +146,10 @@ export default function ReportPage() {
     [context],
   );
 
-  const statusSummary = useMemo(
-    () => context?.summary.statusCounts ?? null,
-    [context],
-  );
+  const statusSummary = useMemo(() => context?.summary.statusCounts ?? null, [context]);
 
   const weekLabel = context?.weekLabel ?? "週次レポート";
+  const kpt = (report as any)?.kpt as { keep?: string[]; problem?: string[]; try?: string[] } | undefined;
 
   return (
     <div className="space-y-6">
@@ -174,6 +172,7 @@ export default function ReportPage() {
           </button>
         </div>
       )}
+
       <header className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-slate-500">週次レポート</p>
@@ -217,11 +216,7 @@ export default function ReportPage() {
         </div>
       </header>
 
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
 
       <section className="space-y-4">
         <div className="grid gap-4 md:grid-cols-3">
@@ -234,7 +229,7 @@ export default function ReportPage() {
           <div className="rounded-xl border border-slate-200 bg-white p-4">
             <p className="text-xs font-semibold text-slate-500">タスク状況</p>
             {statusSummary ? (
-              <div className="mt-2 text-sm text-slate-700 space-y-1">
+              <div className="mt-2 space-y-1 text-sm text-slate-700">
                 <p>完了: {statusSummary.done}</p>
                 <p>進行中: {statusSummary.inProgress}</p>
                 <p>一時停止: {statusSummary.paused}</p>
@@ -281,9 +276,7 @@ export default function ReportPage() {
                 <p className="text-sm text-slate-500">記録なし</p>
               )}
             </div>
-            <p className="mt-3 text-xs text-slate-500">
-              ※ クレド／体調関連の記録とハイライト
-            </p>
+            <p className="mt-3 text-xs text-slate-500">※ クレド／体調関連の記録とハイライト</p>
           </div>
         </div>
       </section>
@@ -323,6 +316,51 @@ export default function ReportPage() {
           <div>
             <p className="text-xs font-semibold text-slate-500">支援者向けメッセージ</p>
             <p className="mt-1 text-sm text-slate-700">{report?.supporterExport ?? "保護者・先生向けのポイントを生成します"}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900">KPT 振り返り</h2>
+          <p className="text-xs text-slate-500">AI生成または手入力のKPTメモをここに表示します</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Keep</p>
+            {kpt?.keep?.length ? (
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-800">
+                {kpt.keep.map((item: string) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-slate-600">続けたいことを記録してください。</p>
+            )}
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Problem</p>
+            {kpt?.problem?.length ? (
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-800">
+                {kpt.problem.map((item: string) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-slate-600">課題に感じたことを記録してください。</p>
+            )}
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Try</p>
+            {kpt?.try?.length ? (
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-800">
+                {kpt.try.map((item: string) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-slate-600">次週試したいアクションを書き出しましょう。</p>
+            )}
           </div>
         </div>
       </section>
