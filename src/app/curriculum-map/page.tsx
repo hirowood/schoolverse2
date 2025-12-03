@@ -1,24 +1,84 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { CURRICULUM_MAP } from "@/lib/curriculum/map";
 import type { CurriculumLine, CurriculumNode, CareerLine } from "@/lib/curriculum/types";
 
 export default function CurriculumMapPage() {
+  const [keyword, setKeyword] = useState("");
   const data = CURRICULUM_MAP;
+  const term = keyword.trim().toLowerCase();
+
+  const filtered = useMemo(() => {
+    const match = (text?: string | null) => (text ?? "").toLowerCase().includes(term);
+
+    const filterNodes = (nodes: CurriculumNode[]): CurriculumNode[] =>
+      nodes
+        .map((n) => {
+          const childMatches = n.children ? filterNodes(n.children) : [];
+          const selfMatch = match(n.name) || match(n.description);
+          if (selfMatch || childMatches.length > 0 || term === "") {
+            return { ...n, children: childMatches.length ? childMatches : n.children };
+          }
+          return null;
+        })
+        .filter(Boolean) as CurriculumNode[];
+
+    const filterLine = (line: CurriculumLine): CurriculumLine | null => {
+      const unitHit = line.units.some((u) => match(u.title) || match(u.description));
+      const missionHit = line.missions?.some((m) => match(m));
+      const selfHit = match(line.title) || match(line.summary);
+      if (term === "" || selfHit || unitHit || missionHit) return line;
+      return null;
+    };
+
+    const filterCareer = (c: CareerLine): CareerLine | null => {
+      const hit =
+        match(c.name) || match(c.what) || c.linkedCurriculumIds.some((id) => match(id)) || c.sampleMissions?.some(match);
+      return term === "" || hit ? c : null;
+    };
+
+    return {
+      coreCurriculum: filterNodes(data.coreCurriculum),
+      certifications: filterNodes(data.contentLines.certifications),
+      languages: filterNodes(data.contentLines.languages),
+      web: filterNodes(data.contentLines.webFrameworks),
+      react: filterNodes(data.contentLines.react),
+      nextjs: filterNodes(data.contentLines.nextjs),
+      ai: filterNodes(data.contentLines.ai),
+      office: filterNodes(data.contentLines.officeDxAx),
+      roleLines: data.contentLines.roleLines.map(filterLine).filter(Boolean) as CurriculumLine[],
+      careers: {
+        engineer: data.careers.engineer.map(filterCareer).filter(Boolean) as CareerLine[],
+        office: data.careers.office.map(filterCareer).filter(Boolean) as CareerLine[],
+        axDxData: data.careers.axDxData.map(filterCareer).filter(Boolean) as CareerLine[],
+      },
+    };
+  }, [data, term]);
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-8">
-      <header className="space-y-2">
-        <p className="text-sm text-slate-500">MECE Curriculum Map</p>
-        <h1 className="text-2xl font-semibold">Schoolverse2 カリキュラム＆職種マップ</h1>
-        <p className="text-sm text-slate-600">
-          カテゴリ / ライン / 職種の対応関係をひと目で確認できます。学習パスやクエスト生成の土台として使うことを想定しています。
-        </p>
+    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-8">
+      <header className="space-y-3">
+        <div className="space-y-1">
+          <p className="text-sm text-slate-500">MECE Curriculum Map</p>
+          <h1 className="text-2xl font-semibold">Schoolverse2 カリキュラム＆職種マップ</h1>
+          <p className="text-sm text-slate-600">
+            カテゴリ / ライン / 職種の対応関係をひと目で確認できます。学習パスやクエスト生成の土台として使うことを想定しています。
+          </p>
+        </div>
+        <div className="w-full md:w-96">
+          <input
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="キーワードで絞り込み（例: React, DX, QA, BI ...）"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+          />
+        </div>
       </header>
 
       <section className="grid gap-4 md:grid-cols-2">
         <Card title="カリキュラム階層 (Category→Activity)">
-          <Hierarchy nodes={data.coreCurriculum} />
+          <Hierarchy nodes={filtered.coreCurriculum} />
         </Card>
         <Card title="学習パス (タイプ / ノード)">
           <div className="space-y-3">
@@ -33,18 +93,18 @@ export default function CurriculumMapPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <Card title="資格 / 言語 / Web / AI / 事務・DX/AX">
             <div className="space-y-4">
-              <NodeList label="資格" nodes={data.contentLines.certifications} />
-              <NodeList label="言語" nodes={data.contentLines.languages} />
-              <NodeList label="Web/Framework" nodes={data.contentLines.webFrameworks} />
-              <NodeList label="React" nodes={data.contentLines.react} />
-              <NodeList label="Next.js" nodes={data.contentLines.nextjs} />
-              <NodeList label="AI/ML" nodes={data.contentLines.ai} />
-              <NodeList label="事務・DX/AX" nodes={data.contentLines.officeDxAx} />
+              <NodeList label="資格" nodes={filtered.certifications} />
+              <NodeList label="言語" nodes={filtered.languages} />
+              <NodeList label="Web/Framework" nodes={filtered.web} />
+              <NodeList label="React" nodes={filtered.react} />
+              <NodeList label="Next.js" nodes={filtered.nextjs} />
+              <NodeList label="AI/ML" nodes={filtered.ai} />
+              <NodeList label="事務・DX/AX" nodes={filtered.office} />
             </div>
           </Card>
           <Card title="役割別ライン（ユニット概要とミッション例）">
             <div className="space-y-4">
-              {data.contentLines.roleLines.map((line) => (
+              {filtered.roleLines.map((line) => (
                 <RoleLine key={line.id} line={line} />
               ))}
             </div>
@@ -55,9 +115,9 @@ export default function CurriculumMapPage() {
       <section className="space-y-4">
         <h2 className="text-xl font-semibold">職種マップ（カリキュラムとのリンク）</h2>
         <div className="grid gap-4 md:grid-cols-3">
-          <CareerColumn title="エンジニア系" items={data.careers.engineer} />
-          <CareerColumn title="事務・バックオフィス×IT" items={data.careers.office} />
-          <CareerColumn title="AX / DX / データ" items={data.careers.axDxData} />
+          <CareerColumn title="エンジニア系" items={filtered.careers.engineer} />
+          <CareerColumn title="事務・バックオフィス×IT" items={filtered.careers.office} />
+          <CareerColumn title="AX / DX / データ" items={filtered.careers.axDxData} />
         </div>
       </section>
 
@@ -109,18 +169,25 @@ function NodeList({ label, nodes }: { label: string; nodes: CurriculumNode[] }) 
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold text-slate-600">{label}</p>
-      <div className="flex flex-wrap gap-2">
-        {nodes.map((node) => (
-          <div key={node.id} className="text-xs px-3 py-2 rounded-lg border border-slate-200 bg-slate-50/70 min-w-[120px]">
-            <p className="font-semibold text-slate-800">{node.name}</p>
-            {node.children && node.children.length > 0 && (
-              <p className="text-[11px] text-slate-600 mt-1 line-clamp-2">
-                {node.children.map((c) => c.name).join(" / ")}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
+      {nodes.length === 0 ? (
+        <p className="text-[11px] text-slate-500">該当なし</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {nodes.map((node) => (
+            <div
+              key={node.id}
+              className="text-xs px-3 py-2 rounded-lg border border-slate-200 bg-slate-50/70 min-w-[120px]"
+            >
+              <p className="font-semibold text-slate-800">{node.name}</p>
+              {node.children && node.children.length > 0 && (
+                <p className="text-[11px] text-slate-600 mt-1 line-clamp-2">
+                  {node.children.map((c) => c.name).join(" / ")}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -154,20 +221,49 @@ function CareerColumn({ title, items }: { title: string; items: CareerLine[] }) 
   return (
     <div className="rounded-lg border border-slate-200 bg-white/60 p-3 space-y-3">
       <p className="text-sm font-semibold text-slate-800">{title}</p>
-      <div className="space-y-2">
-        {items.map((c) => (
-          <div key={c.id} className="border border-slate-200 rounded-md p-2 bg-slate-50/80 space-y-1">
-            <p className="text-sm font-semibold text-slate-800">{c.name}</p>
-            <p className="text-[12px] text-slate-600">{c.what}</p>
-            <p className="text-[11px] text-slate-600">
-              対応カリキュラム: {c.linkedCurriculumIds.join(", ")}
-            </p>
-            {c.sampleMissions && c.sampleMissions.length > 0 && (
-              <p className="text-[11px] text-slate-600">ミッション例: {c.sampleMissions.join(" / ")}</p>
-            )}
-          </div>
-        ))}
-      </div>
+      {items.length === 0 ? (
+        <p className="text-[11px] text-slate-500">該当なし</p>
+      ) : (
+        <div className="space-y-2">
+          {items.map((c) => (
+            <div key={c.id} className="border border-slate-200 rounded-md p-2 bg-slate-50/80 space-y-1">
+              <p className="text-sm font-semibold text-slate-800">{c.name}</p>
+              <p className="text-[12px] text-slate-600">{c.what}</p>
+              <p className="text-[11px] text-slate-600">
+                対応カリキュラム: {c.linkedCurriculumIds.join(", ")}
+              </p>
+              {c.sampleMissions && c.sampleMissions.length > 0 && (
+                <p className="text-[11px] text-slate-600">ミッション例: {c.sampleMissions.join(" / ")}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Hierarchy({ nodes }: { nodes: CurriculumNode[] }) {
+  return (
+    <div className="space-y-1 text-sm text-slate-700">
+      {nodes.length === 0 ? (
+        <p className="text-xs text-slate-500">該当なし</p>
+      ) : (
+        <ul className="space-y-1">
+          {nodes.map((n) => (
+            <li key={n.id}>
+              <span className="font-semibold">{n.name}</span>
+              {n.children && n.children.length > 0 && (
+                <ul className="ml-4 list-disc space-y-1 text-xs text-slate-600">
+                  {n.children.map((c) => (
+                    <li key={c.id}>{c.name}</li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
