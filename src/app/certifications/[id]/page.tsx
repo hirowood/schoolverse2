@@ -47,7 +47,7 @@ const CERT_DETAILS: Record<string, CertDetail> = {
       { label: "科目A（午前）：基礎理論と分野別対策", href: "/certifications/fe/subject-a" },
       { label: "科目B（午後）：記述・設計・セキュリティ", href: "/certifications/fe/subject-b" },
     ],
-    pastExamLink: "/certifications/fe/past",
+    pastExamLink: "https://www.fe-siken.com/fekakomon.php",
   },
   ap: {
     title: "応用情報技術者試験",
