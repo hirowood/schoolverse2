@@ -5,6 +5,7 @@ import { QuestGenerationOptions, ParsedQuest } from "./types";
 import { gatherQuestGenerationContext } from "./context-gatherer";
 import { buildQuestPrompt } from "./quest-prompt-builder";
 import { parseQuestResponse } from "./quest-parser";
+import { resolveQuestCategoriesFromLinesAndCareers } from "@/lib/curriculum/quest-map";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -59,6 +60,8 @@ export async function generateQuestsForUser(
   const now = new Date();
   const today = startOfDay(now);
   const forceRegenerate = options?.forceRegenerate ?? false;
+  const inferredCategories = resolveQuestCategoriesFromLinesAndCareers(options?.lineIds, options?.careerIds);
+  const mergedPreferred = Array.from(new Set([...(options?.preferredCategories ?? []), ...inferredCategories]));
 
   if (!forceRegenerate) {
     const existing = await prisma.aIGeneratedQuest.findMany({ where: { userId, date: today } });
@@ -86,7 +89,7 @@ export async function generateQuestsForUser(
   }
 
   const context = await gatherQuestGenerationContext(userId);
-  const prompt = buildQuestPrompt(context, options?.preferredCategories);
+  const prompt = buildQuestPrompt(context, mergedPreferred);
 
   let parsed: ParsedQuest[] = [];
   let rawResponse = "";

@@ -20,6 +20,8 @@ export type ParsedQuest = {
 export type QuestGenerationOptions = {
   forceRegenerate?: boolean;
   preferredCategories?: QuestCategory[];
+  lineIds?: string[];
+  careerIds?: string[];
 };
 
 export type QuestGenerationContext = {

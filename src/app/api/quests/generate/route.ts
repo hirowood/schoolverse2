@@ -5,10 +5,13 @@ import { authOptions } from "@/lib/auth";
 import { assertRateLimit } from "@/lib/rateLimit";
 import { generateQuestsForUser } from "@/lib/gamification/ai-quest-generator";
 import { QuestCategory } from "@/lib/constants/quest-categories";
+import { resolveQuestCategoriesFromLinesAndCareers } from "@/lib/curriculum/quest-map";
 
 const BodySchema = z.object({
   forceRegenerate: z.boolean().optional(),
   preferredCategories: z.array(z.custom<QuestCategory>()).optional(),
+  lineIds: z.array(z.string()).optional(),
+  careerIds: z.array(z.string()).optional(),
 });
 
 export async function POST(request: Request) {
@@ -45,7 +48,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await generateQuestsForUser(user.id, parsed.data);
+    const inferredCategories = resolveQuestCategoriesFromLinesAndCareers(parsed.data.lineIds, parsed.data.careerIds);
+    const preferredCategories = Array.from(
+      new Set([...(parsed.data.preferredCategories ?? []), ...inferredCategories]),
+    ) as QuestCategory[];
+
+    const result = await generateQuestsForUser(user.id, {
+      ...parsed.data,
+      preferredCategories,
+    });
     return NextResponse.json({
       success: true,
       data: {
