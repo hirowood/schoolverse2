@@ -52,9 +52,9 @@ export default function ReportPage() {
       setContext(data.context);
       setReport(data.report);
       setWeekInput(data.context.weekStart);
-      setKeepInput((data.report as any)?.kpt?.keep?.join("\n") ?? "");
-      setProblemInput((data.report as any)?.kpt?.problem?.join("\n") ?? "");
-      setTryInput((data.report as any)?.kpt?.try?.join("\n") ?? "");
+      setKeepInput(data.report?.kpt?.keep?.join("\n") ?? "");
+      setProblemInput(data.report?.kpt?.problem?.join("\n") ?? "");
+      setTryInput(data.report?.kpt?.try?.join("\n") ?? "");
       setError(null);
       if (data.context.weekStart !== weekStart) {
         setRequestedWeek(data.context.weekStart);
@@ -119,13 +119,13 @@ export default function ReportPage() {
       }
       const data = (await response.json()) as {
         context: WeeklyReportContext;
-        report: WeeklyReportRecord & { kpt?: { keep?: string[]; problem?: string[]; try?: string[] } };
+        report: WeeklyReportRecord;
       };
       setContext(data.context);
       setReport(data.report);
-      setKeepInput(data.report.kpt?.keep?.join("\n") ?? keepInput);
-      setProblemInput(data.report.kpt?.problem?.join("\n") ?? problemInput);
-      setTryInput(data.report.kpt?.try?.join("\n") ?? tryInput);
+      setKeepInput((prev) => data.report.kpt?.keep?.join("\n") ?? prev);
+      setProblemInput((prev) => data.report.kpt?.problem?.join("\n") ?? prev);
+      setTryInput((prev) => data.report.kpt?.try?.join("\n") ?? prev);
       setRequestedWeek(data.context.weekStart);
       setWeekInput(data.context.weekStart);
       setError(null);
@@ -134,7 +134,7 @@ export default function ReportPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [context?.weekStart, requestedWeek]);
+  }, [context?.weekStart, requestedWeek, keepInput, problemInput, tryInput]);
 
   const handleExport = useCallback(async () => {
     if (!context) return;
@@ -172,7 +172,7 @@ export default function ReportPage() {
   const statusSummary = useMemo(() => context?.summary.statusCounts ?? null, [context]);
 
   const weekLabel = context?.weekLabel ?? "週次レポート";
-  const kpt = (report as any)?.kpt as { keep?: string[]; problem?: string[]; try?: string[] } | undefined;
+  const kpt = report?.kpt;
 
   return (
     <div className="space-y-6">
@@ -360,7 +360,7 @@ export default function ReportPage() {
             />
             {kpt?.keep?.length ? (
               <ul className="list-disc space-y-1 pl-4 text-sm text-slate-800">
-                {kpt.keep.map((item: string) => (
+                {kpt.keep.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
@@ -379,7 +379,7 @@ export default function ReportPage() {
             />
             {kpt?.problem?.length ? (
               <ul className="list-disc space-y-1 pl-4 text-sm text-slate-800">
-                {kpt.problem.map((item: string) => (
+                {kpt.problem.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
@@ -398,7 +398,7 @@ export default function ReportPage() {
             />
             {kpt?.try?.length ? (
               <ul className="list-disc space-y-1 pl-4 text-sm text-slate-800">
-                {kpt.try.map((item: string) => (
+                {kpt.try.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
