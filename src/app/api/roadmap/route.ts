@@ -15,7 +15,7 @@ const BodySchema = z.object({
     .object({
       strengths: z.array(z.string()).optional(),
       weaknesses: z.array(z.string()).optional(),
-      skill_tags: z.record(z.number()).optional(),
+      skill_tags: z.record(z.number()).optional(), // number keyed? will normalize below
     })
     .optional(),
 });
@@ -36,6 +36,20 @@ export async function POST(req: Request) {
     );
   }
 
-  const roadmap = generateRoadmap(parsed.data);
+  const normalized = {
+    ...parsed.data,
+    diagnostic_result: parsed.data.diagnostic_result
+      ? {
+          ...parsed.data.diagnostic_result,
+          skill_tags: parsed.data.diagnostic_result.skill_tags
+            ? Object.fromEntries(
+                Object.entries(parsed.data.diagnostic_result.skill_tags).map(([k, v]) => [String(k), Number(v)]),
+              )
+            : undefined,
+        }
+      : undefined,
+  };
+
+  const roadmap = generateRoadmap(normalized);
   return NextResponse.json({ success: true, data: roadmap });
 }

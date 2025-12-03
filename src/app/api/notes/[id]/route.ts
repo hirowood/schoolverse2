@@ -67,6 +67,8 @@ export async function PATCH(
 
   // 更新データを構築
   const updateData: Prisma.NoteUpdateInput = {};
+  const toJson = (v: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull =>
+    v === undefined || v === null ? Prisma.JsonNull : (v as Prisma.InputJsonValue);
 
   if (validation.data.title !== undefined) updateData.title = validation.data.title;
   if (validation.data.content !== undefined) updateData.content = validation.data.content;
@@ -79,20 +81,20 @@ export async function PATCH(
   }
 
   if (validation.data.drawingData !== undefined) {
-    updateData.drawingData = validation.data.drawingData ?? Prisma.JsonNull;
+    updateData.drawingData = toJson(validation.data.drawingData);
   }
   if (validation.data.templateData !== undefined) {
-    updateData.templateData = validation.data.templateData ?? Prisma.JsonNull;
+    updateData.templateData = toJson(validation.data.templateData);
   }
   if (validation.data.tags !== undefined) {
     const normalized = normalizeTags(validation.data.tags);
-    updateData.tags = normalized ?? Prisma.JsonNull;
+    updateData.tags = toJson(normalized);
   }
   if (validation.data.imageFiles !== undefined) {
-    updateData.imageFiles = validation.data.imageFiles ?? Prisma.JsonNull;
+    updateData.imageFiles = toJson(validation.data.imageFiles);
   }
   if (validation.data.ocrTexts !== undefined) {
-    updateData.ocrTexts = validation.data.ocrTexts ?? Prisma.JsonNull;
+    updateData.ocrTexts = toJson(validation.data.ocrTexts);
   }
 
   const note = await prisma.note.update({

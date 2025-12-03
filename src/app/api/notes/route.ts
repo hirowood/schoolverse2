@@ -108,18 +108,21 @@ export async function POST(request: NextRequest) {
     name: (session.user as { name?: string }).name ?? null 
   });
 
+  const toJson = (v: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull =>
+    v === undefined || v === null ? Prisma.JsonNull : (v as Prisma.InputJsonValue);
+
   const note = await prisma.note.create({
     data: {
       userId,
       title: validation.data.title,
       content: validation.data.content,
       templateType: validation.data.templateType ?? "free",
-      drawingData: validation.data.drawingData ?? Prisma.JsonNull,
-      templateData: validation.data.templateData ?? Prisma.JsonNull,
-      tags: normalizeTags(validation.data.tags) ?? Prisma.JsonNull,
+      drawingData: toJson(validation.data.drawingData),
+      templateData: toJson(validation.data.templateData),
+      tags: toJson(normalizeTags(validation.data.tags)),
       isShareable: validation.data.isShareable ?? false,
-      imageFiles: validation.data.imageFiles ?? Prisma.JsonNull,
-      ocrTexts: validation.data.ocrTexts ?? Prisma.JsonNull,
+      imageFiles: toJson(validation.data.imageFiles),
+      ocrTexts: toJson(validation.data.ocrTexts),
       relatedTaskId: validation.data.relatedTaskId,
     },
     include: {

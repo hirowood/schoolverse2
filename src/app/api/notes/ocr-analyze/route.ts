@@ -83,7 +83,9 @@ export async function POST(request: Request) {
         data: {
           ocrRawText: ocrText,
           aiSummary: summary,
-          aiAnalysis: analysis ?? Prisma.JsonNull,
+          aiAnalysis: analysis
+            ? (analysis as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
           autoTags: tags ?? Prisma.JsonNull,
           analyzedAt: new Date(),
         },

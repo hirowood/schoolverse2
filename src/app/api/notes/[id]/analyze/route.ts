@@ -87,8 +87,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       where: { id: noteId },
       data: {
         aiSummary: result.summary,
-        aiAnalysis: result.analysis ?? Prisma.JsonNull,
-        autoTags: result.tags ?? Prisma.JsonNull,
+        aiAnalysis: result.analysis
+          ? (result.analysis as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+        autoTags: result.tags ? (result.tags as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
         analyzedAt: new Date(),
       },
     });
