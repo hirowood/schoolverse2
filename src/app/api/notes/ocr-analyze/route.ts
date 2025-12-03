@@ -86,7 +86,7 @@ export async function POST(request: Request) {
           aiAnalysis: analysis
             ? (analysis as unknown as Prisma.InputJsonValue)
             : Prisma.JsonNull,
-          autoTags: tags ?? Prisma.JsonNull,
+          autoTags: tags,
           analyzedAt: new Date(),
         },
       });

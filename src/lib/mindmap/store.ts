@@ -222,8 +222,10 @@ export const useMindMapStore = create<MindMapState & MindMapActions>()(
         if (!connection.source || !connection.target) return;
         get().pushHistory();
         set((state) => {
+          const sourceId = connection.source as string;
+          const targetId = connection.target as string;
           const updatedNodes = state.nodes.map((n) =>
-            n.id === connection.source
+            n.id === sourceId
               ? { ...n, data: { ...n.data, childCount: (n.data.childCount || 0) + 1 } }
               : n
           );
@@ -233,9 +235,9 @@ export const useMindMapStore = create<MindMapState & MindMapActions>()(
             edges: [
               ...state.edges,
               {
-                id: `edge-${connection.source}-${connection.target}`,
-                source: connection.source,
-                target: connection.target,
+                id: `edge-${sourceId}-${targetId}`,
+                source: sourceId,
+                target: targetId,
                 type: "smoothstep",
                 data: { strokeColor: "#94a3b8", strokeWidth: 2, animated: false },
               },

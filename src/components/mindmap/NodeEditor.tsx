@@ -265,7 +265,7 @@ export default function NodeEditor({ open, nodeId, data, onSave, onClose }: Node
                 <span
                   className="px-2 py-1 text-xs rounded-full"
                   style={{
-                    backgroundColor: STATUS_CONFIG[status].bg,
+                    backgroundColor: STATUS_CONFIG[status].bgColor,
                     color: STATUS_CONFIG[status].color,
                   }}
                 >

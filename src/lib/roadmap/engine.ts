@@ -187,7 +187,10 @@ function buildPhases(lines: CurriculumLine[], weekly: number | undefined): Roadm
   const baseWeekly = weekly ?? 5;
   const units = lines.flatMap((l) => l.units.map((u) => ({ ...u, lineId: l.id })));
   const missions = lines.flatMap(
-    (l) => l.missionDetails?.map((m) => ({ ...m, lineId: l.id })) ?? l.missions?.map((title) => ({ id: title, title, lineId: l.id })),
+    (l) =>
+      l.missionDetails?.map((m) => ({ ...m, lineId: l.id })) ??
+      l.missions?.map((title) => ({ id: title, title, lineId: l.id })) ??
+      [],
   );
 
   const phases: RoadmapPhase[] = [];

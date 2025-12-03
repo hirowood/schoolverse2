@@ -83,7 +83,11 @@ const CERT_DETAILS: Record<string, CertDetail> = {
 
 export default async function CertificationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const certNode = CURRICULUM_MAP.contentLines.certifications[0]?.children.find((c) => c.id === id);
+  const certLine = CURRICULUM_MAP.contentLines.certifications?.[0];
+  if (!certLine || !certLine.children) {
+    return notFound();
+  }
+  const certNode = certLine.children.find((c) => c.id === id);
   const detail = CERT_DETAILS[id];
 
   if (!certNode || !detail) {

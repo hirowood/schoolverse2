@@ -65,6 +65,10 @@ export async function GET(request: Request, { params }: RouteParams) {
         ...m,
         createdAt: m.createdAt.toISOString(),
         updatedAt: m.updatedAt.toISOString(),
+        reads: m.reads?.map((r) => ({
+          ...r,
+          readAt: r.readAt.toISOString(),
+        })),
       }))
       .reverse(),
     nextCursor,
@@ -122,6 +126,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     ...message,
     createdAt: message.createdAt.toISOString(),
     updatedAt: message.updatedAt.toISOString(),
+    reads: message.reads?.map((r) => ({ ...r, readAt: r.readAt.toISOString() })),
     sender: message.sender ?? undefined,
   });
 
@@ -130,6 +135,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       ...message,
       createdAt: message.createdAt.toISOString(),
       updatedAt: message.updatedAt.toISOString(),
+      reads: message.reads?.map((r) => ({ ...r, readAt: r.readAt.toISOString() })),
     },
   });
 }

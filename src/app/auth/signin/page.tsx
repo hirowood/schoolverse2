@@ -11,7 +11,7 @@ const DEMO_PASSWORD = "demo1234";
 const SignInContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/credo";
+  const callbackUrl = searchParams?.get("callbackUrl") ?? "/credo";
 
   const [email, setEmail] = useState(DEMO_EMAIL);
   const [password, setPassword] = useState(DEMO_PASSWORD);

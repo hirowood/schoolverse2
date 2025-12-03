@@ -87,7 +87,7 @@ export async function buildMindMapContext(
   let criticalTasks = 0;
 
   const nodes = mindMap.nodes.map((node) => {
-    const wbs = (node.wbs as WBSData | null) || DEFAULT_WBS_DATA;
+    const wbs = ((node as unknown as { wbs?: WBSData | null }).wbs as WBSData | null) || DEFAULT_WBS_DATA;
     
     if (wbs.status === "completed") completedTasks++;
     if (wbs.status === "in_progress") inProgressTasks++;

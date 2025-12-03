@@ -19,13 +19,13 @@ const questMap: QuestMap = {
     infra: ["learning", "life_habit"],
     sre: ["learning", "life_habit"],
     qa: ["learning", "learning_attitude"],
-    "data-eng": ["learning", "ai"],
-    ml: ["learning", "ai"],
+    "data-eng": ["learning", "learning_attitude"],
+    ml: ["learning", "learning_attitude"],
     "office-general": ["life_habit", "note_quality"],
     "internal-it": ["life_habit", "learning_attitude"],
     dx: ["life_habit", "learning_attitude"],
-    ax: ["life_habit", "ai"],
-    "data-analyst": ["learning", "ai"],
+    ax: ["life_habit", "learning_attitude"],
+    "data-analyst": ["learning", "learning_attitude"],
   },
 };
 

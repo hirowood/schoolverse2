@@ -50,10 +50,10 @@ const EMPTY_SCENE: SceneSnapshot = {
 function CanvasPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const noteId = searchParams.get("id");
-  const taskId = searchParams.get("taskId");
-  const taskTitle = searchParams.get("taskTitle");
-  const template = searchParams.get("template"); 
+  const noteId = searchParams?.get("id");
+  const taskId = searchParams?.get("taskId");
+  const taskTitle = searchParams?.get("taskTitle");
+  const template = searchParams?.get("template"); 
 
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
 

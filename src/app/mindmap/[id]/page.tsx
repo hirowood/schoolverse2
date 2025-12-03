@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import MindMapCanvas from "@/components/mindmap/MindMapCanvas";
 import type { MindMapEdge, MindMapNode, MindMapState } from "@/lib/mindmap/types";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 type ApiNode = {
   id: string;
   type?: MindMapNode["type"];
@@ -34,6 +34,7 @@ type ApiEdge = {
 };
 
 export default function MindMapDetailPage({ params }: Params) {
+  const resolvedParams = use(params);
   const [initialState, setInitialState] = useState<Partial<MindMapState> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,7 +42,7 @@ export default function MindMapDetailPage({ params }: Params) {
   useEffect(() => {
     const fetchMindMap = async () => {
       try {
-        const res = await fetch(`/api/mindmap/${params.id}`);
+        const res = await fetch(`/api/mindmap/${resolvedParams.id}`);
         if (!res.ok) {
           throw new Error("Failed to fetch mind map");
         }
@@ -103,7 +104,7 @@ export default function MindMapDetailPage({ params }: Params) {
       }
     };
     void fetchMindMap();
-  }, [params]);
+  }, [resolvedParams.id]);
 
   if (loading) {
     return (

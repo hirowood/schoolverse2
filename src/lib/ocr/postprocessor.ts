@@ -24,7 +24,7 @@ export function normalizeWhitespace(text: string): string {
  * 日本語OCRでよくある誤認識を修正
  */
 export function fixCommonOcrErrors(text: string): string {
-  const replacements: [RegExp, string][] = [
+  const replacements: [RegExp, string | ((match: string) => string)][] = [
     // 数字の誤認識
     [/[oO](?=\d)/g, "0"], // O → 0 (数字の前)
     [/(?<=\d)[oO]/g, "0"], // O → 0 (数字の後)
@@ -40,7 +40,7 @@ export function fixCommonOcrErrors(text: string): string {
     [/[）\)]/g, "）"],
     
     // 全角・半角の統一（数字は半角に）
-    [/[０-９]/g, (match) => String.fromCharCode(match.charCodeAt(0) - 0xfee0)],
+    [/[０-９]/g, (match: string) => String.fromCharCode(match.charCodeAt(0) - 0xfee0)],
     
     // よくある誤認識パターン
     [/ー{2,}/g, "ー"], // 連続する長音を1つに
@@ -49,7 +49,11 @@ export function fixCommonOcrErrors(text: string): string {
 
   let result = text;
   for (const [pattern, replacement] of replacements) {
-    result = result.replace(pattern, replacement);
+    if (typeof replacement === "function") {
+      result = result.replace(pattern, (match: string) => replacement(match));
+    } else {
+      result = result.replace(pattern, replacement);
+    }
   }
   return result;
 }

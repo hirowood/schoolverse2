@@ -15,7 +15,7 @@ const BodySchema = z.object({
     .object({
       strengths: z.array(z.string()).optional(),
       weaknesses: z.array(z.string()).optional(),
-      skill_tags: z.record(z.number()).optional(), // number keyed? will normalize below
+      skill_tags: z.record(z.string(), z.number()).optional(), // number keyed? will normalize below
     })
     .optional(),
 });

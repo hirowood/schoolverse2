@@ -178,8 +178,8 @@ export default function NotesPage() {
   }, [loadNotes]);
 
   useEffect(() => {
-    const taskId = searchParams.get("taskId");
-    const taskTitle = searchParams.get("taskTitle") ?? undefined;
+    const taskId = searchParams?.get("taskId");
+    const taskTitle = searchParams?.get("taskTitle") ?? undefined;
     if (taskId) {
       setLinkedTask({ id: taskId, title: taskTitle });
     } else {
