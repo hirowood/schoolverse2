@@ -54,6 +54,7 @@ export type CurriculumMap = {
     nextjs: CurriculumNode[];
     ai: CurriculumNode[];
     officeDxAx: CurriculumNode[];
+    thinking: CurriculumNode[];
     roleLines: CurriculumLine[];
   };
   careers: {

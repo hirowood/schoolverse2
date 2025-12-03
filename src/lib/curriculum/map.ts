@@ -122,6 +122,22 @@ export const CURRICULUM_MAP: CurriculumMap = {
         ],
       },
     ],
+    thinking: [
+      {
+        id: "thinking",
+        name: "思考スキル",
+        children: [
+          { id: "research_literacy", name: "調べる力" },
+          { id: "note_externalization", name: "メモ書き・外在化" },
+          { id: "hypothesis_thinking", name: "仮説思考" },
+          { id: "logical_thinking", name: "論理的思考" },
+          { id: "lateral_thinking", name: "水平思考" },
+          { id: "critical_thinking", name: "批判的思考" },
+          { id: "no_answer_world", name: "答えのない問いへの対応" },
+        ],
+        meta: { tags: ["RESEARCH_KEYWORDING", "NOTE_5W2H", "HYPOTHESIS_TESTING", "LOGIC_MECE"] },
+      },
+    ],
     roleLines: [
       {
         id: "fe-line",
