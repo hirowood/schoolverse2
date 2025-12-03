@@ -38,8 +38,8 @@ export function layoutMindMap(nodes: MindMapNode[], edges: MindMapEdge[], option
     return {
       ...node,
       position: {
-        x: dagNode.x - (dagNode.width ?? 0) / 2,
-        y: dagNode.y - (dagNode.height ?? 0) / 2,
+        x: (dagNode.x ?? 0) - (dagNode.width ?? 0) / 2,
+        y: (dagNode.y ?? 0) - (dagNode.height ?? 0) / 2,
       },
     };
   });
