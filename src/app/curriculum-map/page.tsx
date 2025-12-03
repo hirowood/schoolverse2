@@ -358,10 +358,10 @@ function RoleLine({ line }: { line: CurriculumLine }) {
                 </div>
               )}
               <div className="flex gap-2 text-[10px]">
-                <a className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-100" href={`/learning-path?line=${line.id}&mission=${m.id}`}>
+                <a className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-100" href={`/learning-path?lineId=${line.id}&missionId=${m.id}`}>
                   Learning Pathへ
                 </a>
-                <a className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-100" href={`/quests?line=${line.id}&mission=${m.id}`}>
+                <a className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-100" href={`/quests?lineId=${line.id}&missionId=${m.id}`}>
                   Quest生成へ
                 </a>
               </div>

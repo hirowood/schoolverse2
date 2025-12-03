@@ -23,7 +23,6 @@ export const CURRICULUM_LINES: CurriculumLine[] = [
         tools: ["React", "Next.js", "Tailwind"],
         tags: ["dashboard", "responsive"],
         effortMinutes: 180,
-        tags: ["dashboard", "responsive"],
       },
       {
         id: "fe-m2",
@@ -57,6 +56,7 @@ export const CURRICULUM_LINES: CurriculumLine[] = [
         expectedOutputs: ["OpenAPI/YAML", "CRUDエンドポイント", "バリデーション/認証"],
         tools: ["Node/Express or Next Route Handler", "Prisma"],
         tags: ["api", "crud", "auth"],
+        effortMinutes: 180,
       },
       {
         id: "be-m2",
@@ -65,6 +65,7 @@ export const CURRICULUM_LINES: CurriculumLine[] = [
         expectedOutputs: ["CRUD", "集計クエリ", "テストコード(任意)"],
         tools: ["Node/Express or Next Route Handler", "Prisma"],
         tags: ["mission", "aggregation"],
+        effortMinutes: 180,
       },
     ],
   },
@@ -89,6 +90,7 @@ export const CURRICULUM_LINES: CurriculumLine[] = [
         expectedOutputs: ["デプロイ手順", "動作確認チェックリスト", "簡易モニタリング設定"],
         tools: ["Vercel/AWS/GCP", "ログ/モニタリングサービス"],
         tags: ["deploy", "monitoring"],
+        effortMinutes: 150,
       },
       {
         id: "inf-m2",
@@ -97,6 +99,7 @@ export const CURRICULUM_LINES: CurriculumLine[] = [
         expectedOutputs: ["インシデントメモ", "原因候補リスト", "調査コマンド例"],
         tools: ["Doc/Notion等"],
         tags: ["incident", "postmortem"],
+        effortMinutes: 120,
       },
     ],
   },
@@ -114,6 +117,7 @@ export const CURRICULUM_LINES: CurriculumLine[] = [
         expectedOutputs: ["要件メモ", "UIモック", "API/DBスキーマ", "デプロイURL"],
         tools: ["Next.js", "Prisma", "PostgreSQL", "Vercel"],
         tags: ["fullstack", "deploy"],
+        effortMinutes: 240,
       },
     ],
   },
