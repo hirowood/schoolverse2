@@ -81,50 +81,56 @@ export default function CurriculumMapPage() {
         </div>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <Card title="カリキュラム階層 (Category→Activity)">
-          <Hierarchy nodes={filtered.coreCurriculum} />
-        </Card>
-        <Card title="学習パス (タイプ / ノード)">
-          <div className="space-y-3">
-            <ChipList label="パスタイプ" items={data.learningPaths.types} />
-            <ChipList label="ノードタイプ" items={data.learningPaths.nodeTypes} />
+      {(sectionFilter === "all" || sectionFilter === "curriculum") && (
+        <>
+          <section className="grid gap-4 md:grid-cols-2">
+            <Card title="カリキュラム階層 (Category→Activity)">
+              <Hierarchy nodes={filtered.coreCurriculum} />
+            </Card>
+            <Card title="学習パス (タイプ / ノード)">
+              <div className="space-y-3">
+                <ChipList label="パスタイプ" items={data.learningPaths.types} />
+                <ChipList label="ノードタイプ" items={data.learningPaths.nodeTypes} />
+              </div>
+            </Card>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold">コンテンツライン</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card title="資格 / 言語 / Web / AI / 事務・DX/AX">
+                <div className="space-y-4">
+                  <NodeList label="資格" nodes={filtered.certifications} />
+                  <NodeList label="言語" nodes={filtered.languages} />
+                  <NodeList label="Web/Framework" nodes={filtered.web} />
+                  <NodeList label="React" nodes={filtered.react} />
+                  <NodeList label="Next.js" nodes={filtered.nextjs} />
+                  <NodeList label="AI/ML" nodes={filtered.ai} />
+                  <NodeList label="事務・DX/AX" nodes={filtered.office} />
+                </div>
+              </Card>
+              <Card title="役割別ライン（ユニット概要とミッション例）">
+                <div className="space-y-4">
+                  {filtered.roleLines.map((line) => (
+                    <RoleLine key={line.id} line={line} />
+                  ))}
+                </div>
+              </Card>
+            </div>
+          </section>
+        </>
+      )}
+
+      {(sectionFilter === "all" || sectionFilter === "career") && (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">職種マップ（カリキュラムとのリンク）</h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            <CareerColumn title="エンジニア系" items={filtered.careers.engineer} />
+            <CareerColumn title="事務・バックオフィス×IT" items={filtered.careers.office} />
+            <CareerColumn title="AX / DX / データ" items={filtered.careers.axDxData} />
           </div>
-        </Card>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">コンテンツライン</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card title="資格 / 言語 / Web / AI / 事務・DX/AX">
-            <div className="space-y-4">
-              <NodeList label="資格" nodes={filtered.certifications} />
-              <NodeList label="言語" nodes={filtered.languages} />
-              <NodeList label="Web/Framework" nodes={filtered.web} />
-              <NodeList label="React" nodes={filtered.react} />
-              <NodeList label="Next.js" nodes={filtered.nextjs} />
-              <NodeList label="AI/ML" nodes={filtered.ai} />
-              <NodeList label="事務・DX/AX" nodes={filtered.office} />
-            </div>
-          </Card>
-          <Card title="役割別ライン（ユニット概要とミッション例）">
-            <div className="space-y-4">
-              {filtered.roleLines.map((line) => (
-                <RoleLine key={line.id} line={line} />
-              ))}
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">職種マップ（カリキュラムとのリンク）</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          <CareerColumn title="エンジニア系" items={filtered.careers.engineer} />
-          <CareerColumn title="事務・バックオフィス×IT" items={filtered.careers.office} />
-          <CareerColumn title="AX / DX / データ" items={filtered.careers.axDxData} />
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="grid gap-4 md:grid-cols-2">
         <Card title="仮説（5本）">
