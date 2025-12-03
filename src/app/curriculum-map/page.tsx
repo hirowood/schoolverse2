@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, createContext, useContext } from "react";
-import type { CurriculumLine, CurriculumNode, CareerLine, CurriculumMap } from "@/lib/curriculum/types";
+import type { CareerLine, CurriculumLine, CurriculumMap, CurriculumNode } from "@/lib/curriculum/types";
 import { CURRICULUM_MAP } from "@/lib/curriculum/map";
 
 type SectionFilter = "all" | "curriculum" | "career";
@@ -12,12 +12,14 @@ export default function CurriculumMapPage() {
   const [sectionFilter, setSectionFilter] = useState<SectionFilter>("all");
   const [searchMode, setSearchMode] = useState<SearchMode>("or");
   const [remoteMap, setRemoteMap] = useState<CurriculumMap | null>(null);
+  const [remoteLines, setRemoteLines] = useState<CurriculumLine[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showHitsOnly, setShowHitsOnly] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    const fetchMap = async () => {
+    const run = async () => {
       setLoading(true);
       setError(null);
       try {
@@ -25,13 +27,31 @@ export default function CurriculumMapPage() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         if (!cancelled) setRemoteMap(json.data as CurriculumMap);
-      } catch (e) {
+      } catch {
         if (!cancelled) setError("最新データの取得に失敗したためローカル定義を使用します。");
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
-    fetchMap();
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const res = await fetch("/api/curriculum/lines");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (!cancelled) setRemoteLines(json.data ?? null);
+      } catch {
+        if (!cancelled) setRemoteLines(null);
+      }
+    };
+    run();
     return () => {
       cancelled = true;
     };
@@ -44,6 +64,7 @@ export default function CurriculumMapPage() {
     .filter(Boolean);
 
   const filtered = useMemo(() => {
+    const roleLinesSource = remoteLines ?? data.contentLines.roleLines;
     const matches = (text?: string | null) => {
       if (terms.length === 0) return true;
       const hay = (text ?? "").toLowerCase();
@@ -70,14 +91,18 @@ export default function CurriculumMapPage() {
         (m) => matches(m.title) || matches(m.description) || m.tags?.some((t) => matches(t)),
       );
       const selfHit = matches(line.title) || matches(line.summary);
-      if (terms.length === 0 || selfHit || unitHit || missionHit || missionDetailsHit || sectionFilter === "career")
+      if (terms.length === 0 || selfHit || unitHit || missionHit || missionDetailsHit || sectionFilter === "career") {
         return line;
+      }
       return null;
     };
 
     const filterCareer = (c: CareerLine): CareerLine | null => {
       const hit =
-        matches(c.name) || matches(c.what) || c.linkedCurriculumIds.some((id) => matches(id)) || c.sampleMissions?.some(matches);
+        matches(c.name) ||
+        matches(c.what) ||
+        c.linkedCurriculumIds.some((id) => matches(id)) ||
+        c.sampleMissions?.some((m) => matches(m));
       return terms.length === 0 || hit || sectionFilter === "curriculum" ? c : null;
     };
 
@@ -90,14 +115,28 @@ export default function CurriculumMapPage() {
       nextjs: filterNodes(data.contentLines.nextjs),
       ai: filterNodes(data.contentLines.ai),
       office: filterNodes(data.contentLines.officeDxAx),
-      roleLines: data.contentLines.roleLines.map(filterLine).filter(Boolean) as CurriculumLine[],
+      roleLines: roleLinesSource.map(filterLine).filter(Boolean) as CurriculumLine[],
       careers: {
         engineer: data.careers.engineer.map(filterCareer).filter(Boolean) as CareerLine[],
         office: data.careers.office.map(filterCareer).filter(Boolean) as CareerLine[],
         axDxData: data.careers.axDxData.map(filterCareer).filter(Boolean) as CareerLine[],
       },
     };
-  }, [data, terms, searchMode, sectionFilter]);
+  }, [data, terms, searchMode, sectionFilter, remoteLines]);
+
+  const counts = {
+    core: filtered.coreCurriculum.length,
+    content:
+      filtered.certifications.length +
+      filtered.languages.length +
+      filtered.web.length +
+      filtered.react.length +
+      filtered.nextjs.length +
+      filtered.ai.length +
+      filtered.office.length,
+    roleLines: filtered.roleLines.length,
+    careers: filtered.careers.engineer.length + filtered.careers.office.length + filtered.careers.axDxData.length,
+  };
 
   return (
     <HighlightProvider keywords={terms}>
@@ -124,11 +163,12 @@ export default function CurriculumMapPage() {
             <div className="flex flex-col md:flex-row gap-2 md:items-center">
               <Tabs value={sectionFilter} onChange={setSectionFilter} />
               <SearchModeToggle value={searchMode} onChange={setSearchMode} />
+              <HitToggle value={showHitsOnly} onChange={setShowHitsOnly} />
             </div>
           </div>
         </header>
 
-        {(sectionFilter === "all" || sectionFilter === "curriculum") && (
+        {(sectionFilter === "all" || sectionFilter === "curriculum") && (!showHitsOnly || counts.core > 0) && (
           <>
             <section className="grid gap-4 md:grid-cols-2">
               <Card title="カリキュラム階層 (Category→Activity)">
@@ -142,35 +182,42 @@ export default function CurriculumMapPage() {
               </Card>
             </section>
 
-            <section className="space-y-4">
-              <h2 className="text-xl font-semibold">コンテンツライン</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card title="資格 / 言語 / Web / AI / 事務・DX/AX">
-                  <div className="space-y-4">
-                    <NodeList label="資格" nodes={filtered.certifications} />
-                    <NodeList label="言語" nodes={filtered.languages} />
-                    <NodeList label="Web/Framework" nodes={filtered.web} />
-                    <NodeList label="React" nodes={filtered.react} />
-                    <NodeList label="Next.js" nodes={filtered.nextjs} />
-                    <NodeList label="AI/ML" nodes={filtered.ai} />
-                    <NodeList label="事務・DX/AX" nodes={filtered.office} />
-                  </div>
-                </Card>
-                <Card title="役割別ライン（ユニット概要とミッション例）">
-                  <div className="space-y-4">
-                    {filtered.roleLines.map((line) => (
-                      <RoleLine key={line.id} line={line} />
-                    ))}
-                  </div>
-                </Card>
-              </div>
-            </section>
+            {(counts.content + counts.roleLines > 0 || !showHitsOnly) && (
+              <section className="space-y-4">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  コンテンツライン <Badge count={counts.content + counts.roleLines} />
+                </h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Card title="資格 / 言語 / Web / AI / 事務・DX/AX">
+                    <div className="space-y-4">
+                      <NodeList label="資格" nodes={filtered.certifications} />
+                      <NodeList label="言語" nodes={filtered.languages} />
+                      <NodeList label="Web/Framework" nodes={filtered.web} />
+                      <NodeList label="React" nodes={filtered.react} />
+                      <NodeList label="Next.js" nodes={filtered.nextjs} />
+                      <NodeList label="AI/ML" nodes={filtered.ai} />
+                      <NodeList label="事務・DX/AX" nodes={filtered.office} />
+                    </div>
+                  </Card>
+                  <Card title="役割別ライン（ユニット概要とミッション例）">
+                    <div className="space-y-4">
+                      {filtered.roleLines.map((line) => (
+                        <RoleLine key={line.id} line={line} />
+                      ))}
+                      {filtered.roleLines.length === 0 && <p className="text-xs text-slate-500">該当なし</p>}
+                    </div>
+                  </Card>
+                </div>
+              </section>
+            )}
           </>
         )}
 
-        {(sectionFilter === "all" || sectionFilter === "career") && (
+        {(sectionFilter === "all" || sectionFilter === "career") && (!showHitsOnly || counts.careers > 0) && (
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold">職種マップ（カリキュラムとのリンク）</h2>
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              職種マップ（カリキュラムとのリンク） <Badge count={counts.careers} />
+            </h2>
             <div className="grid gap-4 md:grid-cols-3">
               <CareerColumn title="エンジニア系" items={filtered.careers.engineer} />
               <CareerColumn title="事務・バックオフィス×IT" items={filtered.careers.office} />
@@ -288,8 +335,16 @@ function RoleLine({ line }: { line: CurriculumLine }) {
               <p className="text-slate-700">
                 <Highlight text={m.description} />
               </p>
-              {m.expectedOutputs && <p>アウトプット例: <Highlight text={m.expectedOutputs.join(" / ")} /></p>}
-              {m.tools && <p>ツール: <Highlight text={m.tools.join(", ")} /></p>}
+              {m.expectedOutputs && (
+                <p>
+                  アウトプット例: <Highlight text={m.expectedOutputs.join(" / ")} />
+                </p>
+              )}
+              {m.tools && (
+                <p>
+                  ツール: <Highlight text={m.tools.join(", ")} />
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -406,6 +461,19 @@ function SearchModeToggle({ value, onChange }: { value: SearchMode; onChange: (v
   );
 }
 
+function HitToggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      onClick={() => onChange(!value)}
+      className={`text-xs px-3 py-2 rounded-md border transition ${
+        value ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-slate-700 border-slate-200"
+      }`}
+    >
+      {value ? "ヒットのみ表示中" : "ヒットのみ表示"}
+    </button>
+  );
+}
+
 function Highlight({ text }: { text: string }) {
   const { keywords } = useHighlightContext();
   if (!keywords.length) return <>{text}</>;
@@ -424,6 +492,12 @@ function Highlight({ text }: { text: string }) {
         ),
       )}
     </>
+  );
+}
+
+function Badge({ count }: { count: number }) {
+  return (
+    <span className="text-[11px] px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">{count}</span>
   );
 }
 
