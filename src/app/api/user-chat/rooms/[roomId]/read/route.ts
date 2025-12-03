@@ -6,12 +6,13 @@ import { assertRateLimit } from "@/lib/rateLimit";
 import { MarkReadSchema } from "@/lib/schemas/userChat";
 import { notifyRead } from "@/lib/user-chat/hub";
 
-type RouteParams = { params: { roomId: string } };
+type RouteParams = { params: Promise<{ roomId: string }> };
 
 const unauthorized = () => NextResponse.json({ error: "unauthorized" }, { status: 401 });
 const forbidden = () => NextResponse.json({ error: "forbidden" }, { status: 403 });
 
 export async function POST(request: Request, { params }: RouteParams) {
+  const { roomId } = await params;
   const session = await getServerSession(authOptions);
   const user = session?.user as { id?: string; email?: string | null } | undefined;
   if (!user?.id || !user.email) return unauthorized();
@@ -27,7 +28,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const member = await prisma.chatRoomMember.findFirst({
-    where: { roomId: params.roomId, userId: user.id },
+    where: { roomId, userId: user.id },
   });
   if (!member) return forbidden();
 
@@ -55,7 +56,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     data: { lastSeenAt: readAt },
   });
 
-  notifyRead(params.roomId, user.id, parsed.data.messageId, readAt.toISOString());
+  notifyRead(roomId, user.id, parsed.data.messageId, readAt.toISOString());
 
   return NextResponse.json({ ok: true });
 }

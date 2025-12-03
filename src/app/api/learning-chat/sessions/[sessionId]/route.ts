@@ -6,13 +6,14 @@ import { assertRateLimit } from "@/lib/rateLimit";
 import { UpdateSessionSchema } from "@/lib/schemas/learningChat";
 
 type RouteParams = {
-  params: { sessionId: string };
+  params: Promise<{ sessionId: string }>;
 };
 
 const unauthorized = () => NextResponse.json({ error: "unauthorized" }, { status: 401 });
 const notFound = () => NextResponse.json({ error: "not_found" }, { status: 404 });
 
 export async function GET(_request: Request, { params }: RouteParams) {
+  const { sessionId } = await params;
   const session = await getServerSession(authOptions);
   const user = session?.user as { id?: string; email?: string | null } | undefined;
   if (!user?.id || !user.email) return unauthorized();
@@ -28,7 +29,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   }
 
   const sessionRow = await prisma.learningChatSession.findFirst({
-    where: { id: params.sessionId, userId: user.id },
+    where: { id: sessionId, userId: user.id },
     include: {
       messages: {
         orderBy: { createdAt: "asc" },
@@ -43,6 +44,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
+  const { sessionId } = await params;
   const auth = await getServerSession(authOptions);
   const user = auth?.user as { id?: string; email?: string | null } | undefined;
   if (!user?.id || !user.email) return unauthorized();
@@ -58,7 +60,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const target = await prisma.learningChatSession.findFirst({
-    where: { id: params.sessionId, userId: user.id },
+    where: { id: sessionId, userId: user.id },
   });
   if (!target) return notFound();
 
@@ -75,7 +77,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const updated = await prisma.learningChatSession.update({
-    where: { id: params.sessionId },
+    where: { id: sessionId },
     data: {
       ...parsed.data,
     },
@@ -85,6 +87,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
+  const { sessionId } = await params;
   const auth = await getServerSession(authOptions);
   const user = auth?.user as { id?: string; email?: string | null } | undefined;
   if (!user?.id || !user.email) return unauthorized();
@@ -100,7 +103,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   const deleted = await prisma.learningChatSession.deleteMany({
-    where: { id: params.sessionId, userId: user.id },
+    where: { id: sessionId, userId: user.id },
   });
 
   if (deleted.count === 0) return notFound();

@@ -6,7 +6,7 @@ import { assertRateLimit } from "@/lib/rateLimit";
 import { ListRoomMessagesQuerySchema, SendRoomMessageSchema } from "@/lib/schemas/userChat";
 import { notifyMessage } from "@/lib/user-chat/hub";
 
-type RouteParams = { params: { roomId: string } };
+type RouteParams = { params: Promise<{ roomId: string }> };
 
 const unauthorized = () => NextResponse.json({ error: "unauthorized" }, { status: 401 });
 const forbidden = () => NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -15,6 +15,7 @@ async function ensureMember(roomId: string, userId: string) {
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
+  const { roomId } = await params;
   const session = await getServerSession(authOptions);
   const user = session?.user as { id?: string; email?: string | null } | undefined;
   if (!user?.id || !user.email) return unauthorized();
@@ -29,7 +30,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     );
   }
 
-  const isMember = await ensureMember(params.roomId, user.id);
+  const isMember = await ensureMember(roomId, user.id);
   if (!isMember) return forbidden();
 
   const { searchParams } = new URL(request.url);
@@ -45,7 +46,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   const take = limit + 1;
 
   const messages = await prisma.chatRoomMessage.findMany({
-    where: { roomId: params.roomId },
+    where: { roomId },
     orderBy: { createdAt: "desc" },
     take,
     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
@@ -76,6 +77,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
+  const { roomId } = await params;
   const session = await getServerSession(authOptions);
   const user = session?.user as { id?: string; email?: string | null } | undefined;
   if (!user?.id || !user.email) return unauthorized();
@@ -90,7 +92,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     );
   }
 
-  const member = await ensureMember(params.roomId, user.id);
+  const member = await ensureMember(roomId, user.id);
   if (!member) return forbidden();
 
   let body: unknown;
@@ -107,7 +109,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   const message = await prisma.chatRoomMessage.create({
     data: {
-      roomId: params.roomId,
+      roomId,
       senderId: user.id,
       content: parsed.data.content.trim(),
     },
@@ -118,11 +120,11 @@ export async function POST(request: Request, { params }: RouteParams) {
   });
 
   await prisma.chatRoom.update({
-    where: { id: params.roomId },
+    where: { id: roomId },
     data: { lastMessageAt: message.createdAt },
   });
 
-  notifyMessage(params.roomId, {
+  notifyMessage(roomId, {
     ...message,
     createdAt: message.createdAt.toISOString(),
     updatedAt: message.updatedAt.toISOString(),

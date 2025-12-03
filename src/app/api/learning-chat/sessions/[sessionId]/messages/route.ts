@@ -11,7 +11,7 @@ import {
 } from "@/lib/schemas/learningChat";
 import { LearningContextManager, estimateTokens } from "@/lib/learning-chat/context-manager";
 
-type RouteParams = { params: { sessionId: string } };
+type RouteParams = { params: Promise<{ sessionId: string }> };
 
 const anthropic =
   process.env.ANTHROPIC_API_KEY?.length && process.env.ANTHROPIC_API_KEY !== "undefined"
@@ -29,6 +29,7 @@ const unauthorized = () => NextResponse.json({ error: "unauthorized" }, { status
 const notFound = () => NextResponse.json({ error: "not_found" }, { status: 404 });
 
 export async function GET(request: Request, { params }: RouteParams) {
+  const { sessionId } = await params;
   const session = await getServerSession(authOptions);
   const user = session?.user as { id?: string; email?: string | null } | undefined;
   if (!user?.id || !user.email) return unauthorized();
@@ -57,13 +58,13 @@ export async function GET(request: Request, { params }: RouteParams) {
   const take = limit + 1;
 
   const ownsSession = await prisma.learningChatSession.findFirst({
-    where: { id: params.sessionId, userId: user.id },
+    where: { id: sessionId, userId: user.id },
     select: { id: true },
   });
   if (!ownsSession) return notFound();
 
   const messages = await prisma.learningChatMessage.findMany({
-    where: { sessionId: params.sessionId },
+    where: { sessionId },
     orderBy: { createdAt: "desc" },
     take,
     ...(before ? { skip: 1, cursor: { id: before } } : {}),
@@ -79,6 +80,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
+  const { sessionId } = await params;
   const auth = await getServerSession(authOptions);
   const user = auth?.user as { id?: string; email?: string | null; name?: string | null } | undefined;
   if (!user?.id || !user.email) return unauthorized();
@@ -106,7 +108,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const chatSession = await prisma.learningChatSession.findFirst({
-    where: { id: params.sessionId, userId: user.id },
+    where: { id: sessionId, userId: user.id },
     include: { messages: { orderBy: { createdAt: "asc" } } },
   });
   if (!chatSession) return notFound();
