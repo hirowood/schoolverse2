@@ -26,6 +26,14 @@ model User {
   chatRoomMemberships ChatRoomMember[]
   chatRoomMessages    ChatRoomMessage[]
   chatRoomReads       ChatRoomRead[]
+  learningSessions    LearningSession[]
+  learningSummaries   DailyLearningSummary[]
+  userSkills          UserSkill[]
+  learningStats       UserLearningStats?
+  gameProfile         UserGameProfile?
+  xpTransactions      XpTransaction[]
+  achievements        UserAchievement[]
+  questProgress       QuestProgress[]
 }
 
 model CredoItem {
@@ -341,4 +349,211 @@ model ChatRoomRead {
 
   @@unique([messageId, userId])
   @@index([userId, readAt])
+}
+
+// ===== Learning Progress (Week 5) =====
+
+model LearningSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category     String
+  activityType String
+  referenceId  String?
+  startedAt    DateTime
+  endedAt      DateTime?
+  durationSec  Int      @default(0)
+  isActive     Boolean  @default(true)
+  isPaused     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, startedAt])
+  @@index([userId, category])
+}
+
+model DailyLearningSummary {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date             DateTime @db.Date
+  totalDurationSec Int      @default(0)
+  sessionCount     Int      @default(0)
+  categoryBreakdown Json?
+  isStreakDay      Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date(sort: Desc)])
+}
+
+model SkillDefinition {
+  id            String             @id @default(cuid())
+  name          String
+  slug          String             @unique
+  description   String?
+  category      String
+  parentId      String?
+  parent        SkillDefinition?   @relation("SkillHierarchy", fields: [parentId], references: [id])
+  children      SkillDefinition[]  @relation("SkillHierarchy")
+  order         Int                @default(0)
+  icon          String?
+  color         String?
+  requiredXp    Int                @default(100)
+  prerequisites String[]           @default([])
+  isActive      Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  userSkills    UserSkill[]
+
+  @@index([category])
+}
+
+model UserSkill {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId     String
+  skill       SkillDefinition  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  currentXp   Int              @default(0)
+  level       Int              @default(0)
+  status      String           @default("locked")
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([userId, skillId])
+  @@index([userId, status])
+}
+
+model UserLearningStats {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalLearningTimeSec Int      @default(0)
+  totalSessionCount    Int      @default(0)
+  totalSkillsCompleted Int      @default(0)
+  currentStreak        Int      @default(0)
+  longestStreak        Int      @default(0)
+  lastActiveDate       DateTime?
+  weeklyTimeSec        Int      @default(0)
+  monthlyTimeSec       Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+// ===== Gamification (Week 6) =====
+
+model UserGameProfile {
+  id          String            @id @default(cuid())
+  userId      String            @unique
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level       Int               @default(1)
+  currentXp   Int               @default(0)
+  totalXp     Int               @default(0)
+  rank        String            @default("beginner")
+  coins       Int               @default(0)
+  gems        Int               @default(0)
+  title       String?
+  avatarFrame String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  questProgress QuestProgress[]
+  achievements  UserAchievement[]
+}
+
+model XpTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Int
+  source      String
+  sourceId    String?
+  category    String?
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model AchievementDefinition {
+  id             String            @id @default(cuid())
+  name           String
+  slug           String            @unique
+  description    String
+  icon           String
+  rarity         String            @default("common")
+  conditionType  String
+  conditionValue Int
+  conditionJson  Json?
+  xpReward       Int               @default(0)
+  coinReward     Int               @default(0)
+  titleReward    String?
+  category       String
+  order          Int               @default(0)
+  isHidden       Boolean           @default(false)
+  isActive       Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id              String               @id @default(cuid())
+  userId          String
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId   String
+  achievement     AchievementDefinition @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  gameProfileId   String
+  gameProfile     UserGameProfile      @relation(fields: [gameProfileId], references: [id], onDelete: Cascade)
+  currentProgress Int                  @default(0)
+  isCompleted     Boolean              @default(false)
+  completedAt     DateTime?
+  isRewardClaimed Boolean              @default(false)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@unique([userId, achievementId])
+}
+
+model QuestDefinition {
+  id            String   @id @default(cuid())
+  name          String
+  description   String
+  questType     String
+  category      String?
+  objectiveType String
+  targetValue   Int
+  xpReward      Int
+  coinReward    Int      @default(0)
+  difficulty    String   @default("normal")
+  minLevel      Int      @default(1)
+  maxLevel      Int?
+  weight        Int      @default(100)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  questProgress QuestProgress[]
+}
+
+model QuestProgress {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questId         String
+  quest           QuestDefinition @relation(fields: [questId], references: [id], onDelete: Cascade)
+  gameProfileId   String
+  gameProfile     UserGameProfile @relation(fields: [gameProfileId], references: [id], onDelete: Cascade)
+  assignedDate    DateTime        @db.Date
+  currentValue    Int             @default(0)
+  isCompleted     Boolean         @default(false)
+  completedAt     DateTime?
+  isRewardClaimed Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([userId, questId, assignedDate])
+  @@index([userId, assignedDate])
 }
