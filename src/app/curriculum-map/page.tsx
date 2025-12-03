@@ -1,24 +1,62 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, createContext, useContext } from "react";
+import type { CurriculumLine, CurriculumNode, CareerLine, CurriculumMap } from "@/lib/curriculum/types";
 import { CURRICULUM_MAP } from "@/lib/curriculum/map";
-import type { CurriculumLine, CurriculumNode, CareerLine } from "@/lib/curriculum/types";
+
+type SectionFilter = "all" | "curriculum" | "career";
+type SearchMode = "and" | "or";
 
 export default function CurriculumMapPage() {
   const [keyword, setKeyword] = useState("");
-  const [sectionFilter, setSectionFilter] = useState<"all" | "curriculum" | "career">("all");
-  const data = CURRICULUM_MAP;
-  const term = keyword.trim().toLowerCase();
+  const [sectionFilter, setSectionFilter] = useState<SectionFilter>("all");
+  const [searchMode, setSearchMode] = useState<SearchMode>("or");
+  const [remoteMap, setRemoteMap] = useState<CurriculumMap | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchMap = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/curriculum/map");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (!cancelled) setRemoteMap(json.data as CurriculumMap);
+      } catch (e) {
+        if (!cancelled) setError("最新データの取得に失敗したためローカル定義を使用します。");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchMap();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const data = remoteMap ?? CURRICULUM_MAP;
+  const terms = keyword
+    .split(/\s+/)
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
 
   const filtered = useMemo(() => {
-    const match = (text?: string | null) => (text ?? "").toLowerCase().includes(term);
+    const matches = (text?: string | null) => {
+      if (terms.length === 0) return true;
+      const hay = (text ?? "").toLowerCase();
+      if (searchMode === "or") return terms.some((t) => hay.includes(t));
+      return terms.every((t) => hay.includes(t));
+    };
 
     const filterNodes = (nodes: CurriculumNode[]): CurriculumNode[] =>
       nodes
         .map((n) => {
           const childMatches = n.children ? filterNodes(n.children) : [];
-          const selfMatch = match(n.name) || match(n.description);
-          if (selfMatch || childMatches.length > 0 || term === "" || sectionFilter === "career") {
+          const selfMatch = matches(n.name) || matches(n.description);
+          if (selfMatch || childMatches.length > 0 || terms.length === 0 || sectionFilter === "career") {
             return { ...n, children: childMatches.length ? childMatches : n.children };
           }
           return null;
@@ -26,17 +64,21 @@ export default function CurriculumMapPage() {
         .filter(Boolean) as CurriculumNode[];
 
     const filterLine = (line: CurriculumLine): CurriculumLine | null => {
-      const unitHit = line.units.some((u) => match(u.title) || match(u.description));
-      const missionHit = line.missions?.some((m) => match(m));
-      const selfHit = match(line.title) || match(line.summary);
-      if (term === "" || selfHit || unitHit || missionHit || sectionFilter === "career") return line;
+      const unitHit = line.units.some((u) => matches(u.title) || matches(u.description));
+      const missionHit = line.missions?.some((m) => matches(m));
+      const missionDetailsHit = line.missionDetails?.some(
+        (m) => matches(m.title) || matches(m.description) || m.tags?.some((t) => matches(t)),
+      );
+      const selfHit = matches(line.title) || matches(line.summary);
+      if (terms.length === 0 || selfHit || unitHit || missionHit || missionDetailsHit || sectionFilter === "career")
+        return line;
       return null;
     };
 
     const filterCareer = (c: CareerLine): CareerLine | null => {
       const hit =
-        match(c.name) || match(c.what) || c.linkedCurriculumIds.some((id) => match(id)) || c.sampleMissions?.some(match);
-      return term === "" || hit || sectionFilter === "curriculum" ? c : null;
+        matches(c.name) || matches(c.what) || c.linkedCurriculumIds.some((id) => matches(id)) || c.sampleMissions?.some(matches);
+      return terms.length === 0 || hit || sectionFilter === "curriculum" ? c : null;
     };
 
     return {
@@ -55,99 +97,104 @@ export default function CurriculumMapPage() {
         axDxData: data.careers.axDxData.map(filterCareer).filter(Boolean) as CareerLine[],
       },
     };
-  }, [data, term]);
+  }, [data, terms, searchMode, sectionFilter]);
 
   return (
-    <HighlightProvider keyword={keyword}>
+    <HighlightProvider keywords={terms}>
       <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-8">
-      <header className="space-y-3">
-        <div className="space-y-1">
-          <p className="text-sm text-slate-500">MECE Curriculum Map</p>
-          <h1 className="text-2xl font-semibold">Schoolverse2 カリキュラム＆職種マップ</h1>
-          <p className="text-sm text-slate-600">
-            カテゴリ / ライン / 職種の対応関係をひと目で確認できます。学習パスやクエスト生成の土台として使うことを想定しています。
-          </p>
-        </div>
-        <div className="flex flex-col gap-2">
-          <div className="w-full md:w-96">
-            <input
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="キーワードで絞り込み（例: React, DX, QA, BI ...）"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-            />
+        <header className="space-y-3">
+          <div className="space-y-1">
+            <p className="text-sm text-slate-500">MECE Curriculum Map</p>
+            <h1 className="text-2xl font-semibold">Schoolverse2 カリキュラム＆職種マップ</h1>
+            <p className="text-sm text-slate-600">
+              カテゴリ / ライン / 職種の対応関係をひと目で確認できます。学習パスやクエスト生成の土台として使うことを想定しています。
+            </p>
+            {loading && <p className="text-xs text-slate-500">同期中...</p>}
+            {error && <p className="text-xs text-amber-600">{error}</p>}
           </div>
-          <Tabs value={sectionFilter} onChange={setSectionFilter} />
-        </div>
-      </header>
+          <div className="flex flex-col gap-2">
+            <div className="w-full md:w-96">
+              <input
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="キーワードで絞り込み（例: React, DX, QA, BI ...）"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+              />
+            </div>
+            <div className="flex flex-col md:flex-row gap-2 md:items-center">
+              <Tabs value={sectionFilter} onChange={setSectionFilter} />
+              <SearchModeToggle value={searchMode} onChange={setSearchMode} />
+            </div>
+          </div>
+        </header>
 
-      {(sectionFilter === "all" || sectionFilter === "curriculum") && (
-        <>
-          <section className="grid gap-4 md:grid-cols-2">
-            <Card title="カリキュラム階層 (Category→Activity)">
-              <Hierarchy nodes={filtered.coreCurriculum} />
-            </Card>
-            <Card title="学習パス (タイプ / ノード)">
-              <div className="space-y-3">
-                <ChipList label="パスタイプ" items={data.learningPaths.types} />
-                <ChipList label="ノードタイプ" items={data.learningPaths.nodeTypes} />
+        {(sectionFilter === "all" || sectionFilter === "curriculum") && (
+          <>
+            <section className="grid gap-4 md:grid-cols-2">
+              <Card title="カリキュラム階層 (Category→Activity)">
+                <Hierarchy nodes={filtered.coreCurriculum} />
+              </Card>
+              <Card title="学習パス (タイプ / ノード)">
+                <div className="space-y-3">
+                  <ChipList label="パスタイプ" items={data.learningPaths.types} />
+                  <ChipList label="ノードタイプ" items={data.learningPaths.nodeTypes} />
+                </div>
+              </Card>
+            </section>
+
+            <section className="space-y-4">
+              <h2 className="text-xl font-semibold">コンテンツライン</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card title="資格 / 言語 / Web / AI / 事務・DX/AX">
+                  <div className="space-y-4">
+                    <NodeList label="資格" nodes={filtered.certifications} />
+                    <NodeList label="言語" nodes={filtered.languages} />
+                    <NodeList label="Web/Framework" nodes={filtered.web} />
+                    <NodeList label="React" nodes={filtered.react} />
+                    <NodeList label="Next.js" nodes={filtered.nextjs} />
+                    <NodeList label="AI/ML" nodes={filtered.ai} />
+                    <NodeList label="事務・DX/AX" nodes={filtered.office} />
+                  </div>
+                </Card>
+                <Card title="役割別ライン（ユニット概要とミッション例）">
+                  <div className="space-y-4">
+                    {filtered.roleLines.map((line) => (
+                      <RoleLine key={line.id} line={line} />
+                    ))}
+                  </div>
+                </Card>
               </div>
-            </Card>
-          </section>
+            </section>
+          </>
+        )}
 
+        {(sectionFilter === "all" || sectionFilter === "career") && (
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold">コンテンツライン</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card title="資格 / 言語 / Web / AI / 事務・DX/AX">
-                <div className="space-y-4">
-                  <NodeList label="資格" nodes={filtered.certifications} />
-                  <NodeList label="言語" nodes={filtered.languages} />
-                  <NodeList label="Web/Framework" nodes={filtered.web} />
-                  <NodeList label="React" nodes={filtered.react} />
-                  <NodeList label="Next.js" nodes={filtered.nextjs} />
-                  <NodeList label="AI/ML" nodes={filtered.ai} />
-                  <NodeList label="事務・DX/AX" nodes={filtered.office} />
-                </div>
-              </Card>
-              <Card title="役割別ライン（ユニット概要とミッション例）">
-                <div className="space-y-4">
-                  {filtered.roleLines.map((line) => (
-                    <RoleLine key={line.id} line={line} />
-                  ))}
-                </div>
-              </Card>
+            <h2 className="text-xl font-semibold">職種マップ（カリキュラムとのリンク）</h2>
+            <div className="grid gap-4 md:grid-cols-3">
+              <CareerColumn title="エンジニア系" items={filtered.careers.engineer} />
+              <CareerColumn title="事務・バックオフィス×IT" items={filtered.careers.office} />
+              <CareerColumn title="AX / DX / データ" items={filtered.careers.axDxData} />
             </div>
           </section>
-        </>
-      )}
+        )}
 
-      {(sectionFilter === "all" || sectionFilter === "career") && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">職種マップ（カリキュラムとのリンク）</h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            <CareerColumn title="エンジニア系" items={filtered.careers.engineer} />
-            <CareerColumn title="事務・バックオフィス×IT" items={filtered.careers.office} />
-            <CareerColumn title="AX / DX / データ" items={filtered.careers.axDxData} />
-          </div>
+        <section className="grid gap-4 md:grid-cols-2">
+          <Card title="仮説（5本）">
+            <ul className="list-disc list-inside text-sm space-y-1 text-slate-700">
+              {data.hypotheses.map((h, i) => (
+                <li key={i}>{h}</li>
+              ))}
+            </ul>
+          </Card>
+          <Card title="設計の落とし穴">
+            <ul className="list-disc list-inside text-sm space-y-1 text-slate-700">
+              {data.pitfalls.map((p, i) => (
+                <li key={i}>{p}</li>
+              ))}
+            </ul>
+          </Card>
         </section>
-      )}
-
-      <section className="grid gap-4 md:grid-cols-2">
-        <Card title="仮説（5本）">
-          <ul className="list-disc list-inside text-sm space-y-1 text-slate-700">
-            {data.hypotheses.map((h, i) => (
-              <li key={i}>{h}</li>
-            ))}
-          </ul>
-        </Card>
-        <Card title="設計の落とし穴">
-          <ul className="list-disc list-inside text-sm space-y-1 text-slate-700">
-            {data.pitfalls.map((p, i) => (
-              <li key={i}>{p}</li>
-            ))}
-          </ul>
-        </Card>
-      </section>
       </div>
     </HighlightProvider>
   );
@@ -231,6 +278,22 @@ function RoleLine({ line }: { line: CurriculumLine }) {
           ミッション例: <Highlight text={line.missions.join(" / ")} />
         </p>
       )}
+      {line.missionDetails && line.missionDetails.length > 0 && (
+        <div className="space-y-2 text-[11px] text-slate-600">
+          {line.missionDetails.map((m) => (
+            <div key={m.id} className="rounded border border-slate-200 bg-white/80 p-2">
+              <p className="font-semibold text-slate-800">
+                <Highlight text={m.title} />
+              </p>
+              <p className="text-slate-700">
+                <Highlight text={m.description} />
+              </p>
+              {m.expectedOutputs && <p>アウトプット例: <Highlight text={m.expectedOutputs.join(" / ")} /></p>}
+              {m.tools && <p>ツール: <Highlight text={m.tools.join(", ")} /></p>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -296,35 +359,8 @@ function Hierarchy({ nodes }: { nodes: CurriculumNode[] }) {
   );
 }
 
-function FilterButton({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-full px-3 py-1 text-xs border transition ${
-        active ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-700 border-slate-200"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
-function Tabs({
-  value,
-  onChange,
-}: {
-  value: "all" | "curriculum" | "career";
-  onChange: (val: "all" | "curriculum" | "career") => void;
-}) {
-  const items: Array<{ label: string; value: "all" | "curriculum" | "career" }> = [
+function Tabs({ value, onChange }: { value: SectionFilter; onChange: (val: SectionFilter) => void }) {
+  const items: Array<{ label: string; value: SectionFilter }> = [
     { label: "全て", value: "all" },
     { label: "カテゴリ", value: "curriculum" },
     { label: "職種", value: "career" },
@@ -349,32 +385,52 @@ function Tabs({
   );
 }
 
+function SearchModeToggle({ value, onChange }: { value: SearchMode; onChange: (v: SearchMode) => void }) {
+  return (
+    <div className="inline-flex rounded-lg border border-slate-200 bg-white/70">
+      {(["or", "and"] as const).map((mode, idx) => {
+        const active = value === mode;
+        return (
+          <button
+            key={mode}
+            onClick={() => onChange(mode)}
+            className={`px-3 py-2 text-xs border-l ${idx === 0 ? "first:border-l-0" : ""} transition ${
+              active ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-700 border-slate-200"
+            }`}
+          >
+            {mode === "or" ? "OR（いずれか）" : "AND（すべて）"}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function Highlight({ text }: { text: string }) {
-  const { keyword } = useHighlightContext();
-  if (!keyword) return <>{text}</>;
-  const lower = text.toLowerCase();
-  const term = keyword.toLowerCase();
-  const idx = lower.indexOf(term);
-  if (idx === -1) return <>{text}</>;
-  const before = text.slice(0, idx);
-  const match = text.slice(idx, idx + term.length);
-  const after = text.slice(idx + term.length);
+  const { keywords } = useHighlightContext();
+  if (!keywords.length) return <>{text}</>;
+  const escaped = keywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+  const parts = text.split(regex);
   return (
     <>
-      {before}
-      <mark className="bg-yellow-200 text-slate-900 rounded px-[1px]">{match}</mark>
-      {after}
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark key={`${part}-${i}`} className="bg-yellow-200 text-slate-900 rounded px-[1px]">
+            {part}
+          </mark>
+        ) : (
+          <span key={`${part}-${i}`}>{part}</span>
+        ),
+      )}
     </>
   );
 }
 
-// 簡易コンテキストで検索語を共有
-import { createContext, useContext } from "react";
+const HighlightContext = createContext<{ keywords: string[] }>({ keywords: [] });
 
-const HighlightContext = createContext<{ keyword: string }>({ keyword: "" });
-
-function HighlightProvider({ keyword, children }: { keyword: string; children: React.ReactNode }) {
-  return <HighlightContext.Provider value={{ keyword }}>{children}</HighlightContext.Provider>;
+function HighlightProvider({ keywords, children }: { keywords: string[]; children: React.ReactNode }) {
+  return <HighlightContext.Provider value={{ keywords }}>{children}</HighlightContext.Provider>;
 }
 
 function useHighlightContext() {
