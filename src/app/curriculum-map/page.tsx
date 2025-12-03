@@ -87,7 +87,7 @@ export default function CurriculumMapPage() {
       const unitHit = line.units.some((u) => matches(u.title) || matches(u.description));
       const missionHit = line.missions?.some((m) => matches(m));
       const missionDetailsHit = line.missionDetails?.some(
-        (m) => matches(m.title) || matches(m.description) || m.tags?.some((t) => matches(t)),
+        (m) => matches(m.title) || matches(m.description) || m.tags?.some((t) => matches(t)) || matches(String(m.effortMinutes ?? "")),
       );
       const selfHit = matches(line.title) || matches(line.summary);
       if (terms.length === 0 || selfHit || unitHit || missionHit || missionDetailsHit || sectionFilter === "career") {
@@ -203,12 +203,12 @@ export default function CurriculumMapPage() {
                   </Card>
                   <Card title="役割別ライン（ユニット概要とミッション例）">
                     <div className="space-y-4">
-              {filtered.roleLines.map((line) => (
-                <RoleLine key={line.id} line={line} />
-              ))}
-              {filtered.roleLines.length === 0 && <p className="text-xs text-slate-500">該当なし</p>}
-            </div>
-          </Card>
+                      {filtered.roleLines.map((line) => (
+                        <RoleLine key={line.id} line={line} />
+                      ))}
+                      {filtered.roleLines.length === 0 && <p className="text-xs text-slate-500">該当なし</p>}
+                    </div>
+                  </Card>
                 </div>
               </section>
             )}
@@ -330,7 +330,7 @@ function RoleLine({ line }: { line: CurriculumLine }) {
       {line.missionDetails && line.missionDetails.length > 0 && (
         <div className="space-y-2 text-[11px] text-slate-600">
           {line.missionDetails.map((m) => (
-            <div key={m.id} className="rounded border border-slate-200 bg-white/80 p-2">
+            <div key={m.id} className="rounded border border-slate-200 bg-white/80 p-2 space-y-1">
               <p className="font-semibold text-slate-800">
                 <Highlight text={m.title} />
               </p>
@@ -347,6 +347,24 @@ function RoleLine({ line }: { line: CurriculumLine }) {
                   ツール: <Highlight text={m.tools.join(", ")} />
                 </p>
               )}
+              {m.effortMinutes && <p>目安時間: {m.effortMinutes}分</p>}
+              {m.tags && m.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {m.tags.map((t) => (
+                    <span key={t} className="px-2 py-[2px] text-[10px] rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2 text-[10px]">
+                <a className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-100" href={`/learning-path?line=${line.id}&mission=${m.id}`}>
+                  Learning Pathへ
+                </a>
+                <a className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-100" href={`/quests?line=${line.id}&mission=${m.id}`}>
+                  Quest生成へ
+                </a>
+              </div>
             </div>
           ))}
         </div>
