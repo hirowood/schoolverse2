@@ -68,7 +68,7 @@ export default function CurriculumMapPage() {
             カテゴリ / ライン / 職種の対応関係をひと目で確認できます。学習パスやクエスト生成の土台として使うことを想定しています。
           </p>
         </div>
-        <div className="flex flex-col md:flex-row gap-2 md:items-center">
+        <div className="flex flex-col gap-2">
           <div className="w-full md:w-96">
             <input
               value={keyword}
@@ -77,15 +77,7 @@ export default function CurriculumMapPage() {
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
             />
           </div>
-          <div className="flex gap-2">
-            <FilterButton label="全て" active={sectionFilter === "all"} onClick={() => setSectionFilter("all")} />
-            <FilterButton
-              label="カテゴリのみ"
-              active={sectionFilter === "curriculum"}
-              onClick={() => setSectionFilter("curriculum")}
-            />
-            <FilterButton label="職種のみ" active={sectionFilter === "career"} onClick={() => setSectionFilter("career")} />
-          </div>
+          <Tabs value={sectionFilter} onChange={setSectionFilter} />
         </div>
       </header>
 
@@ -316,6 +308,38 @@ function FilterButton({
     >
       {label}
     </button>
+  );
+}
+
+function Tabs({
+  value,
+  onChange,
+}: {
+  value: "all" | "curriculum" | "career";
+  onChange: (val: "all" | "curriculum" | "career") => void;
+}) {
+  const items: Array<{ label: string; value: "all" | "curriculum" | "career" }> = [
+    { label: "全て", value: "all" },
+    { label: "カテゴリ", value: "curriculum" },
+    { label: "職種", value: "career" },
+  ];
+  return (
+    <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white/70 p-1">
+      {items.map((item) => {
+        const active = value === item.value;
+        return (
+          <button
+            key={item.value}
+            onClick={() => onChange(item.value)}
+            className={`flex-1 min-w-[90px] text-xs px-3 py-2 rounded-md border transition ${
+              active ? "bg-slate-800 text-white border-slate-800 shadow-sm" : "bg-white text-slate-700 border-slate-200"
+            }`}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
