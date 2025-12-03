@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import NotesOnboarding from "@/components/notes/NotesOnboarding";
 import SkeletonBlock from "@/components/ui/SkeletonBlock";
 import OcrEnhanced from "@/components/notes/OcrEnhanced";
@@ -104,7 +104,7 @@ const getImageDimensions = (url: string) =>
     img.src = url;
   });
 
-export default function NotesPage() {
+function NotesPageContent() {
   const [notes, setNotes] = useState<NoteRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1162,6 +1162,24 @@ export default function NotesPage() {
   );
 }
 
+function NotesPageFallback() {
+  return (
+    <div className="space-y-6">
+      <header className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+        <p className="text-xs text-slate-500 dark:text-slate-400">ノート / 思考の外部化</p>
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">週の振り返りや気づきを記録する</h1>
+      </header>
+      <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+        <SkeletonBlock rows={6} />
+      </div>
+    </div>
+  );
+}
 
-
-
+export default function NotesPage() {
+  return (
+    <Suspense fallback={<NotesPageFallback />}>
+      <NotesPageContent />
+    </Suspense>
+  );
+}
