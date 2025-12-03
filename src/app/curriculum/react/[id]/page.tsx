@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { use } from "react";
+
 import { CURRICULUM_MAP } from "@/lib/curriculum/map";
 
 type ReactNode = { id: string; name: string; description?: string | null; children?: ReactNode[] };
@@ -18,8 +20,9 @@ function findNode(id: string): ReactNode | null {
   return null;
 }
 
-export default function ReactCurriculumPage({ params }: { params: { id: string } }) {
-  const node = findNode(params.id);
+export default function ReactCurriculumPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const node = findNode(id);
   if (!node) return notFound();
 
   return (
@@ -57,7 +60,7 @@ export default function ReactCurriculumPage({ params }: { params: { id: string }
       )}
 
       {!node.children?.length && (
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-2">
+        <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-sm text-slate-700">
             まだ詳細教材はありません。マップに戻るか、上位のステップから進んでください。
           </p>
