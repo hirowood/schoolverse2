@@ -10,8 +10,6 @@ type RouteParams = { params: { roomId: string } };
 
 const unauthorized = () => NextResponse.json({ error: "unauthorized" }, { status: 401 });
 const forbidden = () => NextResponse.json({ error: "forbidden" }, { status: 403 });
-const notFound = () => NextResponse.json({ error: "not_found" }, { status: 404 });
-
 async function ensureMember(roomId: string, userId: string) {
   return prisma.chatRoomMember.findFirst({ where: { roomId, userId } });
 }

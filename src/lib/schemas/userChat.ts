@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { ChatRoomType } from "@/features/user-chat/types";
 
 export const CreateRoomSchema = z.object({
   type: z.enum(["dm", "group"]),

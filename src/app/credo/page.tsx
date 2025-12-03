@@ -173,10 +173,13 @@ export default function Page() {
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(CREDO_ONBOARDING_KEY) !== "1";
-  });
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const dismissed = window.localStorage.getItem(CREDO_ONBOARDING_KEY) === "1";
+    setShowOnboarding(!dismissed);
+  }, []);
 
   const handleDismissOnboarding = () => {
     if (typeof window === "undefined") return;

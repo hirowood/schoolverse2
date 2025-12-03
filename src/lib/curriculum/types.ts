@@ -55,6 +55,7 @@ export type CurriculumMap = {
     ai: CurriculumNode[];
     officeDxAx: CurriculumNode[];
     thinking: CurriculumNode[];
+    handsOn?: CurriculumNode[];
     roleLines: CurriculumLine[];
   };
   careers: {

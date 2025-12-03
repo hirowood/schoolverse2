@@ -25,9 +25,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <header className="flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--panel)] px-6 py-4">
         <div className="flex items-center gap-3">
           <span className="text-xl font-semibold tracking-tight">schoolverse2</span>
-          <span className="text-xs text-[var(--muted)]">
-            AIと学習をともに歩む生活コーチ
-          </span>
+          <span className="text-xs text-[var(--muted)]">AIと学習者がともに成長するコーチ</span>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -38,9 +36,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   {session.user.name ?? session.user.email ?? "ゲスト"}
                 </span>
                 {session.user.email && (
-                  <span className="text-[11px] text-[var(--muted)] leading-tight">
-                    {session.user.email}
-                  </span>
+                  <span className="text-[11px] text-[var(--muted)] leading-tight">{session.user.email}</span>
                 )}
               </div>
               <button

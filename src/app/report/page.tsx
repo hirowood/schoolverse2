@@ -31,10 +31,7 @@ export default function ReportPage() {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(REPORT_ONBOARDING_KEY) !== "1";
-  });
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const fetchReport = useCallback(async (weekStart: string) => {
     setLoading(true);
@@ -79,6 +76,12 @@ export default function ReportPage() {
     if (typeof window === "undefined") return;
     window.localStorage.removeItem(REPORT_ONBOARDING_KEY);
     setShowOnboarding(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const dismissed = window.localStorage.getItem(REPORT_ONBOARDING_KEY) === "1";
+    setShowOnboarding(!dismissed);
   }, []);
 
   const handleGenerate = useCallback(async () => {

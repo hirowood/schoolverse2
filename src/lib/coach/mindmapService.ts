@@ -8,7 +8,7 @@ import {
   type AIAction,
 } from "./prompts/mindmapSystem";
 import { prisma } from "@/lib/prisma";
-import type { MindMapNode, MindMapEdge, WBSData } from "@/lib/mindmap/types";
+import type { WBSData } from "@/lib/mindmap/types";
 import { DEFAULT_WBS_DATA } from "@/lib/mindmap/types";
 
 export interface MindMapAIRequest {

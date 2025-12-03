@@ -19,7 +19,7 @@ export default function MindMapListPage() {
         const res = await fetch("/api/mindmap");
         if (!res.ok) throw new Error("一覧を取得できませんでした");
         const data = await res.json();
-        const maps: MindMapListItem[] = (data.mindmaps ?? []).map((m: any) => ({
+        const maps: MindMapListItem[] = (data.mindmaps ?? []).map((m: MindMapListItem) => ({
           id: m.id,
           title: m.title,
           updatedAt: m.updatedAt,

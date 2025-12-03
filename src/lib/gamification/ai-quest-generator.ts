@@ -7,8 +7,6 @@ import { buildQuestPrompt } from "./quest-prompt-builder";
 import { parseQuestResponse } from "./quest-parser";
 import { resolveQuestCategoriesFromLinesAndCareers } from "@/lib/curriculum/quest-map";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 function startOfDay(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);

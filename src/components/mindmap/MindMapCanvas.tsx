@@ -300,7 +300,7 @@ export default function MindMapCanvas({ initialState }: Props) {
       const parentNode = nodes.find((n) => n.id === parentId);
       if (!parentNode) return;
 
-      newNodes.forEach((node, index) => {
+      newNodes.forEach((node) => {
         const nodeId = addNode(parentId, node.label);
         
         // WBSデータを設定

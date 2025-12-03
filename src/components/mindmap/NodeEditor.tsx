@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useEffect, useState } from "react";
 import type { MindMapNodeData, WBSData, TaskStatus, TaskPriority } from "@/lib/mindmap/types";

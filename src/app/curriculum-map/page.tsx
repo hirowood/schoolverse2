@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, createContext, useContext } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState, createContext, useContext } from "react";
+import { useRouter } from "next/navigation";
 import type { CareerLine, CurriculumLine, CurriculumMap, CurriculumNode } from "@/lib/curriculum/types";
 import { CURRICULUM_MAP } from "@/lib/curriculum/map";
 
@@ -8,6 +10,7 @@ type SectionFilter = "all" | "curriculum" | "career";
 type SearchMode = "and" | "or";
 
 export default function CurriculumMapPage() {
+  const router = useRouter();
   const [keyword, setKeyword] = useState("");
   const [sectionFilter, setSectionFilter] = useState<SectionFilter>("all");
   const [searchMode, setSearchMode] = useState<SearchMode>("or");
@@ -17,7 +20,10 @@ export default function CurriculumMapPage() {
   const [error, setError] = useState<string | null>(null);
   const [showHitsOnly, setShowHitsOnly] = useState(false);
   const [mindMapOpen, setMindMapOpen] = useState(false);
+  const [selectedNode, setSelectedNode] = useState<CurriculumNode | null>(null);
+  const selectedRef = useRef<HTMLDivElement | null>(null);
 
+  // ラインのみ q 付きで再フェッチ
   const fetchLines = async (query?: string) => {
     try {
       const qs = query ? `?q=${encodeURIComponent(query)}` : "";
@@ -30,6 +36,7 @@ export default function CurriculumMapPage() {
     }
   };
 
+  // マップ全体を取得
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -41,7 +48,7 @@ export default function CurriculumMapPage() {
         const json = await res.json();
         if (!cancelled) setRemoteMap(json.data as CurriculumMap);
       } catch {
-        if (!cancelled) setError("最新データの取得に失敗したためローカル定義を使用します。");
+        if (!cancelled) setError("最新データの取得に失敗しました（ローカルデータを使用します）");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -52,10 +59,17 @@ export default function CurriculumMapPage() {
     };
   }, []);
 
+  // キーワードが変わったらラインを再取得
   useEffect(() => {
     fetchLines(keyword);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keyword]);
+
+  // 選択パネルへスクロール
+  useEffect(() => {
+    if (selectedNode && selectedRef.current) {
+      selectedRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [selectedNode]);
 
   const data = remoteMap ?? CURRICULUM_MAP;
   const terms = keyword
@@ -106,9 +120,12 @@ export default function CurriculumMapPage() {
       return terms.length === 0 || hit || sectionFilter === "curriculum" ? c : null;
     };
 
+    const certificationLeaves = data.contentLines.certifications.flatMap((c) => c.children ?? []);
+
     return {
       coreCurriculum: filterNodes(data.coreCurriculum),
       certifications: filterNodes(data.contentLines.certifications),
+      certificationLeaves: filterNodes(certificationLeaves),
       languages: filterNodes(data.contentLines.languages),
       web: filterNodes(data.contentLines.webFrameworks),
       react: filterNodes(data.contentLines.react),
@@ -116,6 +133,7 @@ export default function CurriculumMapPage() {
       ai: filterNodes(data.contentLines.ai),
       office: filterNodes(data.contentLines.officeDxAx),
       thinking: filterNodes(data.contentLines.thinking),
+      handsOn: filterNodes(data.contentLines.handsOn ?? []),
       roleLines: roleLinesSource.map(filterLine).filter(Boolean) as CurriculumLine[],
       careers: {
         engineer: data.careers.engineer.map(filterCareer).filter(Boolean) as CareerLine[],
@@ -135,7 +153,9 @@ export default function CurriculumMapPage() {
       filtered.nextjs.length +
       filtered.ai.length +
       filtered.office.length +
-      filtered.thinking.length,
+      filtered.thinking.length +
+      filtered.certificationLeaves.length +
+      filtered.handsOn.length,
     roleLines: filtered.roleLines.length,
     careers: filtered.careers.engineer.length + filtered.careers.office.length + filtered.careers.axDxData.length,
   };
@@ -146,11 +166,11 @@ export default function CurriculumMapPage() {
         <header className="space-y-3">
           <div className="space-y-1">
             <p className="text-sm text-slate-500">MECE Curriculum Map</p>
-            <h1 className="text-2xl font-semibold">Schoolverse2 カリキュラム＆職種マップ</h1>
+            <h1 className="text-2xl font-semibold">Schoolverse2 カリキュラム＆職業マップ</h1>
             <p className="text-sm text-slate-600">
-              カテゴリ / ライン / 職種の対応関係をひと目で確認できます。学習パスやクエスト生成の土台として使うことを想定しています。
+              カテゴリ / ライン / 職種の対応関係を俯瞰できます。学習パスやクエスト生成の参照として活用ください。
             </p>
-            {loading && <p className="text-xs text-slate-500">同期中...</p>}
+            {loading && <p className="text-xs text-slate-500">読み込み中...</p>}
             {error && <p className="text-xs text-amber-600">{error}</p>}
           </div>
           <div className="flex flex-col gap-2">
@@ -167,7 +187,7 @@ export default function CurriculumMapPage() {
               <SearchModeToggle value={searchMode} onChange={setSearchMode} />
               <HitToggle value={showHitsOnly} onChange={setShowHitsOnly} />
               {remoteLines === null && (
-                <p className="text-[11px] text-amber-600">ライン詳細の同期に失敗しました（ローカル定義を使用）</p>
+                <p className="text-[11px] text-amber-600">ライン詳細の取得に失敗しました（ローカルデータ利用）</p>
               )}
             </div>
           </div>
@@ -176,8 +196,8 @@ export default function CurriculumMapPage() {
         {(sectionFilter === "all" || sectionFilter === "curriculum") && (!showHitsOnly || counts.core > 0) && (
           <>
             <section className="grid gap-4 md:grid-cols-2">
-              <Card title="カリキュラム階層 (Category→Activity)">
-                <Hierarchy nodes={filtered.coreCurriculum} />
+              <Card title="カリキュラム全体像 (Category〜Activity)">
+                <Hierarchy nodes={filtered.coreCurriculum} onSelect={setSelectedNode} />
               </Card>
               <Card title="学習パス (タイプ / ノード)">
                 <div className="space-y-3">
@@ -193,32 +213,47 @@ export default function CurriculumMapPage() {
                   コンテンツライン <Badge count={counts.content + counts.roleLines} />
                 </h2>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Card title="資格 / 言語 / Web / AI / 事務・DX/AX / 思考">
+                  <Card title="資格 / 言語 / Web / AI / 事務DX/AX / 思考 / ハンズオン">
                     <div className="space-y-4">
-                      <NodeList label="資格" nodes={filtered.certifications} />
-                      <NodeList label="言語" nodes={filtered.languages} />
-                      <NodeList label="Web/Framework" nodes={filtered.web} />
-                      <NodeList label="React" nodes={filtered.react} />
-                      <NodeList label="Next.js" nodes={filtered.nextjs} />
-                      <NodeList label="AI/ML" nodes={filtered.ai} />
-                      <NodeList label="事務・DX/AX" nodes={filtered.office} />
-                      <div className="flex items-center justify-between">
-                        <NodeList label="思考スキル" nodes={filtered.thinking} />
-                        <button
-                          onClick={() => setMindMapOpen(true)}
-                          className="text-xs px-3 py-2 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                        >
-                          思考マップを開く
-                        </button>
-                      </div>
+                      <NodeList
+                        label="資格"
+                        nodes={filtered.certificationLeaves}
+                        onSelect={setSelectedNode}
+                        selectedId={selectedNode?.id}
+                        linkTo={(node) => `/certifications/${node.id}`}
+                        router={router}
+                      />
+                      <NodeList label="言語" nodes={filtered.languages} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
+                      <NodeList label="Web/Framework" nodes={filtered.web} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
+                      <NodeList label="React" nodes={filtered.react} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
+                      <NodeList label="Next.js" nodes={filtered.nextjs} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
+                      <NodeList label="AI/ML/LLM" nodes={filtered.ai} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
+                      <NodeList label="事務・業務効率(DX/AX)" nodes={filtered.office} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
+                      <NodeList label="思考スキル" nodes={filtered.thinking} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
+                      <NodeList label="ハンズオン演習" nodes={filtered.handsOn} onSelect={setSelectedNode} selectedId={selectedNode?.id} />
                     </div>
                   </Card>
-                  <Card title="役割別ライン（ユニット概要とミッション例）">
-                    <div className="space-y-4">
-                      {filtered.roleLines.map((line) => (
-                        <RoleLine key={line.id} line={line} />
-                      ))}
-                      {filtered.roleLines.length === 0 && <p className="text-xs text-slate-500">該当なし</p>}
+
+                  <Card title="ロールライン（パス例とミッション例）">
+                    <div className="space-y-3">
+                      {filtered.roleLines.length === 0 ? (
+                        <p className="text-xs text-slate-500">該当なし</p>
+                      ) : (
+                        filtered.roleLines.map((line) => (
+                          <RoleLine
+                            key={line.id}
+                            line={line}
+                            onSelect={() =>
+                              setSelectedNode({
+                                id: line.id,
+                                name: line.title,
+                                description: line.summary,
+                                children: line.units.map((u) => ({ id: u.id, name: u.title })),
+                              })
+                            }
+                          />
+                        ))
+                      )}
                     </div>
                   </Card>
                 </div>
@@ -230,58 +265,105 @@ export default function CurriculumMapPage() {
         {(sectionFilter === "all" || sectionFilter === "career") && (!showHitsOnly || counts.careers > 0) && (
           <section className="space-y-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
-              職種マップ（カリキュラムとのリンク） <Badge count={counts.careers} />
+              職種/キャリアライン <Badge count={counts.careers} />
             </h2>
             <div className="grid gap-4 md:grid-cols-3">
               <CareerColumn title="エンジニア系" items={filtered.careers.engineer} />
-              <CareerColumn title="事務・バックオフィス×IT" items={filtered.careers.office} />
-              <CareerColumn title="AX / DX / データ" items={filtered.careers.axDxData} />
+              <CareerColumn title="事務/バックオフィス" items={filtered.careers.office} />
+              <CareerColumn title="AX/DX/データ" items={filtered.careers.axDxData} />
             </div>
           </section>
         )}
 
-        <section className="grid gap-4 md:grid-cols-2">
-          <Card title="仮説（5本）">
-            <ul className="list-disc list-inside text-sm space-y-1 text-slate-700">
-              {data.hypotheses.map((h, i) => (
-                <li key={i}>{h}</li>
-              ))}
-            </ul>
-          </Card>
-          <Card title="設計の落とし穴">
-            <ul className="list-disc list-inside text-sm space-y-1 text-slate-700">
-              {data.pitfalls.map((p, i) => (
-                <li key={i}>{p}</li>
-              ))}
-            </ul>
-          </Card>
-        </section>
-      </div>
-      {mindMapOpen && <MindMapModal onClose={() => setMindMapOpen(false)} />}
-    </HighlightProvider>
-  );
-}
-
-function MindMapModal({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2">
-      <div className="relative w-full max-w-5xl h-[80vh] rounded-xl overflow-hidden border border-slate-200 bg-white shadow-2xl">
-        <div className="absolute top-0 right-0 m-2 flex gap-2">
+        <section className="flex flex-wrap items-center gap-3">
           <button
-            onClick={onClose}
-            className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-200 hover:bg-slate-50"
+            className="px-3 py-2 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium"
+            onClick={() => setMindMapOpen(true)}
           >
-            閉じる
+            マインドマップを開く
           </button>
-        </div>
-        <iframe
-          title="thinking-mindmap"
-          src="/mindmap/new?template=thinking&from=thinking-curriculum"
-          className="w-full h-full bg-white"
-          allowFullScreen
-        />
+          <p className="text-xs text-slate-500">思考系カリキュラム学習中に開いて、整理用マップとして使えます。</p>
+        </section>
+
+        {mindMapOpen && (
+          <div className="fixed inset-0 z-20 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+                <div>
+                  <p className="text-xs text-slate-500">Mindmap</p>
+                  <h3 className="text-base font-semibold text-slate-800">思考スキルのマインドマップ</h3>
+                </div>
+                <button
+                  onClick={() => setMindMapOpen(false)}
+                  className="rounded-md border border-slate-200 px-3 py-1 text-sm hover:bg-slate-50"
+                >
+                  閉じる
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden bg-slate-50">
+                <iframe
+                  title="mindmap"
+                  src="https://embed.coggle.it/diagram/ZNQmHoU9uQykb5WW/3fa9169ea30a4d47199fafda6137d59e12c35b59c58b82cb7afc7b34b5f6da7d"
+                  className="w-full h-full border-0"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedNode && (
+          <section ref={selectedRef} className="space-y-3 rounded-xl border border-slate-200 bg-white/80 p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">選択中のカリキュラム</p>
+                <h3 className="text-lg font-semibold text-slate-900">
+                  <Highlight text={selectedNode.name} />
+                </h3>
+                {selectedNode.description && (
+                  <p className="text-sm text-slate-700">
+                    <Highlight text={selectedNode.description} />
+                  </p>
+                )}
+              </div>
+              <button
+                className="text-xs text-slate-500 hover:text-slate-800 underline"
+                onClick={() => setSelectedNode(null)}
+                type="button"
+              >
+                クリア
+              </button>
+            </div>
+            {selectedNode.children && selectedNode.children.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-600">子要素</p>
+                <ul className="list-disc pl-5 space-y-1 text-sm text-slate-700">
+                  {selectedNode.children.map((c) => (
+                    <li key={c.id}>
+                      <Highlight text={c.name} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Link
+                href={`/learning-chat?topic=${encodeURIComponent(selectedNode.id)}`}
+                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                学習チャットで相談
+              </Link>
+              <Link
+                href={`/plan?topic=${encodeURIComponent(selectedNode.id)}`}
+                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                学習プランに追加
+              </Link>
+            </div>
+          </section>
+        )}
       </div>
-    </div>
+    </HighlightProvider>
   );
 }
 
@@ -309,7 +391,21 @@ function ChipList({ label, items }: { label: string; items: string[] }) {
   );
 }
 
-function NodeList({ label, nodes }: { label: string; nodes: CurriculumNode[] }) {
+function NodeList({
+  label,
+  nodes,
+  onSelect,
+  selectedId,
+  linkTo,
+  router,
+}: {
+  label: string;
+  nodes: CurriculumNode[];
+  onSelect: (n: CurriculumNode) => void;
+  selectedId?: string | null;
+  linkTo?: (n: CurriculumNode) => string;
+  router?: ReturnType<typeof useRouter>;
+}) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold text-slate-600">{label}</p>
@@ -318,9 +414,19 @@ function NodeList({ label, nodes }: { label: string; nodes: CurriculumNode[] }) 
       ) : (
         <div className="flex flex-wrap gap-2">
           {nodes.map((node) => (
-            <div
+            <button
               key={node.id}
-              className="text-xs px-3 py-2 rounded-lg border border-slate-200 bg-slate-50/70 min-w-[120px]"
+              className={`text-left text-xs px-3 py-2 rounded-lg border min-w-[140px] shadow-sm transition ${
+                selectedId === node.id
+                  ? "border-slate-400 bg-white"
+                  : "border-slate-200 bg-slate-50/70 hover:border-slate-300 hover:bg-white"
+              }`}
+              onClick={() => {
+                onSelect(node);
+                if (linkTo && router) {
+                  router.push(linkTo(node));
+                }
+              }}
             >
               <p className="font-semibold text-slate-800">
                 <Highlight text={node.name} />
@@ -330,7 +436,7 @@ function NodeList({ label, nodes }: { label: string; nodes: CurriculumNode[] }) 
                   {node.children.map((c) => c.name).join(" / ")}
                 </p>
               )}
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -338,7 +444,7 @@ function NodeList({ label, nodes }: { label: string; nodes: CurriculumNode[] }) 
   );
 }
 
-function RoleLine({ line }: { line: CurriculumLine }) {
+function RoleLine({ line, onSelect }: { line: CurriculumLine; onSelect: () => void }) {
   return (
     <div className="rounded-lg border border-slate-200 p-3 bg-slate-50/60 space-y-2">
       <div className="flex items-center justify-between gap-2">
@@ -350,6 +456,12 @@ function RoleLine({ line }: { line: CurriculumLine }) {
             <Highlight text={line.summary} />
           </p>
         </div>
+        <button
+          onClick={onSelect}
+          className="text-[11px] px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-100"
+        >
+          詳細パネルに表示
+        </button>
       </div>
       <div className="flex flex-wrap gap-2">
         {line.units.map((u) => (
@@ -441,128 +553,128 @@ function CareerColumn({ title, items }: { title: string; items: CareerLine[] }) 
   );
 }
 
-function Hierarchy({ nodes }: { nodes: CurriculumNode[] }) {
+function Hierarchy({ nodes, onSelect }: { nodes: CurriculumNode[]; onSelect: (n: CurriculumNode) => void }) {
+  const renderNode = (n: CurriculumNode) => (
+    <li key={n.id} className="space-y-1">
+      <details className="group" open>
+        <summary
+          className="cursor-pointer select-none text-sm font-semibold text-slate-800 flex items-center gap-2"
+          onClick={(e) => {
+            e.preventDefault();
+            onSelect(n);
+          }}
+        >
+          <Highlight text={n.name} />
+          <span className="text-[10px] text-slate-500 group-open:hidden">（クリックで詳細）</span>
+        </summary>
+        {n.description && (
+          <p className="text-xs text-slate-600 pl-4">
+            <Highlight text={n.description} />
+          </p>
+        )}
+        {n.children && n.children.length > 0 && (
+          <ul className="ml-4 list-disc space-y-1 text-xs text-slate-700">
+            {n.children.map((c) => renderNode(c))}
+          </ul>
+        )}
+      </details>
+    </li>
+  );
+
   return (
     <div className="space-y-1 text-sm text-slate-700">
-      {nodes.length === 0 ? (
-        <p className="text-xs text-slate-500">該当なし</p>
-      ) : (
-        <ul className="space-y-1">
-          {nodes.map((n) => (
-            <li key={n.id}>
-              <span className="font-semibold">
-                <Highlight text={n.name} />
-              </span>
-              {n.children && n.children.length > 0 && (
-                <ul className="ml-4 list-disc space-y-1 text-xs text-slate-600">
-                  {n.children.map((c) => (
-                    <li key={c.id}>
-                      <Highlight text={c.name} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      {nodes.length === 0 ? <p className="text-xs text-slate-500">該当なし</p> : <ul className="space-y-1">{nodes.map((n) => renderNode(n))}</ul>}
     </div>
   );
 }
 
 function Tabs({ value, onChange }: { value: SectionFilter; onChange: (val: SectionFilter) => void }) {
   const items: Array<{ label: string; value: SectionFilter }> = [
-    { label: "全て", value: "all" },
-    { label: "カテゴリ", value: "curriculum" },
+    { label: "すべて", value: "all" },
+    { label: "カリキュラム", value: "curriculum" },
     { label: "職種", value: "career" },
   ];
   return (
     <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white/70 p-1">
-      {items.map((item) => {
-        const active = value === item.value;
-        return (
-          <button
-            key={item.value}
-            onClick={() => onChange(item.value)}
-            className={`flex-1 min-w-[90px] text-xs px-3 py-2 rounded-md border transition ${
-              active ? "bg-slate-800 text-white border-slate-800 shadow-sm" : "bg-white text-slate-700 border-slate-200"
-            }`}
-          >
-            {item.label}
-          </button>
-        );
-      })}
+      {items.map((item) => (
+        <button
+          key={item.value}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            value === item.value ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
+          }`}
+          onClick={() => onChange(item.value)}
+        >
+          {item.label}
+        </button>
+      ))}
     </div>
   );
 }
 
-function SearchModeToggle({ value, onChange }: { value: SearchMode; onChange: (v: SearchMode) => void }) {
+function SearchModeToggle({ value, onChange }: { value: SearchMode; onChange: (val: SearchMode) => void }) {
   return (
-    <div className="inline-flex rounded-lg border border-slate-200 bg-white/70">
-      {(["or", "and"] as const).map((mode, idx) => {
-        const active = value === mode;
-        return (
-          <button
-            key={mode}
-            onClick={() => onChange(mode)}
-            className={`px-3 py-2 text-xs border-l ${idx === 0 ? "first:border-l-0" : ""} transition ${
-              active ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-700 border-slate-200"
-            }`}
-          >
-            {mode === "or" ? "OR（いずれか）" : "AND（すべて）"}
-          </button>
-        );
-      })}
+    <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white/70 px-2 py-1">
+      <button
+        className={`px-3 py-1 rounded-md text-xs font-semibold ${value === "or" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"}`}
+        onClick={() => onChange("or")}
+      >
+        OR検索
+      </button>
+      <button
+        className={`px-3 py-1 rounded-md text-xs font-semibold ${value === "and" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"}`}
+        onClick={() => onChange("and")}
+      >
+        AND検索
+      </button>
     </div>
   );
 }
 
-function HitToggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+function HitToggle({ value, onChange }: { value: boolean; onChange: (val: boolean) => void }) {
   return (
-    <button
-      onClick={() => onChange(!value)}
-      className={`text-xs px-3 py-2 rounded-md border transition ${
-        value ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-slate-700 border-slate-200"
-      }`}
-    >
-      {value ? "ヒットのみ表示中" : "ヒットのみ表示"}
-    </button>
-  );
-}
-
-function Highlight({ text }: { text: string }) {
-  const { keywords } = useHighlightContext();
-  if (!keywords.length) return <>{text}</>;
-  const escaped = keywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const regex = new RegExp(`(${escaped.join("|")})`, "gi");
-  const parts = text.split(regex);
-  return (
-    <>
-      {parts.map((part, i) =>
-        regex.test(part) ? (
-          <mark key={`${part}-${i}`} className="bg-yellow-200 text-slate-900 rounded px-[1px]">
-            {part}
-          </mark>
-        ) : (
-          <span key={`${part}-${i}`}>{part}</span>
-        ),
-      )}
-    </>
+    <label className="flex items-center gap-2 text-xs text-slate-700">
+      <input type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} className="rounded border-slate-300" />
+      ヒット項目だけ表示
+    </label>
   );
 }
 
 function Badge({ count }: { count: number }) {
   return (
-    <span className="text-[11px] px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">{count}</span>
+    <span className="inline-flex items-center rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm">
+      {count}
+    </span>
   );
 }
 
-const HighlightContext = createContext<{ keywords: string[] }>({ keywords: [] });
+// --- ハイライト ---
+const HighlightContext = createContext<string[]>([]);
 
 function HighlightProvider({ keywords, children }: { keywords: string[]; children: React.ReactNode }) {
-  return <HighlightContext.Provider value={{ keywords }}>{children}</HighlightContext.Provider>;
+  return <HighlightContext.Provider value={keywords}>{children}</HighlightContext.Provider>;
 }
 
-function useHighlightContext() {
-  return useContext(HighlightContext);
+function Highlight({ text }: { text?: string }) {
+  const keywords = useContext(HighlightContext);
+  if (!text) return null;
+  if (keywords.length === 0) return <>{text}</>;
+
+  const lower = text.toLowerCase();
+  const firstHit = keywords.find((k) => lower.includes(k));
+  if (!firstHit) return <>{text}</>;
+
+  const idx = lower.indexOf(firstHit);
+  if (idx === -1) return <>{text}</>;
+  const before = text.slice(0, idx);
+  const hit = text.slice(idx, idx + firstHit.length);
+  const after = text.slice(idx + firstHit.length);
+
+  return (
+    <>
+      {before}
+      <mark className="bg-amber-200 text-slate-900">{hit}</mark>
+      <Highlight text={after} />
+    </>
+  );
 }
+

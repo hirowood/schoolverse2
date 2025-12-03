@@ -5,31 +5,37 @@ export type NavItem = {
   icon?: string;
 };
 
+// 左ナビとモバイルボトムバーで共通利用するメニュー定義
 export const MAIN_NAV_ITEMS: NavItem[] = [
   {
     label: "AIコーチ",
     href: "/coach",
-    description: "AIコーチとの対話で学習計画を進めましょう",
+    description: "AIコーチとの対話で学習を進めましょう",
   },
   {
     label: "学習チャット",
     href: "/learning-chat",
-    description: "専門モードで学習や進路の相談を整理",
+    description: "科目ごとの質問や相談をチャットで",
   },
   {
     label: "ユーザーチャット",
     href: "/user-chat",
-    description: "他のユーザーとのDM/グループチャット",
+    description: "他のユーザーとのDM・グループチャット",
   },
   {
     label: "ダッシュボード",
     href: "/dashboard",
-    description: "タスク・時間トラッカー・休息状況をまとめて確認",
+    description: "タスク・進捗・ベンチマークをまとめて確認",
+  },
+  {
+    label: "カリキュラムマップ",
+    href: "/curriculum-map",
+    description: "資格・技術ライン・思考スキルを俯瞰するマップ",
   },
   {
     label: "サマリーレポート",
     href: "/report",
-    description: "AI要約のMarkdownレポートで振り返り",
+    description: "AIがまとめたMarkdownレポートを確認",
   },
   {
     label: "ノート",
@@ -39,17 +45,17 @@ export const MAIN_NAV_ITEMS: NavItem[] = [
   {
     label: "マインドマップ",
     href: "/mindmap",
-    description: "アイデアを広げて整理するラピッドマッピング",
+    description: "アイデア整理に使えるマインドマッピング",
   },
   {
     label: "学習プラン",
     href: "/plan",
-    description: "学習タスクと優先順位を可視化",
+    description: "学習タスクと目標をまとめて管理",
   },
   {
     label: "クレド",
     href: "/credo",
-    description: "11の行動原則とサマリー",
+    description: "11の原則とサマリー",
   },
   {
     label: "設定",

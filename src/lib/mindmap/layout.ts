@@ -1,5 +1,5 @@
 import dagre from "dagre";
-import type { MindMapEdge, MindMapNode, LayoutType, LAYOUT_CONFIG } from "./types";
+import type { MindMapEdge, MindMapNode, LayoutType } from "./types";
 
 export interface LayoutResult {
   nodes: MindMapNode[];

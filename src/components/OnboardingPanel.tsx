@@ -16,14 +16,7 @@ interface OnboardingPanelProps {
   highlight?: ReactNode;
 }
 
-export default function OnboardingPanel({
-  show,
-  title,
-  description,
-  steps,
-  onClose,
-  highlight,
-}: OnboardingPanelProps) {
+export default function OnboardingPanel({ show, title, description, steps, onClose, highlight }: OnboardingPanelProps) {
   if (!show) return null;
 
   return (

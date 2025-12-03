@@ -1,8 +1,9 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { useMemo, useRef, useEffect, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { MindMapNode, MindMapEdge } from "@/lib/mindmap/types";
-import { STATUS_CONFIG, PRIORITY_CONFIG, DEFAULT_WBS_DATA } from "@/lib/mindmap/types";
+import { STATUS_CONFIG, DEFAULT_WBS_DATA } from "@/lib/mindmap/types";
 
 interface TimelineRow {
   id: string;

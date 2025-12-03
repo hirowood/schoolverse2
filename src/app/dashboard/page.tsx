@@ -198,32 +198,29 @@ export default function DashboardPage() {
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
 
-    const [profile, setProfile] = useState<Profile | null>(null);
-    const [profileError, setProfileError] = useState<string | null>(null);
-    const [showOnboarding, setShowOnboarding] = useState(() => {
-      if (typeof window === "undefined") return false;
-      return window.localStorage.getItem(DASHBOARD_ONBOARDING_KEY) !== "1";
-    });
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
-    useEffect(() => {
-      if (typeof window === "undefined") return;
-      const dismissed = window.localStorage.getItem(DASHBOARD_ONBOARDING_KEY) === "1";
-      setShowOnboarding(!dismissed);
-    }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const dismissed = window.localStorage.getItem(DASHBOARD_ONBOARDING_KEY) === "1";
+    setShowOnboarding(!dismissed);
+  }, []);
 
-    const handleDismissOnboarding = useCallback(() => {
-      if (typeof window === "undefined") return;
-      window.localStorage.setItem(DASHBOARD_ONBOARDING_KEY, "1");
-      setShowOnboarding(false);
-    }, []);
+  const handleDismissOnboarding = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(DASHBOARD_ONBOARDING_KEY, "1");
+    setShowOnboarding(false);
+  }, []);
 
-    const handleShowOnboarding = useCallback(() => {
-      if (typeof window === "undefined") return;
-      window.localStorage.removeItem(DASHBOARD_ONBOARDING_KEY);
-      setShowOnboarding(true);
-    }, []);
+  const handleShowOnboarding = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(DASHBOARD_ONBOARDING_KEY);
+    setShowOnboarding(true);
+  }, []);
 
-    const [goalInput, setGoalInput] = useState("");
+  const [goalInput, setGoalInput] = useState("");
   const [savedGoal, setSavedGoal] = useState("");
 
   const [condition, setCondition] = useState<{ done: number; total: number; note?: string } | null>(null);

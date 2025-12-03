@@ -78,10 +78,7 @@ export function PlanPage() {
   const [pomodoroBreakMinutes, setPomodoroBreakMinutes] = useState(5);
   const [restModalOpen, setRestModalOpen] = useState(false);
   const [pomodoroLoading, setPomodoroLoading] = useState(false);
-  const [showPlanOnboarding, setShowPlanOnboarding] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(PLAN_ONBOARDING_KEY) !== "1";
-  });
+  const [showPlanOnboarding, setShowPlanOnboarding] = useState(false);
 
   const {
     modalOpen,
@@ -139,6 +136,12 @@ export function PlanPage() {
     if (typeof window === "undefined") return;
     window.localStorage.removeItem(PLAN_ONBOARDING_KEY);
     setShowPlanOnboarding(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const dismissed = window.localStorage.getItem(PLAN_ONBOARDING_KEY) === "1";
+    setShowPlanOnboarding(!dismissed);
   }, []);
 
   const historyColumnId = `history-${historyDate}`;

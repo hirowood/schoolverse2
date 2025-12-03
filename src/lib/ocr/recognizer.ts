@@ -1,7 +1,7 @@
 // src/lib/ocr/recognizer.ts
 
 import { createWorker, Worker } from "tesseract.js";
-import { preprocessImage, PREPROCESS_PRESETS, type PreprocessOptions } from "./preprocessor";
+import { preprocessImage, PREPROCESS_PRESETS } from "./preprocessor";
 import { postprocessOcrText, calculateTextQuality } from "./postprocessor";
 
 export interface OcrResult {

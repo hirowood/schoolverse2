@@ -1,15 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
   ChatRoom,
   ChatRoomMessage,
   ChatRoomType,
   UserPreview,
-  WsServerMessage,
 } from "@/features/user-chat/types";
 
 type TypingState = Record<string, Set<string>>;
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export function useUserChat() {
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
@@ -21,102 +24,40 @@ export function useUserChat() {
   const [searchResults, setSearchResults] = useState<UserPreview[]>([]);
   const [typing, setTyping] = useState<TypingState>({});
   const [error, setError] = useState<string | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectRef = useRef<NodeJS.Timeout | null>(null);
-  const pendingRoomJoin = useRef<Set<string>>(new Set());
+  const subscriptionRef = useRef<ReturnType<SupabaseClient["channel"]> | null>(null);
 
   const activeRoom = useMemo(
     () => rooms.find((r) => r.id === activeRoomId) ?? null,
     [activeRoomId, rooms],
   );
 
-  const connectWebSocket = useCallback(() => {
-    if (typeof window === "undefined") return;
-    if (wsRef.current) return;
+  const supabase = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }, []);
 
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${protocol}://${window.location.host}/api/user-chat/ws`);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      if (reconnectRef.current) {
-        clearTimeout(reconnectRef.current);
-        reconnectRef.current = null;
-      }
-      pendingRoomJoin.current.forEach((roomId) => {
-        ws.send(JSON.stringify({ type: "join", roomId }));
-      });
-    };
-
-    ws.onmessage = (event) => {
+  const fetchRooms = useCallback(
+    async (type?: ChatRoomType | "all") => {
+      setLoadingRooms(true);
       try {
-        const payload = JSON.parse(event.data) as WsServerMessage;
-        if (payload.type === "message") {
-          setMessages((prev) =>
-            activeRoomId === payload.roomId ? [...prev, payload.message] : prev,
-          );
-          setRooms((prev) =>
-            prev.map((r) =>
-              r.id === payload.roomId
-                ? { ...r, lastMessage: payload.message, lastMessageAt: payload.message.createdAt }
-                : r,
-            ),
-          );
-        } else if (payload.type === "typing") {
-          setTyping((prev) => {
-            const set = new Set(prev[payload.roomId] ?? []);
-            if (payload.isTyping) set.add(payload.userId);
-            else set.delete(payload.userId);
-            return { ...prev, [payload.roomId]: set };
-          });
-        } else if (payload.type === "read") {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === payload.messageId
-                ? {
-                    ...m,
-                    reads: [
-                      ...(m.reads ?? []),
-                      { id: `${payload.userId}-${payload.messageId}`, userId: payload.userId, messageId: payload.messageId, readAt: payload.readAt },
-                    ],
-                  }
-                : m,
-            ),
-          );
+        const qs = new URLSearchParams();
+        if (type && type !== "all") qs.set("type", type);
+        const res = await fetch(`/api/user-chat/rooms?${qs.toString()}`);
+        if (!res.ok) throw new Error("ルーム取得に失敗しました");
+        const data = (await res.json()) as { rooms: ChatRoom[] };
+        setRooms(data.rooms ?? []);
+        if (!activeRoomId && data.rooms?.length) {
+          setActiveRoomId(data.rooms[0].id);
         }
       } catch (e) {
-        console.error("ws parse error", e);
+        setError((e as Error).message);
+      } finally {
+        setLoadingRooms(false);
       }
-    };
-
-    ws.onclose = () => {
-      wsRef.current = null;
-      reconnectRef.current = setTimeout(() => connectWebSocket(), 2000);
-    };
-
-    ws.onerror = () => {
-      setError("WebSocket接続に失敗しました");
-    };
-  }, [activeRoomId]);
-
-  const fetchRooms = useCallback(async (type?: ChatRoomType | "all") => {
-    setLoadingRooms(true);
-    try {
-      const qs = new URLSearchParams();
-      if (type && type !== "all") qs.set("type", type);
-      const res = await fetch(`/api/user-chat/rooms?${qs.toString()}`);
-      if (!res.ok) throw new Error("ルーム取得に失敗しました");
-      const data = (await res.json()) as { rooms: ChatRoom[] };
-      setRooms(data.rooms ?? []);
-      if (!activeRoomId && data.rooms?.length) {
-        setActiveRoomId(data.rooms[0].id);
-      }
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoadingRooms(false);
-    }
-  }, [activeRoomId]);
+    },
+    [activeRoomId],
+  );
 
   const fetchMessages = useCallback(
     async (roomId: string) => {
@@ -139,10 +80,6 @@ export function useUserChat() {
   const selectRoom = useCallback(
     async (roomId: string) => {
       setActiveRoomId(roomId);
-      pendingRoomJoin.current.add(roomId);
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: "join", roomId }));
-      }
       await fetchMessages(roomId);
     },
     [fetchMessages],
@@ -164,28 +101,23 @@ export function useUserChat() {
     async (content: string) => {
       const text = content.trim();
       if (!text || !activeRoomId) return;
-      const ws = wsRef.current;
-      if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "message", roomId: activeRoomId, content: text }));
-      } else {
-        // fallback via HTTP
-        await fetch(`/api/user-chat/rooms/${activeRoomId}/messages`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: text }),
-        });
-      }
+      await fetch(`/api/user-chat/rooms/${activeRoomId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: text }),
+      });
     },
     [activeRoomId],
   );
 
   const sendTyping = useCallback(
     (isTyping: boolean) => {
-      if (!activeRoomId) return;
-      const ws = wsRef.current;
-      if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "typing", roomId: activeRoomId, isTyping }));
-      }
+      setTyping((prev) => {
+        const set = new Set(prev[activeRoomId ?? ""] ?? []);
+        if (isTyping) set.add("me");
+        else set.delete("me");
+        return activeRoomId ? { ...prev, [activeRoomId]: set } : prev;
+      });
     },
     [activeRoomId],
   );
@@ -193,10 +125,6 @@ export function useUserChat() {
   const markRead = useCallback(
     async (messageId: string) => {
       if (!activeRoomId) return;
-      const ws = wsRef.current;
-      if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "read", roomId: activeRoomId, messageId }));
-      }
       await fetch(`/api/user-chat/rooms/${activeRoomId}/read`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -234,14 +162,59 @@ export function useUserChat() {
     [fetchMessages],
   );
 
+  // Supabase Realtime: メッセージ挿入を監視
+  useEffect(() => {
+    if (!supabase) {
+      setError("Supabaseの環境変数が未設定です");
+      return;
+    }
+    if (!activeRoomId) return;
+
+    // 既存チャネルを解除
+    if (subscriptionRef.current) {
+      supabase.removeChannel(subscriptionRef.current);
+      subscriptionRef.current = null;
+    }
+
+    const channel = supabase
+      .channel(`room-${activeRoomId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "ChatRoomMessage", filter: `roomId=eq.${activeRoomId}` },
+        (payload) => {
+          const msg = payload.new as ChatRoomMessage;
+          setMessages((prev) => [...prev, msg]);
+          setRooms((prev) =>
+            prev.map((r) =>
+              r.id === activeRoomId
+                ? { ...r, lastMessage: msg, lastMessageAt: msg.createdAt }
+                : r,
+            ),
+          );
+        },
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setError(null);
+        }
+      });
+
+    subscriptionRef.current = channel;
+
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
+    };
+  }, [supabase, activeRoomId]);
+
   useEffect(() => {
     fetchRooms();
-    connectWebSocket();
     return () => {
-      wsRef.current?.close();
-      if (reconnectRef.current) clearTimeout(reconnectRef.current);
+      if (subscriptionRef.current && supabase) supabase.removeChannel(subscriptionRef.current);
     };
-  }, [connectWebSocket, fetchRooms]);
+  }, [fetchRooms, supabase]);
 
   return {
     rooms,

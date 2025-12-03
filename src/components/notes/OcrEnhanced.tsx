@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { recognizeText, type OcrResult, type OcrOptions } from "@/lib/ocr/recognizer";
-import { PREPROCESS_PRESETS } from "@/lib/ocr/preprocessor";
+import { useState, useCallback } from "react";
+import { recognizeText, type OcrResult } from "@/lib/ocr/recognizer";
 
 interface OcrEnhancedProps {
   imageUrl: string;

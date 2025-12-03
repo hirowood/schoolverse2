@@ -4,11 +4,36 @@ import { useEffect, useState } from "react";
 import MindMapCanvas from "@/components/mindmap/MindMapCanvas";
 import type { MindMapEdge, MindMapNode, MindMapState } from "@/lib/mindmap/types";
 
-interface Props {
-  params: Promise<{ id: string }>;
-}
+type Params = { params: { id: string } };
+type ApiNode = {
+  id: string;
+  type?: MindMapNode["type"];
+  positionX?: number;
+  positionY?: number;
+  label?: string;
+  description?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  textColor?: string;
+  fontSize?: number;
+  shape?: MindMapNode["data"]["shape"];
+  level?: number;
+  isCollapsed?: boolean;
+  linkedNoteId?: string | null;
+};
 
-export default function MindMapDetailPage({ params }: Props) {
+type ApiEdge = {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  type?: MindMapEdge["type"];
+  strokeColor?: string;
+  strokeWidth?: number;
+  animated?: boolean;
+  label?: string | null;
+};
+
+export default function MindMapDetailPage({ params }: Params) {
   const [initialState, setInitialState] = useState<Partial<MindMapState> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -16,15 +41,14 @@ export default function MindMapDetailPage({ params }: Props) {
   useEffect(() => {
     const fetchMindMap = async () => {
       try {
-        const { id } = await params;
-        const res = await fetch(`/api/mindmap/${id}`);
+        const res = await fetch(`/api/mindmap/${params.id}`);
         if (!res.ok) {
           throw new Error("Failed to fetch mind map");
         }
         const data = await res.json();
         const map = data.mindMap;
 
-        const nodes: MindMapNode[] = (map.nodes ?? []).map((node: any) => ({
+        const nodes: MindMapNode[] = (map.nodes ?? []).map((node: ApiNode) => ({
           id: node.id,
           type: (node.type as MindMapNode["type"]) ?? "mindMapNode",
           position: {
@@ -45,7 +69,7 @@ export default function MindMapDetailPage({ params }: Props) {
           },
         }));
 
-        const edges: MindMapEdge[] = (map.edges ?? []).map((edge: any) => ({
+        const edges: MindMapEdge[] = (map.edges ?? []).map((edge: ApiEdge) => ({
           id: edge.id,
           source: edge.sourceId,
           target: edge.targetId,

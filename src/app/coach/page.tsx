@@ -1,6 +1,7 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import OnboardingPanel, { type OnboardingStep } from "@/components/OnboardingPanel";
 import { ChatPanel, PlanPanel, UsageGuide } from "@/components/coach";
 
@@ -45,12 +46,15 @@ const TAB_DEFINITIONS: TabDefinition[] = [
 
 export default function CoachPage() {
   const [activeTab, setActiveTab] = useState<Tab>("chat");
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(COACH_ONBOARDING_KEY) !== "1";
-  });
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const activeTabDefinition =
     TAB_DEFINITIONS.find((tab) => tab.id === activeTab) ?? TAB_DEFINITIONS[0];
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const dismissed = window.localStorage.getItem(COACH_ONBOARDING_KEY) === "1";
+    setShowOnboarding(!dismissed);
+  }, []);
 
   const handleDismissOnboarding = () => {
     if (typeof window === "undefined") return;

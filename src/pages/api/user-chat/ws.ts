@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import type { Socket } from "net";
+import type { Server } from "http";
 import { getToken } from "next-auth/jwt";
 import { WebSocketServer, RawData } from "ws";
 import { prisma } from "@/lib/prisma";
@@ -10,34 +12,55 @@ export const config = {
   },
 };
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET;
-
-async function authenticate(request: NextApiRequest): Promise<string | null> {
-  if (!JWT_SECRET) return null;
-  const token = await getToken({ req: request as any, secret: JWT_SECRET }).catch(() => null);
-  const userId = (token as { sub?: string } | null)?.sub;
-  return userId ?? null;
+// カスタム型定義：Next.jsのソケットサーバー拡張
+interface SocketWithServer extends Socket {
+  server: Server & {
+    userChatWss?: WebSocketServer;
+  };
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // WebSocket upgrade happens via the HTTP server; here we just ensure the server is ready.
-  const server = res.socket.server as any;
+interface ExtendedNextApiResponse extends NextApiResponse {
+  socket: SocketWithServer | null;
+}
 
+async function authenticate(request: NextApiRequest): Promise<string | null> {
+  try {
+    // NextApiRequestをそのまま渡す（next-authは内部で処理）
+    const token = await getToken({ req: request });
+    const userId = (token as { sub?: string } | null)?.sub;
+    return userId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function handler(req: NextApiRequest, res: ExtendedNextApiResponse) {
+  // WebSocket upgrade happens via the HTTP server; here we just ensure the server is ready.
+  
+  // nullチェック
+  if (!res.socket) {
+    res.status(500).json({ error: "Socket not available" });
+    return;
+  }
+
+  const server = res.socket.server;
+  
   if (!server.userChatWss) {
     const wss = new WebSocketServer({ noServer: true });
     server.userChatWss = wss;
 
-    server.on("upgrade", async (request: NextApiRequest, socket: any, head: any) => {
+    server.on("upgrade", async (request: import("http").IncomingMessage, socket: Socket, head: Buffer) => {
       if (!request.url?.startsWith("/api/user-chat/ws")) return;
 
-      const userId = await authenticate(request);
+      // IncomingMessageをNextApiRequest互換として認証
+      const userId = await authenticate(request as unknown as NextApiRequest);
       if (!userId) {
         socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
         socket.destroy();
         return;
       }
 
-      wss.handleUpgrade(request as any, socket, head, (ws) => {
+      wss.handleUpgrade(request, socket, head, (ws) => {
         const client = registerClient(ws, userId);
 
         ws.on("message", async (data: RawData) => {
@@ -104,12 +127,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 data: { lastMessageAt: message.createdAt },
               });
 
+              // reads配列のreadAtをstringに変換
               notifyMessage(parsed.roomId, {
-                ...message,
+                id: message.id,
                 roomId: parsed.roomId,
+                senderId: message.senderId,
+                content: message.content,
+                messageType: message.messageType,
                 createdAt: message.createdAt.toISOString(),
                 updatedAt: message.updatedAt.toISOString(),
                 sender: message.sender ?? undefined,
+                reads: message.reads.map((read) => ({
+                  id: read.id,
+                  messageId: read.messageId,
+                  userId: read.userId,
+                  readAt: read.readAt.toISOString(),
+                })),
               });
             }
           } catch (error) {

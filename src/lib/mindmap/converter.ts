@@ -1,5 +1,6 @@
-// Excalidrawとの相互変換ユーティリティ（簡易実装）
-// バージョン間の型互換を考慮し、ExcalidrawElementはゆるくanyとする。
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Excalidrawとの相互変換ユーティリティ（暫定実装）
+// バージョン差の型が混在するため ExcalidrawElement は暫定 any で扱う
 
 type ExcalidrawElement = any;
 import type { MindMapEdge, MindMapNode, LayoutType } from "./types";
@@ -165,7 +166,7 @@ export function excalidrawToMindMap(elements: ExcalidrawElement[]): {
       width: shape.width,
       height: shape.height,
       data: {
-        label: textElement?.text ?? "無題",
+        label: textElement?.text ?? "未設定",
         description: undefined,
         backgroundColor: shape.backgroundColor ?? "#ffffff",
         borderColor: shape.strokeColor ?? "#e2e8f0",
