@@ -8,6 +8,34 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum RoomType {
+  CLASSROOM
+  STUDY_GROUP
+  CONSULTATION
+  PRESENTATION
+}
+
+enum RoomStatus {
+  WAITING
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+enum ParticipantRole {
+  HOST
+  TEACHER
+  STUDENT
+  OBSERVER
+}
+
+enum MessageType {
+  TEXT
+  SYSTEM
+  QUESTION
+  FILE
+}
+
 model User {
   id            String             @id @default(cuid())
   email         String             @unique
@@ -42,6 +70,11 @@ model User {
   xpTransactions      XpTransaction[]
   achievements        UserAchievement[]
   questProgress       QuestProgress[]
+  hostedRooms         VirtualRoom[]       @relation("RoomHost")
+  roomParticipations  RoomParticipant[]
+  roomMessages        RoomMessage[]
+  whiteboardSnapshots WhiteboardSnapshot[]
+  roomRecordings      RoomRecording[]
 }
 
 model CredoItem {
@@ -855,4 +888,158 @@ model QuestGenerationLog {
   createdAt        DateTime @default(now())
 
   @@index([userId, date])
+}
+
+model VirtualRoom {
+  id               String        @id @default(cuid())
+  name             String        @db.VarChar(100)
+  description      String?       @db.VarChar(500)
+  type             RoomType
+  maxParticipants  Int           @default(20)
+  isPublic         Boolean       @default(false)
+  password         String?
+  environmentId    String        @default("default_classroom")
+  spawnPosition    Json          @default(dbgenerated("'{}'::jsonb"))
+  allowVideo       Boolean       @default(true)
+  allowAudio       Boolean       @default(true)
+  allowScreenShare Boolean       @default(true)
+  allowChat        Boolean       @default(true)
+  status           RoomStatus    @default(WAITING)
+  startedAt        DateTime?
+  endedAt          DateTime?
+  scheduledAt      DateTime?
+  scheduledEndAt   DateTime?
+  hostId           String
+  host             User          @relation("RoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  participants     RoomParticipant[]
+  whiteboards      Whiteboard[]
+  messages         RoomMessage[]
+  recordings       RoomRecording[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([hostId])
+  @@index([status])
+  @@index([type])
+  @@index([isPublic, status])
+  @@index([scheduledAt])
+  @@index([createdAt(sort: Desc)])
+}
+
+model RoomParticipant {
+  id             String         @id @default(cuid())
+  roomId         String
+  userId         String
+  role           ParticipantRole @default(STUDENT)
+  avatarId       String?
+  avatarColor    String         @default("#4F46E5")
+  displayName    String?        @db.VarChar(50)
+  positionX      Float          @default(0)
+  positionY      Float          @default(0)
+  positionZ      Float          @default(5)
+  rotationY      Float          @default(0)
+  currentAction  String         @default("idle")
+  currentSeatId  String?
+  isVideoOn      Boolean        @default(false)
+  isAudioOn      Boolean        @default(false)
+  isSharingScreen Boolean       @default(false)
+  isHandRaised   Boolean        @default(false)
+  isConnected    Boolean        @default(true)
+  lastSeenAt     DateTime       @default(now())
+  joinedAt       DateTime       @default(now())
+  leftAt         DateTime?
+  room           VirtualRoom    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([roomId])
+  @@index([userId])
+  @@index([roomId, isConnected])
+}
+
+model Whiteboard {
+  id             String                 @id @default(cuid())
+  name           String
+  roomId         String
+  room           VirtualRoom            @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  elements       Json                   @default(dbgenerated("'{}'::jsonb"))
+  appState       Json                   @default(dbgenerated("'{}'::jsonb"))
+  isLocked       Boolean                @default(false)
+  allowedEditors String[]               @default([])
+  snapshots      WhiteboardSnapshot[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@index([roomId])
+}
+
+model WhiteboardSnapshot {
+  id            String      @id @default(cuid())
+  whiteboardId  String
+  createdById   String
+  elements      Json        @default(dbgenerated("'{}'::jsonb"))
+  appState      Json        @default(dbgenerated("'{}'::jsonb"))
+  thumbnailUrl  String?
+  description   String?
+  createdAt     DateTime    @default(now())
+  whiteboard    Whiteboard  @relation(fields: [whiteboardId], references: [id], onDelete: Cascade)
+  createdBy     User        @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([whiteboardId])
+}
+
+model RoomMessage {
+  id          String      @id @default(cuid())
+  roomId      String
+  senderId    String
+  type        MessageType @default(TEXT)
+  content     String
+  metadata    Json?
+  isQuestion  Boolean     @default(false)
+  isAnswered  Boolean     @default(false)
+  answeredBy  String?
+  answeredAt  DateTime?
+  isEdited    Boolean     @default(false)
+  isDeleted   Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  room        VirtualRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender      User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, createdAt(sort: Desc)])
+  @@index([roomId, isQuestion])
+  @@index([senderId])
+}
+
+model RoomRecording {
+  id             String       @id @default(cuid())
+  roomId         String
+  recordedById   String
+  videoUrl       String?
+  audioUrl       String?
+  whiteboardData Json?
+  duration       Int?
+  fileSize       Int?
+  startedAt      DateTime?
+  endedAt        DateTime?
+  createdAt      DateTime     @default(now())
+  room           VirtualRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  recordedBy     User         @relation(fields: [recordedById], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+}
+
+model AvatarTemplate {
+  id            String   @id @default(cuid())
+  name          String
+  category      String
+  modelUrl      String
+  thumbnailUrl  String?
+  customizable  Json?
+  defaultColor  String?
+  isPremium     Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
