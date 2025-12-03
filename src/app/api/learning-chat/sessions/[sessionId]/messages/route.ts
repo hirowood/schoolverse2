@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { assertRateLimit } from "@/lib/rateLimit";
 import {
   ListMessagesQuerySchema,
@@ -174,7 +175,7 @@ export async function POST(request: Request, { params }: RouteParams) {
             category,
             tokenCount: estimateTokens(fullResponse),
             model: "claude-sonnet-4-20250514",
-            codeBlocks: extractCodeBlocks(fullResponse),
+            codeBlocks: extractCodeBlocks(fullResponse) ?? Prisma.JsonNull,
           },
         });
 

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { assertRateLimit } from "@/lib/rateLimit";
 import { analyzeAll } from "@/lib/ai/analyzer";
 
@@ -86,8 +87,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       where: { id: noteId },
       data: {
         aiSummary: result.summary,
-        aiAnalysis: result.analysis as object | null,
-        autoTags: result.tags,
+        aiAnalysis: result.analysis ?? Prisma.JsonNull,
+        autoTags: result.tags ?? Prisma.JsonNull,
         analyzedAt: new Date(),
       },
     });

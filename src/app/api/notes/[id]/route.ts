@@ -67,13 +67,17 @@ export async function PATCH(
 
   // 更新データを構築
   const updateData: Prisma.NoteUpdateInput = {};
-  
+
   if (validation.data.title !== undefined) updateData.title = validation.data.title;
   if (validation.data.content !== undefined) updateData.content = validation.data.content;
   if (validation.data.templateType !== undefined) updateData.templateType = validation.data.templateType;
   if (validation.data.isShareable !== undefined) updateData.isShareable = validation.data.isShareable;
-  if (validation.data.relatedTaskId !== undefined) updateData.relatedTaskId = validation.data.relatedTaskId;
-  
+  if (validation.data.relatedTaskId !== undefined) {
+    updateData.relatedTask = validation.data.relatedTaskId
+      ? { connect: { id: validation.data.relatedTaskId } }
+      : { disconnect: true };
+  }
+
   if (validation.data.drawingData !== undefined) {
     updateData.drawingData = validation.data.drawingData ?? Prisma.JsonNull;
   }
@@ -81,7 +85,8 @@ export async function PATCH(
     updateData.templateData = validation.data.templateData ?? Prisma.JsonNull;
   }
   if (validation.data.tags !== undefined) {
-    updateData.tags = normalizeTags(validation.data.tags) ?? Prisma.JsonNull;
+    const normalized = normalizeTags(validation.data.tags);
+    updateData.tags = normalized ?? Prisma.JsonNull;
   }
   if (validation.data.imageFiles !== undefined) {
     updateData.imageFiles = validation.data.imageFiles ?? Prisma.JsonNull;

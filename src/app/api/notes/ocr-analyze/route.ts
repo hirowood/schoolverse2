@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { assertRateLimit } from "@/lib/rateLimit";
 import { analyzeAll } from "@/lib/ai/analyzer";
 import type { OcrAnalyzeOptions, OcrAnalyzeResult } from "@/lib/ai/types";
@@ -82,8 +83,8 @@ export async function POST(request: Request) {
         data: {
           ocrRawText: ocrText,
           aiSummary: summary,
-          aiAnalysis: analysis as object | null,
-          autoTags: tags,
+          aiAnalysis: analysis ?? Prisma.JsonNull,
+          autoTags: tags ?? Prisma.JsonNull,
           analyzedAt: new Date(),
         },
       });
