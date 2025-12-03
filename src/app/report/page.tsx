@@ -27,6 +27,9 @@ export default function ReportPage() {
   const [weekInput, setWeekInput] = useState(DEFAULT_WEEK_START);
   const [context, setContext] = useState<WeeklyReportContext | null>(null);
   const [report, setReport] = useState<WeeklyReportRecord | null>(null);
+  const [keepInput, setKeepInput] = useState("");
+  const [problemInput, setProblemInput] = useState("");
+  const [tryInput, setTryInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -49,6 +52,9 @@ export default function ReportPage() {
       setContext(data.context);
       setReport(data.report);
       setWeekInput(data.context.weekStart);
+      setKeepInput((data.report as any)?.kpt?.keep?.join("\n") ?? "");
+      setProblemInput((data.report as any)?.kpt?.problem?.join("\n") ?? "");
+      setTryInput((data.report as any)?.kpt?.try?.join("\n") ?? "");
       setError(null);
       if (data.context.weekStart !== weekStart) {
         setRequestedWeek(data.context.weekStart);
@@ -88,10 +94,24 @@ export default function ReportPage() {
     setIsGenerating(true);
     try {
       const targetWeek = context?.weekStart ?? requestedWeek;
+      const kpt = {
+        keep: keepInput
+          .split("\n")
+          .map((v) => v.trim())
+          .filter(Boolean),
+        problem: problemInput
+          .split("\n")
+          .map((v) => v.trim())
+          .filter(Boolean),
+        try: tryInput
+          .split("\n")
+          .map((v) => v.trim())
+          .filter(Boolean),
+      };
       const response = await fetch("/api/report/weekly/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weekStart: targetWeek }),
+        body: JSON.stringify({ weekStart: targetWeek, kpt }),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
@@ -99,10 +119,13 @@ export default function ReportPage() {
       }
       const data = (await response.json()) as {
         context: WeeklyReportContext;
-        report: WeeklyReportRecord;
+        report: WeeklyReportRecord & { kpt?: { keep?: string[]; problem?: string[]; try?: string[] } };
       };
       setContext(data.context);
       setReport(data.report);
+      setKeepInput(data.report.kpt?.keep?.join("\n") ?? keepInput);
+      setProblemInput(data.report.kpt?.problem?.join("\n") ?? problemInput);
+      setTryInput(data.report.kpt?.try?.join("\n") ?? tryInput);
       setRequestedWeek(data.context.weekStart);
       setWeekInput(data.context.weekStart);
       setError(null);
@@ -323,43 +346,64 @@ export default function ReportPage() {
       <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900">KPT 振り返り</h2>
-          <p className="text-xs text-slate-500">AI生成または手入力のKPTメモをここに表示します</p>
+          <p className="text-xs text-slate-500">先にKPTを入力してから「AIで生成」を押してください</p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Keep</p>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Keep</label>
+            <textarea
+              value={keepInput}
+              onChange={(e) => setKeepInput(e.target.value)}
+              placeholder="続けたいことを1行ずつ入力"
+              rows={5}
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm"
+            />
             {kpt?.keep?.length ? (
-              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-800">
+              <ul className="list-disc space-y-1 pl-4 text-sm text-slate-800">
                 {kpt.keep.map((item: string) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-2 text-sm text-slate-600">続けたいことを記録してください。</p>
+              <p className="text-xs text-slate-500">入力後にAI生成するとここに反映されます。</p>
             )}
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Problem</p>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-amber-700">Problem</label>
+            <textarea
+              value={problemInput}
+              onChange={(e) => setProblemInput(e.target.value)}
+              placeholder="課題に感じたことを1行ずつ入力"
+              rows={5}
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm"
+            />
             {kpt?.problem?.length ? (
-              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-800">
+              <ul className="list-disc space-y-1 pl-4 text-sm text-slate-800">
                 {kpt.problem.map((item: string) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-2 text-sm text-slate-600">課題に感じたことを記録してください。</p>
+              <p className="text-xs text-slate-500">入力後にAI生成するとここに反映されます。</p>
             )}
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Try</p>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Try</label>
+            <textarea
+              value={tryInput}
+              onChange={(e) => setTryInput(e.target.value)}
+              placeholder="次週試したいことを1行ずつ入力"
+              rows={5}
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm"
+            />
             {kpt?.try?.length ? (
-              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-800">
+              <ul className="list-disc space-y-1 pl-4 text-sm text-slate-800">
                 {kpt.try.map((item: string) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-2 text-sm text-slate-600">次週試したいアクションを書き出しましょう。</p>
+              <p className="text-xs text-slate-500">入力後にAI生成するとここに反映されます。</p>
             )}
           </div>
         </div>

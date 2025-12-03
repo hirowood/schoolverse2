@@ -6,6 +6,11 @@ export type WeeklyReportPayload = {
   aiAnalysis: string;
   nextWeekFocus: string[];
   supporterExport: string;
+  kpt?: {
+    keep?: string[];
+    problem?: string[];
+    try?: string[];
+  };
 };
 
 export type WeeklyReportRecord = WeeklyReportPayload & {

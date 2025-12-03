@@ -70,9 +70,11 @@ export async function POST(request: Request) {
       aiAnalysis: payload.aiAnalysis,
       nextWeekFocus: payload.nextWeekFocus,
       supporterExport: payload.supporterExport,
+      // Note: KPTは現状DBに保存せず、レスポンスでのみ返却
+      kpt: validation.data.kpt,
     },
   });
 
   const report = mapWeeklyReportRecord(stored);
-  return NextResponse.json({ report, context });
+  return NextResponse.json({ report: { ...report, kpt: validation.data.kpt }, context });
 }
