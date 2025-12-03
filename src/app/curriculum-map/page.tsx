@@ -16,6 +16,7 @@ export default function CurriculumMapPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHitsOnly, setShowHitsOnly] = useState(false);
+  const [mindMapOpen, setMindMapOpen] = useState(false);
 
   const fetchLines = async (query?: string) => {
     try {
@@ -201,7 +202,15 @@ export default function CurriculumMapPage() {
                       <NodeList label="Next.js" nodes={filtered.nextjs} />
                       <NodeList label="AI/ML" nodes={filtered.ai} />
                       <NodeList label="事務・DX/AX" nodes={filtered.office} />
-                      <NodeList label="思考スキル" nodes={filtered.thinking} />
+                      <div className="flex items-center justify-between">
+                        <NodeList label="思考スキル" nodes={filtered.thinking} />
+                        <button
+                          onClick={() => setMindMapOpen(true)}
+                          className="text-xs px-3 py-2 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        >
+                          思考マップを開く
+                        </button>
+                      </div>
                     </div>
                   </Card>
                   <Card title="役割別ライン（ユニット概要とミッション例）">
@@ -248,7 +257,31 @@ export default function CurriculumMapPage() {
           </Card>
         </section>
       </div>
+      {mindMapOpen && <MindMapModal onClose={() => setMindMapOpen(false)} />}
     </HighlightProvider>
+  );
+}
+
+function MindMapModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2">
+      <div className="relative w-full max-w-5xl h-[80vh] rounded-xl overflow-hidden border border-slate-200 bg-white shadow-2xl">
+        <div className="absolute top-0 right-0 m-2 flex gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-200 hover:bg-slate-50"
+          >
+            閉じる
+          </button>
+        </div>
+        <iframe
+          title="thinking-mindmap"
+          src="/mindmap/new?template=thinking&from=thinking-curriculum"
+          className="w-full h-full bg-white"
+          allowFullScreen
+        />
+      </div>
+    </div>
   );
 }
 
