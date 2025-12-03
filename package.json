@@ -36,9 +36,6 @@
     "zod": "^4.1.13",
     "zustand": "^5.0.4"
   },
-  "prisma": {
-    "seed": "node prisma/seed.js"
-  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "20.19.25",
