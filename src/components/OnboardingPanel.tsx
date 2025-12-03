@@ -44,7 +44,10 @@ export default function OnboardingPanel({
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {steps.map((step, index) => (
-          <article key={step.title} className="rounded-2xl border border-slate-200 bg-white/70 p-3 text-sm text-slate-700 shadow-sm">
+          <article
+            key={step.title}
+            className="rounded-2xl border border-slate-200 bg-white/70 p-3 text-sm text-slate-700 shadow-sm"
+          >
             <p className="text-[11px] font-semibold uppercase tracking-[0.4em] text-slate-500">STEP {index + 1}</p>
             <h3 className="mt-1 text-base font-semibold text-slate-900">{step.title}</h3>
             <p className="mt-1 text-sm text-slate-600">{step.detail}</p>
