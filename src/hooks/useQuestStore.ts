@@ -23,6 +23,12 @@ type QuestStoreState = {
   showCompleteModal: boolean;
   showRegenerateModal: boolean;
   showDetailModal: boolean;
+  lastXpGain: {
+    xpEarned: number;
+    questTitle: string;
+    levelUp: boolean;
+    newLevel?: number;
+  } | null;
   fetchTodayQuests: () => Promise<void>;
   regenerateQuests: (options?: QuestRegenerateOptions) => Promise<void>;
   acceptQuest: (id: string) => Promise<void>;
@@ -37,6 +43,7 @@ type QuestStoreState = {
   closeRegenerateModal: () => void;
   openDetailModal: (id: string) => void;
   closeDetailModal: () => void;
+  clearLastXpGain: () => void;
 };
 
 const fetchJson = async <T>(url: string, init?: RequestInit) => {
@@ -61,6 +68,7 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
   showCompleteModal: false,
   showRegenerateModal: false,
   showDetailModal: false,
+  lastXpGain: null,
 
   fetchTodayQuests: async () => {
     set({ isLoading: true, error: null });
@@ -150,6 +158,15 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
         isLoading: false,
         showCompleteModal: false,
         selectedQuestId: null,
+        lastXpGain:
+          data.xpEarned && data.xpEarned > 0
+            ? {
+                xpEarned: data.xpEarned,
+                questTitle: data.quest.title,
+                levelUp: data.levelUp ?? false,
+                newLevel: data.newLevel,
+              }
+            : state.lastXpGain,
       }));
     } catch (error) {
       console.error("[QuestStore] completeQuest failed", error);
@@ -195,4 +212,5 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
 
   openDetailModal: (id) => set({ selectedQuestId: id, showDetailModal: true }),
   closeDetailModal: () => set({ showDetailModal: false }),
+  clearLastXpGain: () => set({ lastXpGain: null }),
 }));

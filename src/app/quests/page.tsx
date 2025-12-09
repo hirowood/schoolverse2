@@ -11,6 +11,7 @@ import {
   QuestSidebar,
   EmptyState,
 } from "./_components";
+import { XpToastContainer } from "@/components/gamification/XpToastContainer";
 
 const formatDateLabel = () => {
   const now = new Date();
@@ -89,6 +90,7 @@ export default function QuestsPage() {
           ) : (
             <EmptyState
               canGenerate={canRegenerate}
+              regenerateRemaining={regenerateRemaining}
               isGenerating={isLoading}
               onGenerate={() => void regenerateQuests()}
             />
@@ -114,6 +116,8 @@ export default function QuestsPage() {
         onClose={closeRegenerateModal}
         onRegenerate={(opts) => void regenerateQuests(opts)}
       />
+
+      <XpToastContainer />
     </main>
   );
 }
