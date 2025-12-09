@@ -8,6 +8,9 @@ import type { StudyTask } from "@/features/plan/types";
 import { addDays, formatLocalIsoDate, getToday, parseLocalDate } from "@/features/plan/utils/date";
 import { Modal } from "@/components/ui/Modal";
 import OnboardingPanel, { type OnboardingStep } from "@/components/OnboardingPanel";
+import { useGameStore } from "@/hooks/useGameStore";
+import { GameStatusWidget } from "@/app/dashboard/_components/GameStatusWidget";
+import { AchievementToastContainer } from "@/components/gamification/AchievementToastContainer";
 
 type Profile = {
   name?: string;
@@ -230,6 +233,9 @@ export default function DashboardPage() {
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [messageError, setMessageError] = useState<string | null>(null);
 
+  const fetchProfile = useGameStore((state) => state.fetchProfile);
+  const refreshXpHistory = useGameStore((state) => state.refreshXpHistory);
+
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -302,6 +308,11 @@ export default function DashboardPage() {
   useEffect(() => {
     refreshTasks();
   }, [refreshTasks]);
+
+  useEffect(() => {
+    void fetchProfile();
+    void refreshXpHistory();
+  }, [fetchProfile, refreshXpHistory]);
 
   useEffect(() => {
     let active = true;
@@ -924,164 +935,167 @@ export default function DashboardPage() {
           )}
         </section>
 
-        <Modal
-          open={detailModalOpen}
-          title="子Todoを追加"
-          onClose={() => {
-            setDetailModalOpen(false);
-            setDetailError(null);
-          }}
-          footer={
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setDetailModalOpen(false);
-                  setDetailError(null);
-                }}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
-              >
-                キャンセル
-              </button>
-              <button
-                type="button"
-                onClick={handleAddDetail}
-                disabled={detailLoading || !todayTopTask}
-                className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-              >
-                {detailLoading ? "追加中..." : "追加"}
-              </button>
-            </div>
-          }
-        >
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-800" htmlFor="detail-title">
-                タイトル
-              </label>
-              <input
-                id="detail-title"
-                type="text"
-                value={detailTitle}
-                onChange={(e) => setDetailTitle(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                placeholder="子タスクのタイトル"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-800" htmlFor="detail-desc">
-                メモ（任意）
-              </label>
+        <div className="space-y-4">
+          <GameStatusWidget />
+          <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900">今日の目標</h2>
+            {profile?.weeklyGoal && (
+              <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3">
+                <p className="text-[11px] font-medium text-indigo-800">週間目標（設定ページより）</p>
+                <p className="text-sm text-indigo-900">{profile.weeklyGoal}</p>
+              </div>
+            )}
+            {profileError && <p className="text-xs text-red-500">{profileError}</p>}
+            <div className="space-y-2">
               <textarea
-                id="detail-desc"
-                value={detailDesc}
-                onChange={(e) => setDetailDesc(e.target.value)}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                rows={3}
-                placeholder="補足メモがあれば入力"
+                rows={4}
+                placeholder="今日のフォーカスや目標をメモ（例: 章末問題を2問解く）"
+                value={goalInput}
+                onChange={(e) => setGoalInput(e.target.value)}
               />
-            </div>
-            <p className="text-xs text-slate-500">追加先: 今日の学習プラン（トップレベル）</p>
-            {detailError && <p className="text-xs text-red-500">{detailError}</p>}
-          </div>
-        </Modal>
-
-        <Modal
-          open={editModalOpen}
-          title="子Todoを編集"
-          onClose={() => {
-            setEditModalOpen(false);
-            setDetailError(null);
-          }}
-          footer={
-            <div className="flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setEditModalOpen(false);
-                  setDetailError(null);
-                }}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+                onClick={handleSaveGoal}
+                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
               >
-                キャンセル
+                目標を保存
               </button>
-              <button
-                type="button"
-                onClick={handleUpdateChild}
-                disabled={editLoading || !editTarget}
-                className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-              >
-                {editLoading ? "更新中..." : "更新"}
-              </button>
+              {savedGoal ? (
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-medium text-slate-600">表示中の目標（{today}）</p>
+                  <p className="text-sm text-slate-900">{savedGoal}</p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">保存するとここに表示されます</p>
+              )}
             </div>
-          }
-        >
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-800" htmlFor="edit-title">
-                タイトル
-              </label>
-              <input
-                id="edit-title"
-                type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                placeholder="子タスクのタイトル"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-800" htmlFor="edit-desc">
-                メモ（任意）
-              </label>
-              <textarea
-                id="edit-desc"
-                value={editDesc}
-                onChange={(e) => setEditDesc(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                rows={3}
-                placeholder="補足メモがあれば入力"
-              />
-            </div>
-            {detailError && <p className="text-xs text-red-500">{detailError}</p>}
-          </div>
-        </Modal>
+          </section>
+        </div>
+      </div>
 
-        <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">今日の目標</h2>
-          {profile?.weeklyGoal && (
-            <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3">
-              <p className="text-[11px] font-medium text-indigo-800">週間目標（設定ページより）</p>
-              <p className="text-sm text-indigo-900">{profile.weeklyGoal}</p>
-            </div>
-          )}
-          {profileError && <p className="text-xs text-red-500">{profileError}</p>}
-          <div className="space-y-2">
-            <textarea
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              rows={4}
-              placeholder="今日のフォーカスや目標をメモ（例: 章末問題を2問解く）"
-              value={goalInput}
-              onChange={(e) => setGoalInput(e.target.value)}
-            />
+      <Modal
+        open={detailModalOpen}
+        title="子Todoを追加"
+        onClose={() => {
+          setDetailModalOpen(false);
+          setDetailError(null);
+        }}
+        footer={
+          <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={handleSaveGoal}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+              onClick={() => {
+                setDetailModalOpen(false);
+                setDetailError(null);
+              }}
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
             >
-              目標を保存
+              キャンセル
             </button>
-            {savedGoal ? (
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-medium text-slate-600">表示中の目標（{today}）</p>
-                <p className="text-sm text-slate-900">{savedGoal}</p>
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500">保存するとここに表示されます</p>
-            )}
+            <button
+              type="button"
+              onClick={handleAddDetail}
+              disabled={detailLoading || !todayTopTask}
+              className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+            >
+              {detailLoading ? "追加中..." : "追加"}
+            </button>
           </div>
-        </section>
-      </div>
+        }
+      >
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-800" htmlFor="detail-title">
+              タイトル
+            </label>
+            <input
+              id="detail-title"
+              type="text"
+              value={detailTitle}
+              onChange={(e) => setDetailTitle(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="子タスクのタイトル"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-800" htmlFor="detail-desc">
+              メモ（任意）
+            </label>
+            <textarea
+              id="detail-desc"
+              value={detailDesc}
+              onChange={(e) => setDetailDesc(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              rows={3}
+              placeholder="補足メモがあれば入力"
+            />
+          </div>
+          <p className="text-xs text-slate-500">追加先: 今日の学習プラン（トップレベル）</p>
+          {detailError && <p className="text-xs text-red-500">{detailError}</p>}
+        </div>
+      </Modal>
+
+      <Modal
+        open={editModalOpen}
+        title="子Todoを編集"
+        onClose={() => {
+          setEditModalOpen(false);
+          setDetailError(null);
+        }}
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setEditModalOpen(false);
+                setDetailError(null);
+              }}
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            >
+              キャンセル
+            </button>
+            <button
+              type="button"
+              onClick={handleUpdateChild}
+              disabled={editLoading || !editTarget}
+              className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+            >
+              {editLoading ? "更新中..." : "更新"}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-800" htmlFor="edit-title">
+              タイトル
+            </label>
+            <input
+              id="edit-title"
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="子タスクのタイトル"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-800" htmlFor="edit-desc">
+              メモ（任意）
+            </label>
+            <textarea
+              id="edit-desc"
+              value={editDesc}
+              onChange={(e) => setEditDesc(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              rows={3}
+              placeholder="補足メモがあれば入力"
+            />
+          </div>
+          {detailError && <p className="text-xs text-red-500">{detailError}</p>}
+        </div>
+      </Modal>
 
       <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1208,6 +1222,8 @@ export default function DashboardPage() {
           </p>
         </section>
       </div>
+
+      <AchievementToastContainer />
     </main>
   );
 }
