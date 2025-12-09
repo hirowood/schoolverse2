@@ -61,4 +61,10 @@ export type DashboardSummary = {
     mentalCondition: number;
     motivationLevel: number;
   };
+  timeStats?: {
+    todaySeconds: number;
+    weekSeconds: number;
+    monthSeconds: number;
+    totalSeconds: number;
+  };
 };
