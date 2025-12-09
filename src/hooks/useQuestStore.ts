@@ -9,7 +9,6 @@ import type {
   TodayQuest,
   TodayQuestsResponse,
 } from "@/types/quest";
-import { mockTodayQuestsResponse, mockActionResponse } from "@/lib/quests/mock-data";
 
 type QuestStoreState = {
   quests: TodayQuest[];
@@ -50,11 +49,11 @@ const replaceQuest = (quests: TodayQuest[], next: TodayQuest) =>
   quests.map((q) => (q.id === next.id ? next : q));
 
 export const useQuestStore = create<QuestStoreState>((set, get) => ({
-  quests: mockTodayQuestsResponse.quests,
-  summary: mockTodayQuestsResponse.summary,
-  generatedAt: mockTodayQuestsResponse.generatedAt,
-  canRegenerate: mockTodayQuestsResponse.canRegenerate,
-  regenerateRemaining: mockTodayQuestsResponse.regenerateRemaining,
+  quests: [],
+  summary: null,
+  generatedAt: null,
+  canRegenerate: false,
+  regenerateRemaining: 0,
   filter: "all",
   isLoading: false,
   error: null,
@@ -76,15 +75,10 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
         isLoading: false,
       });
     } catch (error) {
-      console.error("[QuestStore] fetchTodayQuests failed, fallback to mock", error);
+      console.error("[QuestStore] fetchTodayQuests failed", error);
       set({
-        quests: mockTodayQuestsResponse.quests,
-        summary: mockTodayQuestsResponse.summary,
-        generatedAt: mockTodayQuestsResponse.generatedAt,
-        canRegenerate: mockTodayQuestsResponse.canRegenerate,
-        regenerateRemaining: mockTodayQuestsResponse.regenerateRemaining,
         isLoading: false,
-        error: "クエストの取得に失敗しました（モック表示中）",
+        error: "クエストの取得に失敗しました",
       });
     }
   },
@@ -102,13 +96,8 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
     } catch (error) {
       console.error("[QuestStore] regenerateQuests failed", error);
       set({
-        quests: mockTodayQuestsResponse.quests,
-        summary: mockTodayQuestsResponse.summary,
-        generatedAt: mockTodayQuestsResponse.generatedAt,
-        canRegenerate: mockTodayQuestsResponse.canRegenerate,
-        regenerateRemaining: mockTodayQuestsResponse.regenerateRemaining,
         isLoading: false,
-        error: "クエストの再生成に失敗しました（モック表示中）",
+        error: "クエストの再生成に失敗しました",
         showRegenerateModal: false,
       });
     }
@@ -123,12 +112,10 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("[QuestStore] acceptQuest failed (fallback)", error);
-      const mock = mockActionResponse(id, "accepted");
+      console.error("[QuestStore] acceptQuest failed", error);
       set((state) => ({
-        quests: mock.success ? replaceQuest(state.quests, mock.quest) : state.quests,
         isLoading: false,
-        error: "クエスト受諾に失敗しました（モック更新）",
+        error: "クエスト受諾に失敗しました",
       }));
     }
   },
@@ -142,12 +129,10 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("[QuestStore] startQuest failed (fallback)", error);
-      const mock = mockActionResponse(id, "in_progress");
+      console.error("[QuestStore] startQuest failed", error);
       set((state) => ({
-        quests: mock.success ? replaceQuest(state.quests, mock.quest) : state.quests,
         isLoading: false,
-        error: "クエスト開始に失敗しました（モック更新）",
+        error: "クエスト開始に失敗しました",
       }));
     }
   },
@@ -167,14 +152,12 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
         selectedQuestId: null,
       }));
     } catch (error) {
-      console.error("[QuestStore] completeQuest failed (fallback)", error);
-      const mock = mockActionResponse(id, "completed");
+      console.error("[QuestStore] completeQuest failed", error);
       set((state) => ({
-        quests: mock.success ? replaceQuest(state.quests, mock.quest) : state.quests,
         isLoading: false,
         showCompleteModal: false,
         selectedQuestId: null,
-        error: "クエスト完了に失敗しました（モック更新）",
+        error: "クエスト完了に失敗しました",
       }));
     }
   },
@@ -192,12 +175,10 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("[QuestStore] skipQuest failed (fallback)", error);
-      const mock = mockActionResponse(id, "skipped");
+      console.error("[QuestStore] skipQuest failed", error);
       set((state) => ({
-        quests: mock.success ? replaceQuest(state.quests, mock.quest) : state.quests,
         isLoading: false,
-        error: "クエストスキップに失敗しました（モック更新）",
+        error: "クエストスキップに失敗しました",
       }));
     }
   },
