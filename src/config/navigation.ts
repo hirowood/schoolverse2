@@ -28,6 +28,21 @@ export const MAIN_NAV_ITEMS: NavItem[] = [
     description: "タスク・進捗・ベンチマークをまとめて確認",
   },
   {
+    label: "マイステータス",
+    href: "/profile",
+    description: "レベル・XP・コイン・ステータスを確認",
+  },
+  {
+    label: "実績",
+    href: "/achievements",
+    description: "カテゴリ別の実績と報酬受取",
+  },
+  {
+    label: "XP履歴",
+    href: "/xp-history",
+    description: "獲得ログとソース別の集計",
+  },
+  {
     label: "カリキュラムマップ",
     href: "/curriculum-map",
     description: "資格・技術ライン・思考スキルを俯瞰するマップ",
