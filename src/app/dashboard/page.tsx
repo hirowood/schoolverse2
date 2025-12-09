@@ -7,9 +7,12 @@ import {
   DashboardSkeleton,
   GameStatusCard,
   TodayQuestsCard,
+  TodayTasksCard,
   CredoProgressCard,
   RecentAchievementsCard,
   QuickAccessGrid,
+  TimeTrackerCard,
+  DailyGoalCard,
 } from "./_components";
 
 export default function DashboardPage() {
@@ -34,10 +37,15 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-12">
-        <div className="space-y-4 lg:col-span-8">
+        <div className="space-y-4 lg:col-span-5">
           <TodayQuestsCard />
+          <TodayTasksCard />
         </div>
         <div className="space-y-4 lg:col-span-4">
+          <TimeTrackerCard />
+          <DailyGoalCard />
+        </div>
+        <div className="space-y-4 lg:col-span-3">
           <GameStatusCard />
           <CredoProgressCard />
           <RecentAchievementsCard />
