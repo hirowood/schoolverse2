@@ -28,6 +28,11 @@ export const MAIN_NAV_ITEMS: NavItem[] = [
     description: "タスク・進捗・ベンチマークをまとめて確認",
   },
   {
+    label: "今日のクエスト",
+    href: "/quests",
+    description: "AI生成と定型クエストで日次アクションを促進",
+  },
+  {
     label: "マイステータス",
     href: "/profile",
     description: "レベル・XP・コイン・ステータスを確認",
