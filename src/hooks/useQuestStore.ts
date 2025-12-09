@@ -121,7 +121,7 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
       }));
     } catch (error) {
       console.error("[QuestStore] acceptQuest failed", error);
-      set((state) => ({
+      set(() => ({
         isLoading: false,
         error: "クエスト受諾に失敗しました",
       }));
@@ -138,7 +138,7 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
       }));
     } catch (error) {
       console.error("[QuestStore] startQuest failed", error);
-      set((state) => ({
+      set(() => ({
         isLoading: false,
         error: "クエスト開始に失敗しました",
       }));
@@ -170,7 +170,7 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
       }));
     } catch (error) {
       console.error("[QuestStore] completeQuest failed", error);
-      set((state) => ({
+      set(() => ({
         isLoading: false,
         showCompleteModal: false,
         selectedQuestId: null,
@@ -193,7 +193,7 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
       }));
     } catch (error) {
       console.error("[QuestStore] skipQuest failed", error);
-      set((state) => ({
+      set(() => ({
         isLoading: false,
         error: "クエストスキップに失敗しました",
       }));

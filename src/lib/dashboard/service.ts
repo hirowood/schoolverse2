@@ -55,7 +55,12 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
         status: true,
         xpReward: true,
         estimatedMinutes: true,
-        progressPercent: true,
+        priority: true,
+        order: true,
+        acceptedAt: true,
+        startedAt: true,
+        completedAt: true,
+        skippedAt: true,
       },
     }),
     prisma.studyTask.findMany({
@@ -119,14 +124,40 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
   const todayQuests = {
     total: quests.length,
     completed: quests.filter((q) => q.status === "completed").length,
-    quests: quests.map((q) => ({
-      id: q.id,
-      title: q.title,
-      category: q.category,
-      status: q.status as DashboardSummary["todayQuests"]["quests"][number]["status"],
-      xpReward: q.xpReward,
-      progressPercent: q.progressPercent ?? undefined,
-    })),
+    inProgress: quests.filter((q) => q.status === "in_progress").length,
+    pending: quests.filter((q) => q.status === "pending" || q.status === "accepted").length,
+    skipped: quests.filter((q) => q.status === "skipped").length,
+    totalXpEarned: quests.filter((q) => q.status === "completed").reduce((sum, q) => sum + (q.xpReward ?? 0), 0),
+    totalXpPossible: quests.reduce((sum, q) => sum + (q.xpReward ?? 0), 0),
+    completionRate: quests.length === 0 ? 0 : Math.round((quests.filter((q) => q.status === "completed").length / quests.length) * 100),
+
+    quests: quests.map((q) => {
+      const progressPercent =
+        q.startedAt && q.estimatedMinutes
+          ? Math.min(
+              100,
+              Math.round(
+                (Math.max(
+                  0,
+                  Math.min(
+                    q.estimatedMinutes,
+                    Math.round((Date.now() - q.startedAt.getTime()) / 60000),
+                  ),
+                ) /
+                  q.estimatedMinutes) *
+                  100,
+              ),
+            )
+          : undefined;
+      return {
+        id: q.id,
+        title: q.title,
+        category: q.category,
+        status: q.status as DashboardSummary["todayQuests"]["quests"][number]["status"],
+        xpReward: q.xpReward,
+        progressPercent,
+      };
+    }),
   };
 
   const todayTasks = {

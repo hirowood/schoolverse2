@@ -1,3 +1,4 @@
+import type { AIGeneratedQuest } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { QUEST_CATEGORIES, type QuestCategory } from "@/lib/constants/quest-categories";
 import type {
@@ -7,7 +8,6 @@ import type {
   TodayQuest,
   TodayQuestsResponse,
 } from "@/types/quest";
-import { addDays } from "@/features/plan/utils/date";
 import { getRequiredXpForLevel } from "@/lib/gamification/level-system";
 
 const DIFFICULTY_META: Record<QuestDifficulty, { label: string }> = {
@@ -23,21 +23,19 @@ const getJstRange = (base = new Date()) => {
   return { start, end };
 };
 
-const toTodayQuest = (quest: any): TodayQuest => {
+const toTodayQuest = (quest: AIGeneratedQuest & { progressPercent?: number }): TodayQuest => {
   const category = (quest.category ?? "learning") as QuestCategory;
   const catMeta = QUEST_CATEGORIES[category];
   const difficulty = (quest.difficulty ?? "easy") as QuestDifficulty;
   const diffMeta = DIFFICULTY_META[difficulty] ?? DIFFICULTY_META.easy;
 
-  const startedAt = quest.startedAt ? new Date(quest.startedAt).toISOString() : undefined;
+  const startedAtDate = quest.startedAt ?? undefined;
+  const startedAt = startedAtDate ? startedAtDate.toISOString() : undefined;
   const elapsedMinutes =
-    startedAt && quest.estimatedMinutes
+    startedAtDate && quest.estimatedMinutes
       ? Math.max(
           0,
-          Math.min(
-            quest.estimatedMinutes,
-            Math.round((Date.now() - new Date(quest.startedAt).getTime()) / 60000),
-          ),
+          Math.min(quest.estimatedMinutes, Math.round((Date.now() - startedAtDate.getTime()) / 60000)),
         )
       : undefined;
   const progressPercent =
@@ -64,7 +62,7 @@ const toTodayQuest = (quest: any): TodayQuest => {
     relatedCredo: quest.relatedCredo ?? undefined,
     priority: quest.priority ?? 0,
     order: quest.order ?? 0,
-    status: quest.status,
+    status: quest.status as TodayQuest["status"],
     acceptedAt: quest.acceptedAt ? new Date(quest.acceptedAt).toISOString() : undefined,
     startedAt,
     completedAt: quest.completedAt ? new Date(quest.completedAt).toISOString() : undefined,
@@ -95,7 +93,9 @@ export async function getTodayQuests(userId: string): Promise<TodayQuestsRespons
   const inProgress = questsMapped.filter((q) => q.status === "in_progress").length;
   const pending = questsMapped.filter((q) => q.status === "pending" || q.status === "accepted").length;
   const skipped = questsMapped.filter((q) => q.status === "skipped").length;
-  const totalXpEarned = questsMapped.filter((q) => q.status === "completed").reduce((sum, q) => sum + (q.xpReward ?? 0), 0);
+  const totalXpEarned = questsMapped
+    .filter((q) => q.status === "completed")
+    .reduce((sum, q) => sum + (q.xpReward ?? 0), 0);
   const totalXpPossible = questsMapped.reduce((sum, q) => sum + (q.xpReward ?? 0), 0);
   const completionRate = total === 0 ? 0 : Math.round((completed / total) * 100);
 
@@ -156,7 +156,7 @@ const applyXp = async (userId: string, xp: number, quest: { id: string; title: s
     const current = profile ?? (await tx.userGameProfile.create({ data: { userId } }));
     let level = current.level;
     let currentXp = current.currentXp + xp;
-    let totalXp = current.totalXp + xp;
+    const totalXp = current.totalXp + xp;
     let requiredXp = getRequiredXpForLevel(level);
     let levelUp = false;
     while (currentXp >= requiredXp) {

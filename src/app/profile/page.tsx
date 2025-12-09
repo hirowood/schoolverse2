@@ -14,7 +14,7 @@ export default function ProfilePage() {
   useEffect(() => {
     void fetchProfile();
     void refreshXpHistory();
-  }, []);
+  }, [fetchProfile, refreshXpHistory]);
 
   if (!profile || !stats) {
     return (

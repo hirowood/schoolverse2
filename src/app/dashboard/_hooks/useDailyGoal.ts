@@ -12,22 +12,13 @@ type UseDailyGoalReturn = {
 };
 
 export function useDailyGoal(): UseDailyGoalReturn {
-  const [goal, setGoal] = useState("");
-  const [weeklyGoal, setWeeklyGoal] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
   const todayKey = `dashboard-goal-${getToday()}`;
+  const initialGoal =
+    typeof window === "undefined" ? "" : window.localStorage.getItem(todayKey) ?? "";
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem(todayKey);
-    if (stored !== null) {
-      setGoal(stored);
-      setIsSaved(stored.length > 0);
-    } else {
-      setGoal("");
-      setIsSaved(false);
-    }
-  }, [todayKey]);
+  const [goal, setGoal] = useState(initialGoal);
+  const [weeklyGoal, setWeeklyGoal] = useState<string | null>(null);
+  const [isSaved, setIsSaved] = useState(initialGoal.trim().length > 0);
 
   useEffect(() => {
     let active = true;

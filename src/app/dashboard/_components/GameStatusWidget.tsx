@@ -10,7 +10,7 @@ export function GameStatusWidget() {
   useEffect(() => {
     void fetchProfile();
     void refreshXpHistory();
-  }, []);
+  }, [fetchProfile, refreshXpHistory]);
 
   if (!profile || !stats) return null;
 

@@ -3,8 +3,8 @@
 import { QuestCategoryBadge } from "@/components/quests/QuestCategoryBadge";
 import { QuestDifficultyStars } from "@/components/quests/QuestDifficultyStars";
 import { QuestProgressBar } from "@/components/quests/QuestProgressBar";
-import { CATEGORY_META, DIFFICULTY_META, formatMinutes, formatXp } from "@/lib/quests/formatters";
-import type { TodayQuest } from "@/types/quest";
+import { CATEGORY_META, formatMinutes, formatXp } from "@/lib/quests/formatters";
+import type { QuestCategory, TodayQuest } from "@/types/quest";
 
 type Props = {
   quest: TodayQuest;
@@ -16,8 +16,8 @@ type Props = {
 };
 
 export function QuestCard({ quest, onAccept, onStart, onComplete, onSkip, onSelect }: Props) {
-  const category = CATEGORY_META[quest.category];
-  const difficulty = DIFFICULTY_META[quest.difficulty];
+  const categoryKey = (quest.category as QuestCategory) ?? "learning";
+  const category = CATEGORY_META[categoryKey] ?? CATEGORY_META.learning;
 
   const actions = () => {
     if (quest.status === "completed") {
@@ -34,7 +34,7 @@ export function QuestCard({ quest, onAccept, onStart, onComplete, onSkip, onSele
             onClick={() => onComplete?.(quest.id)}
             className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700"
           >
-            完了する ✓
+            完了する
           </button>
           <button
             type="button"
@@ -63,7 +63,7 @@ export function QuestCard({ quest, onAccept, onStart, onComplete, onSkip, onSele
             onClick={() => onStart?.(quest.id)}
             className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-slate-800"
           >
-            {quest.status === "accepted" ? "開始する ▶" : "今すぐ取り組む ▶"}
+            {quest.status === "accepted" ? "開始する" : "今すぐ取り組む"}
           </button>
           <button
             type="button"
@@ -78,17 +78,21 @@ export function QuestCard({ quest, onAccept, onStart, onComplete, onSkip, onSele
     return null;
   };
 
+  const handleSelect = () => onSelect?.(quest.id);
+
   return (
     <div
       className={`flex flex-col gap-3 rounded-2xl border ${category.border} bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md`}
-      onClick={() => onSelect?.(quest.id)}
+      onClick={handleSelect}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === "Enter" && onSelect?.(quest.id)}
+      onKeyDown={(e) => e.key === "Enter" && handleSelect()}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-lg">{category.icon}</div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-lg">
+            {category.icon || "🎯"}
+          </div>
           <div>
             <div className="text-base font-semibold text-slate-900">{quest.title}</div>
             <div className="text-xs text-slate-600">{quest.description}</div>
@@ -118,7 +122,9 @@ export function QuestCard({ quest, onAccept, onStart, onComplete, onSkip, onSele
         <QuestProgressBar value={quest.progressPercent} max={100} />
       )}
       {quest.status === "completed" && quest.completedAt && (
-        <div className="text-xs font-semibold text-emerald-700">✅ 完了済み ({new Date(quest.completedAt).toLocaleTimeString()})</div>
+        <div className="text-xs font-semibold text-emerald-700">
+          ✅ 完了済み ({new Date(quest.completedAt).toLocaleTimeString()})
+        </div>
       )}
 
       <div className="pt-2">{actions()}</div>

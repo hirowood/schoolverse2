@@ -23,7 +23,7 @@ export default function AchievementsPage() {
 
   useEffect(() => {
     void fetchAchievements();
-  }, []);
+  }, [fetchAchievements]);
 
   const inProgress = useMemo(
     () => achievements.filter((a) => !a.isCompleted && a.progressPercent > 0),

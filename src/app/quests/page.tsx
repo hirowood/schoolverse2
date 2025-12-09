@@ -23,7 +23,6 @@ const formatDateLabel = () => {
 export default function QuestsPage() {
   const {
     quests,
-    summary,
     filter,
     isLoading,
     error,
@@ -35,11 +34,7 @@ export default function QuestsPage() {
     fetchTodayQuests,
     setFilter,
     regenerateQuests,
-    acceptQuest,
-    startQuest,
     completeQuest,
-    skipQuest,
-    openCompleteModal,
     closeCompleteModal,
     openRegenerateModal,
     closeRegenerateModal,

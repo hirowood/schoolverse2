@@ -40,7 +40,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     }
   },
 
-  refreshSection: async (_section) => {
+  refreshSection: async (section) => {
+    void section;
     // モック段階では全体再取得
     await get().fetchSummary();
   },

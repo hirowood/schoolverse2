@@ -75,6 +75,7 @@ export type QuestActionResponse = {
   quest: TodayQuest;
   xpEarned?: number;
   levelUp?: boolean;
+  newLevel?: number;
   newAchievements?: string[];
 };
 

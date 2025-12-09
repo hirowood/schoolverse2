@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   let level = mockProfileResponse.profile.level;
   let currentXp = mockProfileResponse.profile.currentXp + xpGain;
   let xpToNextLevel = mockProfileResponse.profile.xpToNextLevel;
-  let totalXp = mockProfileResponse.profile.totalXp + xpGain;
+  const totalXp = mockProfileResponse.profile.totalXp + xpGain;
 
   if (currentXp >= xpToNextLevel) {
     level += 1;

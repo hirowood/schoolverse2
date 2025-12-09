@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { AchievementWithProgress } from "@/types/gamification";
 import { formatNumber } from "@/lib/gamification/formatters";
 
@@ -11,16 +11,16 @@ type AchievementToastProps = {
 export function AchievementToast({ achievement, onClaim, onDismiss }: AchievementToastProps) {
   const [exiting, setExiting] = useState(false);
 
-  const close = () => {
+  const close = useCallback(() => {
     if (exiting) return;
     setExiting(true);
     setTimeout(onDismiss, 200);
-  };
+  }, [exiting, onDismiss]);
 
   useEffect(() => {
     const timer = setTimeout(close, 10_000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [close]);
 
   return (
     <div
@@ -36,7 +36,7 @@ export function AchievementToast({ achievement, onClaim, onDismiss }: Achievemen
           className="text-xs text-slate-500 hover:text-slate-700"
           aria-label="閉じる"
         >
-          ✕
+          ×
         </button>
       </div>
 

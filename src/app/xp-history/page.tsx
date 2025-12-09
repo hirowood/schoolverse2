@@ -9,7 +9,7 @@ export default function XpHistoryPage() {
 
   useEffect(() => {
     void refreshXpHistory();
-  }, []);
+  }, [refreshXpHistory]);
 
   const sourceTotals = useMemo(() => {
     const totals: Record<string, number> = {};
