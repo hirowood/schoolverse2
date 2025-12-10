@@ -8,6 +8,11 @@ export type NavItem = {
 // 左ナビとモバイルボトムバーで共通利用するメニュー定義
 export const MAIN_NAV_ITEMS: NavItem[] = [
   {
+    label: "バーチャル教室 (3D)",
+    href: "/virtual-classroom",
+    description: "3D教室とバトルHUDのベータ版",
+  },
+  {
     label: "AIコーチ",
     href: "/coach",
     description: "AIコーチとの対話で学習を進めましょう",
