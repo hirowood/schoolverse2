@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect } from "react";
 import { useDashboardStore } from "@/hooks/useDashboardStore";
 import {
@@ -14,6 +15,11 @@ import {
   TimeTrackerCard,
   DailyGoalCard,
 } from "./_components";
+
+const Canvas3D = dynamic(
+  () => import("@/components/virtual-classroom/Room3D/Canvas3D").then((m) => m.Canvas3D),
+  { ssr: false, loading: () => <div className="h-[520px] w-full rounded-2xl border border-slate-200 bg-slate-100 shadow-inner" /> },
+);
 
 export default function DashboardPage() {
   const { summary, isLoading, error, fetchSummary } = useDashboardStore();
@@ -51,6 +57,17 @@ export default function DashboardPage() {
           <RecentAchievementsCard />
         </div>
       </div>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between pb-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Virtual Classroom</p>
+            <h2 className="text-lg font-bold text-slate-900">教室の3Dプレビュー</h2>
+            <p className="text-sm text-slate-600">ログイン直後に教室の雰囲気を確認できます。</p>
+          </div>
+        </div>
+        <Canvas3D />
+      </section>
 
       <QuickAccessGrid />
     </main>
