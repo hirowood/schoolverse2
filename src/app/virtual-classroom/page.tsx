@@ -1,14 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { BattleHUD } from "@/components/virtual-classroom/HUD/BattleHUD";
-
-// 3Dキャンバスは未実装のためプレースホルダ（将来R3Fに置き換え）
-const PlaceholderCanvas = dynamic(async () => () => (
-  <div className="h-[480px] w-full rounded-2xl border border-dashed border-slate-300 bg-slate-100 flex items-center justify-center text-slate-500">
-    3D教室キャンバス（将来R3Fで置き換え）
-  </div>
-), { ssr: false });
+import { Canvas3D } from "@/components/virtual-classroom/Room3D/Canvas3D";
 
 export default function VirtualClassroomPage() {
   return (
@@ -19,12 +12,12 @@ export default function VirtualClassroomPage() {
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Virtual Classroom</p>
             <h1 className="text-2xl font-bold text-slate-900">バーチャル教室（ベータ）</h1>
             <p className="mt-1 text-sm text-slate-600">
-              遭遇APIとバトルオーバーレイをHUDに統合したベータ版です。3D描画は今後R3Fで置き換え予定。
+              遭遇APIとバトルオーバーレイをHUDに統合したベータ版です。3D描画は簡易キャンバスで表現（R3F置換予定）。
             </p>
           </div>
         </div>
 
-        <PlaceholderCanvas />
+        <Canvas3D />
       </div>
 
       <BattleHUD />

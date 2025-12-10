@@ -41,15 +41,15 @@ export function RewardToast({ open, isCorrect, monsterName, xp, bonusXp, coins, 
         <div className="grid grid-cols-3 border-t border-white/70 text-center text-sm font-semibold text-slate-800">
           <div className="px-2 py-2">
             <p className="text-[11px] uppercase text-slate-500">XP</p>
-            <p>{xp}</p>
+            <p className="animate-pulse text-emerald-700">{xp}</p>
           </div>
           <div className="border-l border-white/70 px-2 py-2">
             <p className="text-[11px] uppercase text-slate-500">Bonus</p>
-            <p>+{bonusXp}</p>
+            <p className="text-emerald-600">+{bonusXp}</p>
           </div>
           <div className="border-l border-white/70 px-2 py-2">
             <p className="text-[11px] uppercase text-slate-500">Coins</p>
-            <p>{coins}</p>
+            <p className="text-amber-600">{coins}</p>
           </div>
         </div>
       </div>
