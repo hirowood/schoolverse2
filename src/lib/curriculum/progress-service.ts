@@ -6,6 +6,8 @@ import type {
   UserLessonProgress,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { addXp, ensureGameProfile } from "@/lib/gamification/xp-service";
+import { evaluateCurriculumAchievements } from "@/lib/gamification/achievement-service";
 import type { StaticLessonDefinition } from "./lessons-static";
 import { STATIC_CURRICULUM_LESSONS } from "./lessons-static";
 
@@ -33,6 +35,31 @@ export type CompletionResult = {
   bonusXpEarned: number;
   unlockedLessons: string[];
   stats: UserCurriculumStats;
+  achievementsUnlocked: Array<{
+    slug: string;
+    name: string;
+    icon: string;
+    xpReward: number;
+    coinReward: number;
+    titleReward?: string | null;
+  }>;
+  gamification: {
+    totalXpGained: number;
+    levelUp: {
+      occurred: boolean;
+      previousLevel: number;
+      newLevel: number;
+      bonusXp: number;
+    };
+    achievementsUnlocked: Array<{
+      slug: string;
+      name: string;
+      icon: string;
+      xpReward: number;
+      coinReward: number;
+      titleReward?: string | null;
+    }>;
+  };
 };
 
 const toLessonRecord = (definition: StaticLessonDefinition) => ({
@@ -369,6 +396,7 @@ export const completeLesson = async (user: UserIdentity, slug: string, data: Com
     const current = progressMap.get(lesson.id);
     if (current?.status === "completed") {
       const stats = await updateStats(tx, user, lessons, Array.from(progressMap.values()), current.completedAt ?? now);
+      const profile = await ensureGameProfile(tx, user.id);
       return {
         lesson,
         progress: current,
@@ -376,6 +404,17 @@ export const completeLesson = async (user: UserIdentity, slug: string, data: Com
         bonusXpEarned: current.bonusXpEarned,
         unlockedLessons: [],
         stats,
+        achievementsUnlocked: [],
+        gamification: {
+          totalXpGained: 0,
+          levelUp: {
+            occurred: false,
+            previousLevel: profile.level,
+            newLevel: profile.level,
+            bonusXp: 0,
+          },
+          achievementsUnlocked: [],
+        },
       };
     }
 
@@ -414,6 +453,50 @@ export const completeLesson = async (user: UserIdentity, slug: string, data: Com
     const unlockedLessons = await unlockLessons(tx, user, lessons, progressMap);
     const stats = await updateStats(tx, user, lessons, Array.from(progressMap.values()), now);
 
+    const xpResult = await addXp(
+      user.id,
+      xp.base + xp.bonus,
+      {
+        source: "curriculum_complete",
+        sourceId: lesson.id,
+        category: lesson.lineId,
+        description: `Lesson: ${lesson.title}`,
+      },
+      tx,
+    );
+
+    const achievementResult = await evaluateCurriculumAchievements(
+      user,
+      {
+        totalLessonsCompleted: stats.totalLessonsCompleted,
+        totalTimeSpentSec: stats.totalTimeSpentSec,
+        lineProgress: stats.lineProgress as Record<string, { completed: number; total: number }>,
+      },
+      tx,
+    );
+
+    let achievementXpResult:
+      | {
+          totalXpGained: number;
+          levelUp: { occurred: boolean; previousLevel: number; newLevel: number; bonusXp: number };
+          profile: { level: number };
+        }
+      | null = null;
+    if (achievementResult.totalXpReward > 0) {
+      achievementXpResult = await addXp(
+        user.id,
+        achievementResult.totalXpReward,
+        {
+          source: "achievement_unlock",
+          description: "カリキュラム実績",
+        },
+        tx,
+      );
+    }
+
+    const levelUp = achievementXpResult?.levelUp.occurred ? achievementXpResult.levelUp : xpResult.levelUp;
+    const totalXpGained = xpResult.totalXpGained + (achievementXpResult?.totalXpGained ?? 0);
+
     return {
       lesson,
       progress: updated,
@@ -421,6 +504,12 @@ export const completeLesson = async (user: UserIdentity, slug: string, data: Com
       bonusXpEarned: xp.bonus,
       unlockedLessons,
       stats,
+      achievementsUnlocked: achievementResult.unlocked,
+      gamification: {
+        totalXpGained,
+        levelUp,
+        achievementsUnlocked: achievementResult.unlocked,
+      },
     };
   });
 };

@@ -37,9 +37,10 @@ export async function POST(request: Request, { params }: { params: { slug: strin
         xpEarned: result.xpEarned,
         bonusXpEarned: result.bonusXpEarned,
         unlockedLessons: result.unlockedLessons,
-        achievementsUnlocked: [],
+        achievementsUnlocked: result.achievementsUnlocked,
         progress: result.progress,
         stats: result.stats,
+        gamification: result.gamification,
       },
     });
   } catch (error) {

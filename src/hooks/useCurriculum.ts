@@ -59,6 +59,26 @@ export type LessonState = {
   isUnlocked: boolean;
 };
 
+export type AchievementUnlock = {
+  slug: string;
+  name: string;
+  icon: string;
+  xpReward: number;
+  coinReward: number;
+  titleReward?: string | null;
+};
+
+export type GamificationResult = {
+  totalXpGained: number;
+  levelUp: {
+    occurred: boolean;
+    previousLevel: number;
+    newLevel: number;
+    bonusXp: number;
+  };
+  achievementsUnlocked: AchievementUnlock[];
+};
+
 export type ProgressOverview = {
   stats: {
     totalLessonsCompleted: number;
@@ -98,7 +118,7 @@ type CurriculumState = {
   fetchProgress: () => Promise<void>;
   loadLesson: (slug: string) => Promise<void>;
   startLesson: (slug: string) => Promise<void>;
-  completeLesson: (slug: string, payload: CompletePayload) => Promise<void>;
+  completeLesson: (slug: string, payload: CompletePayload) => Promise<GamificationResult | undefined>;
 };
 
 const fetchJson = async <T>(url: string, init?: RequestInit) => {
@@ -203,6 +223,7 @@ export const useCurriculum = create<CurriculumState>((set, get) => ({
           unlockedLessons: string[];
           progress: LessonProgress;
           stats: ProgressOverview["stats"];
+          gamification?: GamificationResult;
         };
       }>(`/api/curriculum/lessons/${slug}/complete`, {
         method: "POST",
@@ -223,9 +244,11 @@ export const useCurriculum = create<CurriculumState>((set, get) => ({
       // Refresh full progress to sync stats and unlocks
       await get().fetchProgress();
       set({ lessonActionLoading: false });
+      return data.data.gamification;
     } catch (error) {
       console.error("[Curriculum] completeLesson failed", error);
       set({ lessonActionLoading: false, lessonError: "レッスン完了に失敗しました" });
+      return undefined;
     }
   },
 }));
