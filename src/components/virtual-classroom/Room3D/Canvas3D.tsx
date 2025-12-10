@@ -34,7 +34,7 @@ export function Canvas3D() {
   const pressedKeysRef = useRef<Set<string>>(new Set());
   const lastTimeRef = useRef<number | null>(null);
   const yawRef = useRef<number>(Math.PI * 1.25); // 初期カメラ角度
-  const pitchRef = useRef<number>(-0.35);
+  const pitchRef = useRef<number>(0.35); // 上から見下ろす
   const distanceRef = useRef<number>(6);
   const draggingRef = useRef<boolean>(false);
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
@@ -128,9 +128,16 @@ export function Canvas3D() {
         (pressedKeysRef.current.has("w") || pressedKeysRef.current.has("arrowup") ? 1 : 0);
 
       if (moveX !== 0 || moveZ !== 0) {
-        const len = Math.hypot(moveX, moveZ) || 1;
-        box.position.x += (moveX / len) * speed * delta;
-        box.position.z += (moveZ / len) * speed * delta;
+        // カメラの向きに合わせた移動ベクトル (ゼルダ64風)
+        const forward = new THREE.Vector3(Math.sin(yawRef.current), 0, Math.cos(yawRef.current));
+        const right = new THREE.Vector3(forward.z, 0, -forward.x);
+        const moveVec = new THREE.Vector3()
+          .addScaledVector(right, moveX)
+          .addScaledVector(forward, moveZ);
+        const len = moveVec.length() || 1;
+        moveVec.divideScalar(len).multiplyScalar(speed * delta);
+
+        box.position.add(moveVec);
         // keep inside floor bounds
         box.position.x = THREE.MathUtils.clamp(box.position.x, -5.5, 5.5);
         box.position.z = THREE.MathUtils.clamp(box.position.z, -5.5, 5.5);
