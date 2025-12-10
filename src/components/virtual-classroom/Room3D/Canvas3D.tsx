@@ -31,6 +31,8 @@ export function Canvas3D() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const frameRef = useRef<number | null>(null);
+  const pressedKeysRef = useRef<Set<string>>(new Set());
+  const lastTimeRef = useRef<number | null>(null);
   const supported = useMemo(() => hasWebGL(), []);
   const [mode, setMode] = useState<"3d" | "2d">(() => (supported ? "3d" : "2d"));
 
@@ -105,7 +107,31 @@ export function Canvas3D() {
     // Animate
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate);
-      const t = performance.now() * 0.001;
+      const now = performance.now();
+      const t = now * 0.001;
+
+      const last = lastTimeRef.current ?? now;
+      const delta = Math.min((now - last) / 1000, 0.05); // clamp delta for stability
+      lastTimeRef.current = now;
+
+      // WASD move the box on the floor plane
+      const speed = 2.5; // units per second
+      const moveX =
+        (pressedKeysRef.current.has("d") || pressedKeysRef.current.has("arrowright") ? 1 : 0) -
+        (pressedKeysRef.current.has("a") || pressedKeysRef.current.has("arrowleft") ? 1 : 0);
+      const moveZ =
+        (pressedKeysRef.current.has("s") || pressedKeysRef.current.has("arrowdown") ? 1 : 0) -
+        (pressedKeysRef.current.has("w") || pressedKeysRef.current.has("arrowup") ? 1 : 0);
+
+      if (moveX !== 0 || moveZ !== 0) {
+        const len = Math.hypot(moveX, moveZ) || 1;
+        box.position.x += (moveX / len) * speed * delta;
+        box.position.z += (moveZ / len) * speed * delta;
+        // keep inside floor bounds
+        box.position.x = THREE.MathUtils.clamp(box.position.x, -5.5, 5.5);
+        box.position.z = THREE.MathUtils.clamp(box.position.z, -5.5, 5.5);
+      }
+
       box.rotation.x = t * 0.6;
       box.rotation.y = t * 0.8;
       box.position.y = 0.6 + Math.sin(t) * 0.15;
@@ -131,6 +157,30 @@ export function Canvas3D() {
     };
   }, [supported, mode]);
 
+  // Keyboard controls for WASD / arrow keys
+  useEffect(() => {
+    if (!supported || mode !== "3d") return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
+        pressedKeysRef.current.add(key);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      pressedKeysRef.current.delete(key);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [supported, mode]);
+
   return (
     <div className="relative h-[360px] w-full overflow-hidden rounded-2xl border border-slate-300 bg-slate-100 shadow-inner">
       {mode === "3d" && supported && <div ref={containerRef} className="absolute inset-0" />}
@@ -140,6 +190,11 @@ export function Canvas3D() {
         <span className={`rounded-full px-3 py-1 text-[11px] font-bold text-white shadow ${mode === "3d" && supported ? "bg-emerald-500" : "bg-blue-500"}`}>
           {mode === "3d" && supported ? "3D Mode (three.js)" : "2D Mode"}
         </span>
+        {mode === "3d" && supported && (
+          <span className="rounded-md bg-white/80 px-2 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200 shadow-sm">
+            WASD / ↑↓←→ で移動
+          </span>
+        )}
       </div>
 
       <div className="absolute right-3 top-3 z-10 flex gap-2">
