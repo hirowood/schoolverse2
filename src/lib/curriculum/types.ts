@@ -1,5 +1,7 @@
 export type LessonType = "lecture" | "practice" | "quiz" | "project" | "discussion";
 
+export type LessonProgressStatus = "locked" | "available" | "in_progress" | "completed";
+
 export type CurriculumNode = {
   id: string;
   name: string;
@@ -20,6 +22,12 @@ export type CurriculumLine = {
   }>;
   missions?: string[];
   missionDetails?: LineMission[];
+};
+
+export type LineProgress = {
+  completed: number;
+  total: number;
+  percentage: number;
 };
 
 export type CareerLine = {

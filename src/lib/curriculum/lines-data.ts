@@ -36,6 +36,19 @@ export const CURRICULUM_LINES: CurriculumLine[] = [
     ],
   },
   {
+    id: "react-line",
+    title: "Reactカリキュラム",
+    summary: "コンポーネント設計からアプリ制作まで",
+    units: [
+      { id: "react-part1", title: "PART 1 Reactの基本を学ぶ" },
+      { id: "react-part2", title: "PART 2 小さなWebアプリを作る" },
+      { id: "react-part3", title: "PART 3 状態を賢く扱う" },
+      { id: "react-part4", title: "PART 4 オリジナルReactアプリに挑戦" },
+      { id: "react-part5", title: "PART 5 Next.js & API連携" },
+    ],
+    missions: ["ToDoアプリを作る", "状態管理とAPI連携を実装する"],
+  },
+  {
     id: "be-line",
     title: "バックエンドライン",
     summary: "APIとデータを設計・提供する",

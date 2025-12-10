@@ -37,44 +37,46 @@ enum MessageType {
 }
 
 model User {
-  id            String             @id @default(cuid())
-  email         String             @unique
-  passwordHash  String?
-  name          String?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  chatMessages  ChatMessage[]
-  credoLogs     CredoPracticeLog[]
-  notes         Note[]
-  studyTasks    StudyTask[]
-  profile       UserProfile?
-  weeklyReports WeeklyReport[]
-  mindMaps      MindMap[]
+  id                   String                 @id @default(cuid())
+  email                String                 @unique
+  passwordHash         String?
+  name                 String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  chatMessages         ChatMessage[]
+  credoLogs            CredoPracticeLog[]
+  notes                Note[]
+  studyTasks           StudyTask[]
+  profile              UserProfile?
+  weeklyReports        WeeklyReport[]
+  mindMaps             MindMap[]
   learningChatSessions LearningChatSession[]
-  chatRoomMemberships ChatRoomMember[]
-  chatRoomMessages    ChatRoomMessage[]
-  chatRoomReads       ChatRoomRead[]
-  goals              UserGoals?
-  dailyConditions    DailyCondition[]
-  dailyLifeLogs      DailyLifeLog[]
+  chatRoomMemberships  ChatRoomMember[]
+  chatRoomMessages     ChatRoomMessage[]
+  chatRoomReads        ChatRoomRead[]
+  goals                UserGoals?
+  dailyConditions      DailyCondition[]
+  dailyLifeLogs        DailyLifeLog[]
   learningAttitudeLogs LearningAttitudeLog[]
-  noteQualityLogs    NoteQualityLog[]
-  habitTrackers      HabitTracker[]
-  aiGeneratedQuests  AIGeneratedQuest[]
-  questGenerationLogs QuestGenerationLog[]
-  learningSessions    LearningSession[]
-  learningSummaries   DailyLearningSummary[]
-  userSkills          UserSkill[]
-  learningStats       UserLearningStats?
-  gameProfile         UserGameProfile?
-  xpTransactions      XpTransaction[]
-  achievements        UserAchievement[]
-  questProgress       QuestProgress[]
-  hostedRooms         VirtualRoom[]       @relation("RoomHost")
-  roomParticipations  RoomParticipant[]
-  roomMessages        RoomMessage[]
-  whiteboardSnapshots WhiteboardSnapshot[]
-  roomRecordings      RoomRecording[]
+  noteQualityLogs      NoteQualityLog[]
+  habitTrackers        HabitTracker[]
+  aiGeneratedQuests    AIGeneratedQuest[]
+  questGenerationLogs  QuestGenerationLog[]
+  learningSessions     LearningSession[]
+  learningSummaries    DailyLearningSummary[]
+  userSkills           UserSkill[]
+  lessonProgress       UserLessonProgress[]
+  curriculumStats      UserCurriculumStats?
+  learningStats        UserLearningStats?
+  gameProfile          UserGameProfile?
+  xpTransactions       XpTransaction[]
+  achievements         UserAchievement[]
+  questProgress        QuestProgress[]
+  hostedRooms          VirtualRoom[]          @relation("RoomHost")
+  roomParticipations   RoomParticipant[]
+  roomMessages         RoomMessage[]
+  whiteboardSnapshots  WhiteboardSnapshot[]
+  roomRecordings       RoomRecording[]
 }
 
 model CredoItem {
@@ -167,30 +169,30 @@ model WeeklyReport {
 }
 
 model Note {
-  id            String       @id @default(cuid())
-  userId        String
-  title         String?
-  content       String?
-  drawingData   Json?
-  imageFiles    Json?
-  ocrTexts      Json?
-  templateType  String?
-  templateData  Json?
-  tags          Json?
-  isShareable   Boolean      @default(false)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  relatedTaskId String?
-  aiAnalysis    Json?
-  aiSummary     String?
-  analyzedAt    DateTime?
-  autoTags      String[]     @default([])
-  ocrConfidence Float?
-  ocrRawText    String?
-  relatedTask   StudyTask?   @relation("NoteToTask", fields: [relatedTaskId], references: [id])
-  user          User         @relation(fields: [userId], references: [id])
-  ocrHistories  OcrHistory[]
-  mindMap       MindMap?
+  id              String           @id @default(cuid())
+  userId          String
+  title           String?
+  content         String?
+  drawingData     Json?
+  imageFiles      Json?
+  ocrTexts        Json?
+  templateType    String?
+  templateData    Json?
+  tags            Json?
+  isShareable     Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  relatedTaskId   String?
+  aiAnalysis      Json?
+  aiSummary       String?
+  analyzedAt      DateTime?
+  autoTags        String[]         @default([])
+  ocrConfidence   Float?
+  ocrRawText      String?
+  relatedTask     StudyTask?       @relation("NoteToTask", fields: [relatedTaskId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
+  ocrHistories    OcrHistory[]
+  mindMap         MindMap?
   noteQualityLogs NoteQualityLog[]
 
   @@index([userId, createdAt(sort: Desc)])
@@ -212,24 +214,24 @@ model OcrHistory {
 }
 
 model MindMap {
-  id            String       @id @default(cuid())
-  userId        String
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title         String       @default("無題のマインドマップ")
-  description   String?
-  viewportX     Float        @default(0)
-  viewportY     Float        @default(0)
-  viewportZoom  Float        @default(1)
-  theme         String       @default("default")
-  layoutType    String       @default("radial")
-  noteId        String?      @unique
-  note          Note?        @relation(fields: [noteId], references: [id], onDelete: SetNull)
-  nodes         MindMapNode[]
-  edges         MindMapEdge[]
-  isTemplate    Boolean      @default(false)
-  isShareable   Boolean      @default(false)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String        @default("無題のマインドマップ")
+  description  String?
+  viewportX    Float         @default(0)
+  viewportY    Float         @default(0)
+  viewportZoom Float         @default(1)
+  theme        String        @default("default")
+  layoutType   String        @default("radial")
+  noteId       String?       @unique
+  note         Note?         @relation(fields: [noteId], references: [id], onDelete: SetNull)
+  nodes        MindMapNode[]
+  edges        MindMapEdge[]
+  isTemplate   Boolean       @default(false)
+  isShareable  Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@index([userId])
   @@index([noteId])
@@ -286,37 +288,37 @@ model MindMapEdge {
 }
 
 model LearningChatSession {
-  id              String                @id @default(cuid())
-  userId          String
-  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title           String                @default("新しい相談")
-  mode            String                @default("learning")
-  category        String?
-  contextSummary  String?               @db.Text
-  totalTokens     Int                   @default(0)
-  isActive        Boolean               @default(true)
-  isPinned        Boolean               @default(false)
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  messages        LearningChatMessage[]
+  id             String                @id @default(cuid())
+  userId         String
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String                @default("新しい相談")
+  mode           String                @default("learning")
+  category       String?
+  contextSummary String?               @db.Text
+  totalTokens    Int                   @default(0)
+  isActive       Boolean               @default(true)
+  isPinned       Boolean               @default(false)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  messages       LearningChatMessage[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, mode])
 }
 
 model LearningChatMessage {
-  id         String               @id @default(cuid())
+  id         String              @id @default(cuid())
   sessionId  String
-  session    LearningChatSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session    LearningChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   role       String
-  content    String               @db.Text
-  tokenCount Int                  @default(0)
+  content    String              @db.Text
+  tokenCount Int                 @default(0)
   model      String?
   rating     Int?
   feedback   String?
   category   String?
   codeBlocks Json?
-  createdAt  DateTime             @default(now())
+  createdAt  DateTime            @default(now())
 
   @@index([sessionId, createdAt])
 }
@@ -337,7 +339,7 @@ model SystemPromptTemplate {
 
 model ChatRoom {
   id            String            @id @default(cuid())
-  type          String            // dm | group
+  type          String // dm | group
   title         String?
   createdBy     String
   createdAt     DateTime          @default(now())
@@ -352,29 +354,29 @@ model ChatRoom {
 }
 
 model ChatRoomMember {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   roomId     String
   userId     String
-  role       String   @default("member") // member | admin
-  joinedAt   DateTime @default(now())
+  role       String    @default("member") // member | admin
+  joinedAt   DateTime  @default(now())
   lastSeenAt DateTime?
-  room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room       ChatRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([roomId, userId])
   @@index([userId])
 }
 
 model ChatRoomMessage {
-  id          String        @id @default(cuid())
+  id          String         @id @default(cuid())
   roomId      String
   senderId    String
-  content     String        @db.Text
-  messageType String        @default("text")
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  room        ChatRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  sender      User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content     String         @db.Text
+  messageType String         @default("text")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  room        ChatRoom       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender      User           @relation(fields: [senderId], references: [id], onDelete: Cascade)
   reads       ChatRoomRead[]
 
   @@index([roomId, createdAt])
@@ -396,112 +398,180 @@ model ChatRoomRead {
 // ===== Learning Progress (Week 5) =====
 
 model LearningSession {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   category     String
   activityType String
   referenceId  String?
   startedAt    DateTime
   endedAt      DateTime?
-  durationSec  Int      @default(0)
-  isActive     Boolean  @default(true)
-  isPaused     Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  durationSec  Int       @default(0)
+  isActive     Boolean   @default(true)
+  isPaused     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([userId, startedAt])
   @@index([userId, category])
 }
 
 model DailyLearningSummary {
-  id               String   @id @default(cuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date             DateTime @db.Date
-  totalDurationSec Int      @default(0)
-  sessionCount     Int      @default(0)
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date              DateTime @db.Date
+  totalDurationSec  Int      @default(0)
+  sessionCount      Int      @default(0)
   categoryBreakdown Json?
-  isStreakDay      Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  isStreakDay       Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@unique([userId, date])
   @@index([userId, date(sort: Desc)])
 }
 
 model SkillDefinition {
-  id            String             @id @default(cuid())
+  id            String            @id @default(cuid())
   name          String
-  slug          String             @unique
+  slug          String            @unique
   description   String?
   category      String
   parentId      String?
-  parent        SkillDefinition?   @relation("SkillHierarchy", fields: [parentId], references: [id])
-  children      SkillDefinition[]  @relation("SkillHierarchy")
-  order         Int                @default(0)
+  parent        SkillDefinition?  @relation("SkillHierarchy", fields: [parentId], references: [id])
+  children      SkillDefinition[] @relation("SkillHierarchy")
+  order         Int               @default(0)
   icon          String?
   color         String?
-  requiredXp    Int                @default(100)
-  prerequisites String[]           @default([])
-  isActive      Boolean            @default(true)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  requiredXp    Int               @default(100)
+  prerequisites String[]          @default([])
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
   userSkills    UserSkill[]
 
   @@index([category])
 }
 
 model UserSkill {
-  id          String           @id @default(cuid())
+  id          String          @id @default(cuid())
   userId      String
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   skillId     String
-  skill       SkillDefinition  @relation(fields: [skillId], references: [id], onDelete: Cascade)
-  currentXp   Int              @default(0)
-  level       Int              @default(0)
-  status      String           @default("locked")
+  skill       SkillDefinition @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  currentXp   Int             @default(0)
+  level       Int             @default(0)
+  status      String          @default("locked")
   startedAt   DateTime?
   completedAt DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   @@unique([userId, skillId])
   @@index([userId, status])
 }
 
+// ===== Curriculum Progress =====
+
+model CurriculumLesson {
+  id               String   @id @default(cuid())
+  lineId           String
+  unitId           String?
+  slug             String   @unique
+  title            String
+  description      String?  @db.Text
+  content          String?  @db.Text
+  lessonType       String   @default("lecture")
+  order            Int      @default(0)
+  estimatedMinutes Int      @default(60)
+  xpReward         Int      @default(50)
+  bonusXp          Int      @default(0)
+  prerequisites    String[] @default([])
+  tags             String[] @default([])
+  resources        Json?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  userProgress UserLessonProgress[]
+
+  @@index([lineId])
+  @@index([lineId, order])
+  @@index([slug])
+}
+
+model UserLessonProgress {
+  id             String           @id @default(cuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId       String
+  lesson         CurriculumLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  status         String           @default("locked")
+  startedAt      DateTime?
+  completedAt    DateTime?
+  totalTimeSpent Int              @default(0)
+  attempts       Int              @default(0)
+  score          Int?
+  notes          String?          @db.Text
+  rating         Int?
+  xpEarned       Int              @default(0)
+  bonusXpEarned  Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([userId, lessonId])
+  @@index([userId, status])
+  @@index([userId, completedAt])
+}
+
+model UserCurriculumStats {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalLessonsCompleted Int       @default(0)
+  totalTimeSpentSec     Int       @default(0)
+  totalXpFromCurriculum Int       @default(0)
+  currentStreak         Int       @default(0)
+  longestStreak         Int       @default(0)
+  lastStudiedAt         DateTime?
+  lineProgress          Json      @default("{}")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
 model UserLearningStats {
-  id                   String   @id @default(cuid())
-  userId               String   @unique
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  totalLearningTimeSec Int      @default(0)
-  totalSessionCount    Int      @default(0)
-  totalSkillsCompleted Int      @default(0)
-  currentStreak        Int      @default(0)
-  longestStreak        Int      @default(0)
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalLearningTimeSec Int       @default(0)
+  totalSessionCount    Int       @default(0)
+  totalSkillsCompleted Int       @default(0)
+  currentStreak        Int       @default(0)
+  longestStreak        Int       @default(0)
   lastActiveDate       DateTime?
-  weeklyTimeSec        Int      @default(0)
-  monthlyTimeSec       Int      @default(0)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  weeklyTimeSec        Int       @default(0)
+  monthlyTimeSec       Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 // ===== Gamification (Week 6) =====
 
 model UserGameProfile {
-  id          String            @id @default(cuid())
-  userId      String            @unique
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  level       Int               @default(1)
-  currentXp   Int               @default(0)
-  totalXp     Int               @default(0)
-  rank        String            @default("beginner")
-  coins       Int               @default(0)
-  gems        Int               @default(0)
-  title       String?
-  avatarFrame String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id            String            @id @default(cuid())
+  userId        String            @unique
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level         Int               @default(1)
+  currentXp     Int               @default(0)
+  totalXp       Int               @default(0)
+  rank          String            @default("beginner")
+  coins         Int               @default(0)
+  gems          Int               @default(0)
+  title         String?
+  avatarFrame   String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
   questProgress QuestProgress[]
   achievements  UserAchievement[]
 }
@@ -521,47 +591,47 @@ model XpTransaction {
 }
 
 model AchievementDefinition {
-  id             String            @id @default(cuid())
-  name           String
-  slug           String            @unique
-  description    String
-  icon           String
-  rarity         String            @default("common")
-  conditionType  String
-  conditionValue Int
-  conditionJson  Json?
-  xpReward       Int               @default(0)
-  coinReward     Int               @default(0)
-  titleReward    String?
-  category       String
-  order          Int               @default(0)
-  isHidden       Boolean           @default(false)
-  isActive       Boolean           @default(true)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id               String            @id @default(cuid())
+  name             String
+  slug             String            @unique
+  description      String
+  icon             String
+  rarity           String            @default("common")
+  conditionType    String
+  conditionValue   Int
+  conditionJson    Json?
+  xpReward         Int               @default(0)
+  coinReward       Int               @default(0)
+  titleReward      String?
+  category         String
+  order            Int               @default(0)
+  isHidden         Boolean           @default(false)
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   userAchievements UserAchievement[]
 }
 
 model UserAchievement {
-  id              String               @id @default(cuid())
+  id              String                @id @default(cuid())
   userId          String
-  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   achievementId   String
   achievement     AchievementDefinition @relation(fields: [achievementId], references: [id], onDelete: Cascade)
   gameProfileId   String
-  gameProfile     UserGameProfile      @relation(fields: [gameProfileId], references: [id], onDelete: Cascade)
-  currentProgress Int                  @default(0)
-  isCompleted     Boolean              @default(false)
+  gameProfile     UserGameProfile       @relation(fields: [gameProfileId], references: [id], onDelete: Cascade)
+  currentProgress Int                   @default(0)
+  isCompleted     Boolean               @default(false)
   completedAt     DateTime?
-  isRewardClaimed Boolean              @default(false)
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  isRewardClaimed Boolean               @default(false)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
 
   @@unique([userId, achievementId])
 }
 
 model QuestDefinition {
-  id            String   @id @default(cuid())
+  id            String          @id @default(cuid())
   name          String
   description   String
   questType     String
@@ -569,14 +639,14 @@ model QuestDefinition {
   objectiveType String
   targetValue   Int
   xpReward      Int
-  coinReward    Int      @default(0)
-  difficulty    String   @default("normal")
-  minLevel      Int      @default(1)
+  coinReward    Int             @default(0)
+  difficulty    String          @default("normal")
+  minLevel      Int             @default(1)
   maxLevel      Int?
-  weight        Int      @default(100)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  weight        Int             @default(100)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
   questProgress QuestProgress[]
 }
 
@@ -603,32 +673,32 @@ model QuestProgress {
 // ===== AIパーソナライズド・デイリークエスト（Phase 1 基盤） =====
 
 model UserGoals {
-  id                  String   @id @default(cuid())
-  userId              String   @unique
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  grade               String?
-  birthDate           DateTime?
-  strongSubjects      String[] @default([])
-  weakSubjects        String[] @default([])
-  dreamJob            String?
-  dreamJobReason      String?
-  targetSchool        String?
-  targetDepartment    String?
-  examType            String?
-  yearlyGoal          String?
-  monthlyGoal         String?
-  weeklyGoal          String?
-  preferredStudyTime  String?
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grade                String?
+  birthDate            DateTime?
+  strongSubjects       String[]  @default([])
+  weakSubjects         String[]  @default([])
+  dreamJob             String?
+  dreamJobReason       String?
+  targetSchool         String?
+  targetDepartment     String?
+  examType             String?
+  yearlyGoal           String?
+  monthlyGoal          String?
+  weeklyGoal           String?
+  preferredStudyTime   String?
   studyDurationMinutes Int?
-  learningStyle       String?
+  learningStyle        String?
   preferredEnvironment String?
-  interests           String[] @default([])
-  currentChallenges   String[] @default([])
-  targetSleepHours    Float?
-  targetWakeUpTime    String?
-  targetBedTime       String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  interests            String[]  @default([])
+  currentChallenges    String[]  @default([])
+  targetSleepHours     Float?
+  targetWakeUpTime     String?
+  targetBedTime        String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 model DailyCondition {
@@ -657,36 +727,36 @@ model DailyCondition {
 }
 
 model DailyLifeLog {
-  id                 String   @id @default(cuid())
+  id                 String    @id @default(cuid())
   userId             String
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date               DateTime @db.Date
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date               DateTime  @db.Date
   wakeUpTime         DateTime?
   bedTime            DateTime?
   actualSleepHours   Float?
   sleepQuality       Int?
-  hadNap             Boolean  @default(false)
+  hadNap             Boolean   @default(false)
   napDurationMin     Int?
-  hadBreakfast       Boolean  @default(false)
+  hadBreakfast       Boolean   @default(false)
   breakfastTime      DateTime?
   breakfastQuality   Int?
-  hadLunch           Boolean  @default(false)
+  hadLunch           Boolean   @default(false)
   lunchTime          DateTime?
   lunchQuality       Int?
-  hadDinner          Boolean  @default(false)
+  hadDinner          Boolean   @default(false)
   dinnerTime         DateTime?
   dinnerQuality      Int?
-  snackCount         Int      @default(0)
+  snackCount         Int       @default(0)
   waterIntakeMl      Int?
   caffeineIntake     Int?
   exerciseMinutes    Int?
   exerciseType       String?
   stepsCount         Int?
-  roomCleaned        Boolean  @default(false)
-  madebed            Boolean  @default(false)
-  tookShower         Boolean  @default(false)
-  wentOutside        Boolean  @default(false)
-  gotSunlight        Boolean  @default(false)
+  roomCleaned        Boolean   @default(false)
+  madebed            Boolean   @default(false)
+  tookShower         Boolean   @default(false)
+  wentOutside        Boolean   @default(false)
+  gotSunlight        Boolean   @default(false)
   totalScreenTimeMin Int?
   studyScreenTimeMin Int?
   snsScreenTimeMin   Int?
@@ -694,118 +764,118 @@ model DailyLifeLog {
   morningMood        Int?
   afternoonMood      Int?
   eveningMood        Int?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@unique([userId, date])
   @@index([userId, date])
 }
 
 model LearningAttitudeLog {
-  id                   String   @id @default(cuid())
-  userId               String
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date                 DateTime @db.Date
-  focusSessionsCount   Int      @default(0)
-  totalFocusMinutes    Int      @default(0)
-  longestFocusMinutes  Int      @default(0)
-  averageFocusMinutes  Float?
-  distractionCount     Int      @default(0)
-  didPlanning          Boolean  @default(false)
-  didPreview           Boolean  @default(false)
-  didActiveListening   Boolean  @default(false)
-  didReview            Boolean  @default(false)
-  didSelfTest          Boolean  @default(false)
-  didSpacedRepetition  Boolean  @default(false)
-  setDailyGoal         Boolean  @default(false)
-  achievedDailyGoal    Boolean  @default(false)
-  goalAchievementRate  Float?
-  didReflection        Boolean  @default(false)
-  reflectionNote       String?
-  questionsAsked       Int      @default(0)
-  questionsAnswered    Int      @default(0)
-  questionsList        String[] @default([])
-  confusionPoints      String[] @default([])
-  studyLocation        String?
-  studyWithOthers      Boolean  @default(false)
-  usedTimer            Boolean  @default(false)
-  subjectsStudied      String[] @default([])
-  mainSubject          String?
-  mainSubjectMinutes   Int?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date                DateTime @db.Date
+  focusSessionsCount  Int      @default(0)
+  totalFocusMinutes   Int      @default(0)
+  longestFocusMinutes Int      @default(0)
+  averageFocusMinutes Float?
+  distractionCount    Int      @default(0)
+  didPlanning         Boolean  @default(false)
+  didPreview          Boolean  @default(false)
+  didActiveListening  Boolean  @default(false)
+  didReview           Boolean  @default(false)
+  didSelfTest         Boolean  @default(false)
+  didSpacedRepetition Boolean  @default(false)
+  setDailyGoal        Boolean  @default(false)
+  achievedDailyGoal   Boolean  @default(false)
+  goalAchievementRate Float?
+  didReflection       Boolean  @default(false)
+  reflectionNote      String?
+  questionsAsked      Int      @default(0)
+  questionsAnswered   Int      @default(0)
+  questionsList       String[] @default([])
+  confusionPoints     String[] @default([])
+  studyLocation       String?
+  studyWithOthers     Boolean  @default(false)
+  usedTimer           Boolean  @default(false)
+  subjectsStudied     String[] @default([])
+  mainSubject         String?
+  mainSubjectMinutes  Int?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@unique([userId, date])
   @@index([userId, date])
 }
 
 model NoteQualityLog {
-  id                String   @id @default(cuid())
-  noteId            String
-  note              Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hasTitle          Boolean  @default(false)
-  hasHeadings       Boolean  @default(false)
-  headingCount      Int      @default(0)
-  hasBulletPoints   Boolean  @default(false)
-  hasNumberedList   Boolean  @default(false)
-  hasTable          Boolean  @default(false)
-  hasHighlights     Boolean  @default(false)
-  wordCount         Int      @default(0)
-  sentenceCount     Int      @default(0)
-  paragraphCount    Int      @default(0)
-  imageCount        Int      @default(0)
-  linkCount         Int      @default(0)
-  codeBlockCount    Int      @default(0)
-  usedTemplate      String?
+  id                 String    @id @default(cuid())
+  noteId             String
+  note               Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hasTitle           Boolean   @default(false)
+  hasHeadings        Boolean   @default(false)
+  headingCount       Int       @default(0)
+  hasBulletPoints    Boolean   @default(false)
+  hasNumberedList    Boolean   @default(false)
+  hasTable           Boolean   @default(false)
+  hasHighlights      Boolean   @default(false)
+  wordCount          Int       @default(0)
+  sentenceCount      Int       @default(0)
+  paragraphCount     Int       @default(0)
+  imageCount         Int       @default(0)
+  linkCount          Int       @default(0)
+  codeBlockCount     Int       @default(0)
+  usedTemplate       String?
   templateCompletion Float?
-  tagCount          Int      @default(0)
-  hasCategory       Boolean  @default(false)
-  hasSubject        Boolean  @default(false)
-  reviewCount       Int      @default(0)
-  lastReviewedAt    DateTime?
-  editCount         Int      @default(0)
-  addedAfterCreation Boolean  @default(false)
-  aiQualityScore    Int?
-  aiCompleteness    Int?
-  aiClarity         Int?
-  aiOrganization    Int?
-  aiSuggestions     String[] @default([])
-  overallScore      Int?
-  qualityLevel      String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  tagCount           Int       @default(0)
+  hasCategory        Boolean   @default(false)
+  hasSubject         Boolean   @default(false)
+  reviewCount        Int       @default(0)
+  lastReviewedAt     DateTime?
+  editCount          Int       @default(0)
+  addedAfterCreation Boolean   @default(false)
+  aiQualityScore     Int?
+  aiCompleteness     Int?
+  aiClarity          Int?
+  aiOrganization     Int?
+  aiSuggestions      String[]  @default([])
+  overallScore       Int?
+  qualityLevel       String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@index([userId])
   @@index([noteId])
 }
 
 model HabitTracker {
-  id               String   @id @default(cuid())
+  id               String            @id @default(cuid())
   userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   name             String
   description      String?
   icon             String?
   color            String?
   category         String
   frequency        String
-  customDays       Int[]    @default([])
-  targetCount      Int      @default(1)
+  customDays       Int[]             @default([])
+  targetCount      Int               @default(1)
   targetTime       String?
-  reminderEnabled  Boolean  @default(false)
+  reminderEnabled  Boolean           @default(false)
   reminderTime     String?
-  xpReward         Int      @default(10)
-  streakBonusXp    Int      @default(5)
-  isActive         Boolean  @default(true)
-  isPaused         Boolean  @default(false)
+  xpReward         Int               @default(10)
+  streakBonusXp    Int               @default(5)
+  isActive         Boolean           @default(true)
+  isPaused         Boolean           @default(false)
   pausedUntil      DateTime?
-  currentStreak    Int      @default(0)
-  longestStreak    Int      @default(0)
-  totalCompletions Int      @default(0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  currentStreak    Int               @default(0)
+  longestStreak    Int               @default(0)
+  totalCompletions Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   completions      HabitCompletion[]
 
   @@index([userId])
@@ -813,18 +883,18 @@ model HabitTracker {
 }
 
 model HabitCompletion {
-  id             String        @id @default(cuid())
-  habitId        String
-  habit          HabitTracker  @relation(fields: [habitId], references: [id], onDelete: Cascade)
-  userId         String
-  date           DateTime      @db.Date
-  completed      Boolean       @default(false)
-  completedAt    DateTime?
-  count          Int           @default(0)
-  note           String?
-  skipped        Boolean       @default(false)
-  skippedReason  String?
-  createdAt      DateTime      @default(now())
+  id            String       @id @default(cuid())
+  habitId       String
+  habit         HabitTracker @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  userId        String
+  date          DateTime     @db.Date
+  completed     Boolean      @default(false)
+  completedAt   DateTime?
+  count         Int          @default(0)
+  note          String?
+  skipped       Boolean      @default(false)
+  skippedReason String?
+  createdAt     DateTime     @default(now())
 
   @@unique([habitId, date])
   @@index([habitId, date])
@@ -832,10 +902,10 @@ model HabitCompletion {
 }
 
 model AIGeneratedQuest {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date             DateTime @db.Date
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date             DateTime  @db.Date
   title            String
   description      String
   category         String
@@ -891,32 +961,32 @@ model QuestGenerationLog {
 }
 
 model VirtualRoom {
-  id               String        @id @default(cuid())
-  name             String        @db.VarChar(100)
-  description      String?       @db.VarChar(500)
+  id               String            @id @default(cuid())
+  name             String            @db.VarChar(100)
+  description      String?           @db.VarChar(500)
   type             RoomType
-  maxParticipants  Int           @default(20)
-  isPublic         Boolean       @default(false)
+  maxParticipants  Int               @default(20)
+  isPublic         Boolean           @default(false)
   password         String?
-  environmentId    String        @default("default_classroom")
-  spawnPosition    Json          @default(dbgenerated("'{}'::jsonb"))
-  allowVideo       Boolean       @default(true)
-  allowAudio       Boolean       @default(true)
-  allowScreenShare Boolean       @default(true)
-  allowChat        Boolean       @default(true)
-  status           RoomStatus    @default(WAITING)
+  environmentId    String            @default("default_classroom")
+  spawnPosition    Json              @default(dbgenerated("'{}'::jsonb"))
+  allowVideo       Boolean           @default(true)
+  allowAudio       Boolean           @default(true)
+  allowScreenShare Boolean           @default(true)
+  allowChat        Boolean           @default(true)
+  status           RoomStatus        @default(WAITING)
   startedAt        DateTime?
   endedAt          DateTime?
   scheduledAt      DateTime?
   scheduledEndAt   DateTime?
   hostId           String
-  host             User          @relation("RoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  host             User              @relation("RoomHost", fields: [hostId], references: [id], onDelete: Cascade)
   participants     RoomParticipant[]
   whiteboards      Whiteboard[]
   messages         RoomMessage[]
   recordings       RoomRecording[]
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([hostId])
   @@index([status])
@@ -927,29 +997,29 @@ model VirtualRoom {
 }
 
 model RoomParticipant {
-  id             String         @id @default(cuid())
-  roomId         String
-  userId         String
-  role           ParticipantRole @default(STUDENT)
-  avatarId       String?
-  avatarColor    String         @default("#4F46E5")
-  displayName    String?        @db.VarChar(50)
-  positionX      Float          @default(0)
-  positionY      Float          @default(0)
-  positionZ      Float          @default(5)
-  rotationY      Float          @default(0)
-  currentAction  String         @default("idle")
-  currentSeatId  String?
-  isVideoOn      Boolean        @default(false)
-  isAudioOn      Boolean        @default(false)
-  isSharingScreen Boolean       @default(false)
-  isHandRaised   Boolean        @default(false)
-  isConnected    Boolean        @default(true)
-  lastSeenAt     DateTime       @default(now())
-  joinedAt       DateTime       @default(now())
-  leftAt         DateTime?
-  room           VirtualRoom    @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String          @id @default(cuid())
+  roomId          String
+  userId          String
+  role            ParticipantRole @default(STUDENT)
+  avatarId        String?
+  avatarColor     String          @default("#4F46E5")
+  displayName     String?         @db.VarChar(50)
+  positionX       Float           @default(0)
+  positionY       Float           @default(0)
+  positionZ       Float           @default(5)
+  rotationY       Float           @default(0)
+  currentAction   String          @default("idle")
+  currentSeatId   String?
+  isVideoOn       Boolean         @default(false)
+  isAudioOn       Boolean         @default(false)
+  isSharingScreen Boolean         @default(false)
+  isHandRaised    Boolean         @default(false)
+  isConnected     Boolean         @default(true)
+  lastSeenAt      DateTime        @default(now())
+  joinedAt        DateTime        @default(now())
+  leftAt          DateTime?
+  room            VirtualRoom     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([roomId, userId])
   @@index([roomId])
@@ -958,53 +1028,53 @@ model RoomParticipant {
 }
 
 model Whiteboard {
-  id             String                 @id @default(cuid())
+  id             String               @id @default(cuid())
   name           String
   roomId         String
-  room           VirtualRoom            @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  elements       Json                   @default(dbgenerated("'{}'::jsonb"))
-  appState       Json                   @default(dbgenerated("'{}'::jsonb"))
-  isLocked       Boolean                @default(false)
-  allowedEditors String[]               @default([])
+  room           VirtualRoom          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  elements       Json                 @default(dbgenerated("'{}'::jsonb"))
+  appState       Json                 @default(dbgenerated("'{}'::jsonb"))
+  isLocked       Boolean              @default(false)
+  allowedEditors String[]             @default([])
   snapshots      WhiteboardSnapshot[]
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 
   @@index([roomId])
 }
 
 model WhiteboardSnapshot {
-  id            String      @id @default(cuid())
-  whiteboardId  String
-  createdById   String
-  elements      Json        @default(dbgenerated("'{}'::jsonb"))
-  appState      Json        @default(dbgenerated("'{}'::jsonb"))
-  thumbnailUrl  String?
-  description   String?
-  createdAt     DateTime    @default(now())
-  whiteboard    Whiteboard  @relation(fields: [whiteboardId], references: [id], onDelete: Cascade)
-  createdBy     User        @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  id           String     @id @default(cuid())
+  whiteboardId String
+  createdById  String
+  elements     Json       @default(dbgenerated("'{}'::jsonb"))
+  appState     Json       @default(dbgenerated("'{}'::jsonb"))
+  thumbnailUrl String?
+  description  String?
+  createdAt    DateTime   @default(now())
+  whiteboard   Whiteboard @relation(fields: [whiteboardId], references: [id], onDelete: Cascade)
+  createdBy    User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([whiteboardId])
 }
 
 model RoomMessage {
-  id          String      @id @default(cuid())
-  roomId      String
-  senderId    String
-  type        MessageType @default(TEXT)
-  content     String
-  metadata    Json?
-  isQuestion  Boolean     @default(false)
-  isAnswered  Boolean     @default(false)
-  answeredBy  String?
-  answeredAt  DateTime?
-  isEdited    Boolean     @default(false)
-  isDeleted   Boolean     @default(false)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  room        VirtualRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  sender      User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  id         String      @id @default(cuid())
+  roomId     String
+  senderId   String
+  type       MessageType @default(TEXT)
+  content    String
+  metadata   Json?
+  isQuestion Boolean     @default(false)
+  isAnswered Boolean     @default(false)
+  answeredBy String?
+  answeredAt DateTime?
+  isEdited   Boolean     @default(false)
+  isDeleted  Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  room       VirtualRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender     User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([roomId, createdAt(sort: Desc)])
   @@index([roomId, isQuestion])
@@ -1012,7 +1082,7 @@ model RoomMessage {
 }
 
 model RoomRecording {
-  id             String       @id @default(cuid())
+  id             String      @id @default(cuid())
   roomId         String
   recordedById   String
   videoUrl       String?
@@ -1022,24 +1092,24 @@ model RoomRecording {
   fileSize       Int?
   startedAt      DateTime?
   endedAt        DateTime?
-  createdAt      DateTime     @default(now())
-  room           VirtualRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  recordedBy     User         @relation(fields: [recordedById], references: [id], onDelete: Cascade)
+  createdAt      DateTime    @default(now())
+  room           VirtualRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  recordedBy     User        @relation(fields: [recordedById], references: [id], onDelete: Cascade)
 
   @@index([roomId])
 }
 
 model AvatarTemplate {
-  id            String   @id @default(cuid())
-  name          String
-  category      String
-  modelUrl      String
-  thumbnailUrl  String?
-  customizable  Json?
-  defaultColor  String?
-  isPremium     Boolean  @default(false)
-  isActive      Boolean  @default(true)
-  sortOrder     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  category     String
+  modelUrl     String
+  thumbnailUrl String?
+  customizable Json?
+  defaultColor String?
+  isPremium    Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
