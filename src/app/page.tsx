@@ -1,8 +1,14 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { FormEvent, useEffect, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { Modal } from "@/components/ui/Modal";
+
+const Canvas3D = dynamic(
+  () => import("@/components/virtual-classroom/Room3D/Canvas3D").then((m) => m.Canvas3D),
+  { ssr: false, loading: () => <div className="h-[320px] w-full rounded-2xl border border-slate-800 bg-slate-900/40 shadow-inner" /> },
+);
 
 export default function HomePage() {
   const { data: session, status } = useSession();
@@ -110,6 +116,23 @@ export default function HomePage() {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="mt-6 w-full max-w-4xl">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-left">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Virtual Classroom</p>
+            <h2 className="text-lg font-bold text-white">教室の3Dプレビュー</h2>
+            <p className="text-sm text-slate-300">ログイン前に教室の雰囲気を確認できます。</p>
+          </div>
+          <a
+            href="/virtual-classroom"
+            className="rounded-md border border-emerald-300/60 bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/30"
+          >
+            もっと見る
+          </a>
+        </div>
+        <Canvas3D />
       </div>
 
       <Modal
