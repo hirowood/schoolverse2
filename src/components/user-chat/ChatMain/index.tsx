@@ -19,6 +19,7 @@ type Props = {
   onMarkRead: (messageId: string) => Promise<void>;
   getUserStatus: (userId: string) => "online" | "away" | "offline";
   currentUserId?: string | null;
+  onBack?: () => void;
 };
 
 export function ChatMain({
@@ -33,6 +34,7 @@ export function ChatMain({
   onMarkRead,
   getUserStatus,
   currentUserId,
+  onBack,
 }: Props) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -58,7 +60,7 @@ export function ChatMain({
 
   return (
     <section className="flex h-full flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
-      <ChatHeader room={room} getUserStatus={getUserStatus} />
+      <ChatHeader room={room} getUserStatus={getUserStatus} onBack={onBack} />
 
       <div className="flex-1 min-h-0 overflow-hidden">
         <MessageList

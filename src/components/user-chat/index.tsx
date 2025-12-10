@@ -32,6 +32,7 @@ export function UserChat() {
 
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
+  const [showSidebar, setShowSidebar] = useState(true);
 
   const activeTyping = useMemo(() => typingUsers.map((u) => u.name), [typingUsers]);
 
@@ -47,40 +48,53 @@ export function UserChat() {
   };
 
   const handleSelectUser = async (user: UserPreview) => {
-    await createRoom(user.id, "dm");
-    setSearchResults([]);
-    setSearch("");
+    const room = await createRoom(user.id, "dm");
+    if (room) {
+      setShowSidebar(false);
+      setSearchResults([]);
+      setSearch("");
+    }
+  };
+
+  const handleSelectRoom = async (roomId: string) => {
+    await selectRoom(roomId);
+    setShowSidebar(false);
   };
 
   return (
-    <div className="grid min-h-[520px] grid-cols-1 gap-4 lg:grid-cols-[320px,1fr]">
-      <ChatSidebar
-        rooms={rooms}
-        loadingRooms={loadingRooms}
-        searchResults={searchResults}
-        onSearchUsers={handleSearch}
-        onSelectUser={handleSelectUser}
-        onSelectRoom={selectRoom}
-        activeRoomId={activeRoom?.id ?? null}
-        currentUserId={currentUser?.id}
-        getUserStatus={getUserStatus}
-        error={error}
-        onClearError={() => setError(null)}
-      />
+    <div className="min-h-[520px] space-y-4 lg:grid lg:grid-cols-[320px,1fr] lg:gap-4 lg:space-y-0">
+      <div className={`${showSidebar ? "block" : "hidden"} lg:block`}>
+        <ChatSidebar
+          rooms={rooms}
+          loadingRooms={loadingRooms}
+          searchResults={searchResults}
+          onSearchUsers={handleSearch}
+          onSelectUser={handleSelectUser}
+          onSelectRoom={handleSelectRoom}
+          activeRoomId={activeRoom?.id ?? null}
+          currentUserId={currentUser?.id}
+          getUserStatus={getUserStatus}
+          error={error}
+          onClearError={() => setError(null)}
+        />
+      </div>
 
-      <ChatMain
-        room={activeRoom}
-        messages={messages}
-        typingUsers={typingUsers}
-        isLoadingMessages={loadingMessages}
-        hasMoreMessages={hasMoreMessages}
-        onLoadMore={loadMore}
-        onSendMessage={handleSend}
-        onTyping={sendTyping}
-        onMarkRead={markRead}
-        getUserStatus={getUserStatus}
-        currentUserId={currentUser?.id}
-      />
+      <div className={`${showSidebar ? "hidden" : "block"} lg:block`}>
+        <ChatMain
+          room={activeRoom}
+          messages={messages}
+          typingUsers={typingUsers}
+          isLoadingMessages={loadingMessages}
+          hasMoreMessages={hasMoreMessages}
+          onLoadMore={loadMore}
+          onSendMessage={handleSend}
+          onTyping={sendTyping}
+          onMarkRead={markRead}
+          getUserStatus={getUserStatus}
+          currentUserId={currentUser?.id}
+          onBack={() => setShowSidebar(true)}
+        />
+      </div>
     </div>
   );
 }

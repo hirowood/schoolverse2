@@ -45,6 +45,7 @@ export type ChatRoom = {
   lastMessageAt?: string | null;
   members?: ChatRoomMember[];
   lastMessage?: ChatRoomMessage | null;
+  unreadCount?: number;
 };
 
 export type RoomListResponse = {

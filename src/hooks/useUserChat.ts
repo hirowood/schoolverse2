@@ -19,6 +19,7 @@ export function useUserChat() {
   const [searchResults, setSearchResults] = useState<UserPreview[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null } | null>(null);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const subscriptionRef = useRef<ReturnType<SupabaseClient["channel"]> | null>(null);
 
   const activeRoom = useMemo(
@@ -39,6 +40,25 @@ export function useUserChat() {
     currentUser?.name ?? currentUser?.email ?? null,
   );
 
+  const fetchUnreadCounts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/user-chat/rooms/unread-counts");
+      if (!res.ok) return;
+      const data = (await res.json()) as { counts?: Record<string, number> };
+      if (data?.counts) {
+        setUnreadCounts(data.counts);
+        setRooms((prev) =>
+          prev.map((room) => ({
+            ...room,
+            unreadCount: data.counts?.[room.id] ?? room.unreadCount ?? 0,
+          })),
+        );
+      }
+    } catch (e) {
+      console.error("Failed to fetch unread counts", e);
+    }
+  }, []);
+
   const fetchRooms = useCallback(
     async (type?: ChatRoomType | "all") => {
       setLoadingRooms(true);
@@ -48,17 +68,24 @@ export function useUserChat() {
         const res = await fetch(`/api/user-chat/rooms?${qs.toString()}`);
         if (!res.ok) throw new Error("ルーム取得に失敗しました");
         const data = (await res.json()) as { rooms: ChatRoom[] };
-        setRooms(data.rooms ?? []);
-        if (!activeRoomId && data.rooms?.length) {
-          setActiveRoomId(data.rooms[0].id);
+        const roomsData = data.rooms ?? [];
+        const mappedUnread = roomsData.reduce<Record<string, number>>((acc, room) => {
+          acc[room.id] = room.unreadCount ?? 0;
+          return acc;
+        }, {});
+        setUnreadCounts(mappedUnread);
+        setRooms(roomsData);
+        if (!activeRoomId && roomsData.length) {
+          setActiveRoomId(roomsData[0].id);
         }
+        void fetchUnreadCounts();
       } catch (e) {
         setError((e as Error).message);
       } finally {
         setLoadingRooms(false);
       }
     },
-    [activeRoomId],
+    [activeRoomId, fetchUnreadCounts],
   );
 
   const fetchMessages = useCallback(
@@ -130,6 +157,8 @@ export function useUserChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messageId }),
       });
+      setUnreadCounts((prev) => ({ ...prev, [activeRoomId]: 0 }));
+      setRooms((prev) => prev.map((room) => (room.id === activeRoomId ? { ...room, unreadCount: 0 } : room)));
     },
     [activeRoomId, recordActivity],
   );
@@ -230,6 +259,13 @@ export function useUserChat() {
     };
   }, [fetchRooms, supabase]);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      void fetchUnreadCounts();
+    }, 30_000);
+    return () => clearInterval(timer);
+  }, [fetchUnreadCounts]);
+
   // Presence: room tracking
   useEffect(() => {
     setCurrentRoom(activeRoomId ?? null);
@@ -240,6 +276,7 @@ export function useUserChat() {
     activeRoom,
     activeRoomId,
     messages,
+    unreadCounts,
     typingUsers,
     loadingRooms,
     loadingMessages,

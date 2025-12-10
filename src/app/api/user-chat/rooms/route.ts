@@ -63,18 +63,33 @@ export async function GET(request: Request) {
   const trimmed = hasNext ? rooms.slice(0, limit) : rooms;
   const nextCursor = hasNext ? trimmed[trimmed.length - 1]?.id ?? null : null;
 
+  const roomsWithUnread = await Promise.all(
+    trimmed.map(async (room) => {
+      const myMembership = room.members.find((m) => m.userId === user.id);
+      const unreadCount = await prisma.chatRoomMessage.count({
+        where: {
+          roomId: room.id,
+          senderId: { not: user.id },
+          createdAt: { gt: myMembership?.lastSeenAt ?? new Date(0) },
+        },
+      });
+      return {
+        ...room,
+        unreadCount,
+        lastMessage: room.messages[0]
+          ? {
+            ...room.messages[0],
+            createdAt: room.messages[0].createdAt.toISOString(),
+            updatedAt: room.messages[0].updatedAt.toISOString(),
+          }
+          : null,
+        messages: undefined,
+      };
+    }),
+  );
+
   return NextResponse.json({
-    rooms: trimmed.map((room) => ({
-      ...room,
-      lastMessage: room.messages[0]
-        ? {
-          ...room.messages[0],
-          createdAt: room.messages[0].createdAt.toISOString(),
-          updatedAt: room.messages[0].updatedAt.toISOString(),
-        }
-        : null,
-      messages: undefined,
-    })),
+    rooms: roomsWithUnread,
     nextCursor,
   });
 }
