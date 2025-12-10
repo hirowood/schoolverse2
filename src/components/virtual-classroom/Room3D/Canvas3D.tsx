@@ -33,6 +33,11 @@ export function Canvas3D() {
   const frameRef = useRef<number | null>(null);
   const pressedKeysRef = useRef<Set<string>>(new Set());
   const lastTimeRef = useRef<number | null>(null);
+  const yawRef = useRef<number>(Math.PI * 1.25); // 初期カメラ角度
+  const pitchRef = useRef<number>(-0.35);
+  const distanceRef = useRef<number>(6);
+  const draggingRef = useRef<boolean>(false);
+  const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
   const supported = useMemo(() => hasWebGL(), []);
   const [mode, setMode] = useState<"3d" | "2d">(() => (supported ? "3d" : "2d"));
 
@@ -45,9 +50,8 @@ export function Canvas3D() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color("#f8fafc");
 
-    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-    camera.position.set(6, 6, 10);
-    camera.lookAt(0, 0, 0);
+    const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 200);
+    camera.position.set(6, 4, 10);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
@@ -135,6 +139,19 @@ export function Canvas3D() {
       box.rotation.x = t * 0.6;
       box.rotation.y = t * 0.8;
       box.position.y = 0.6 + Math.sin(t) * 0.15;
+      // FPSライクな視点: プレイヤーを中心にカメラを回す
+      const r = distanceRef.current;
+      const yaw = yawRef.current;
+      const pitch = THREE.MathUtils.clamp(pitchRef.current, -1.2, 1.2);
+      const offset = new THREE.Vector3(
+        Math.sin(yaw) * Math.cos(pitch),
+        Math.sin(pitch),
+        Math.cos(yaw) * Math.cos(pitch),
+      ).multiplyScalar(r);
+      const target = new THREE.Vector3(box.position.x, box.position.y + 0.35, box.position.z);
+      camera.position.copy(target).add(offset);
+      camera.lookAt(target);
+
       renderer.render(scene, camera);
     };
     animate();
@@ -154,6 +171,57 @@ export function Canvas3D() {
       if (renderer.domElement.parentElement) {
         renderer.domElement.parentElement.removeChild(renderer.domElement);
       }
+    };
+  }, [supported, mode]);
+
+  // Mouse look & zoom: FPS-like camera pivoting around the player
+  useEffect(() => {
+    if (!supported || mode !== "3d") return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      draggingRef.current = true;
+      lastPointerRef.current = { x: e.clientX, y: e.clientY };
+      container.style.cursor = "grabbing";
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!draggingRef.current || !lastPointerRef.current) return;
+      const dx = e.clientX - lastPointerRef.current.x;
+      const dy = e.clientY - lastPointerRef.current.y;
+      lastPointerRef.current = { x: e.clientX, y: e.clientY };
+
+      const sensitivity = 0.005;
+      yawRef.current += dx * sensitivity;
+      pitchRef.current = THREE.MathUtils.clamp(pitchRef.current - dy * sensitivity, -1.2, 1.2);
+    };
+
+    const stopDrag = () => {
+      draggingRef.current = false;
+      lastPointerRef.current = null;
+      container.style.cursor = "grab";
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      const delta = e.deltaY > 0 ? 1 : -1;
+      distanceRef.current = THREE.MathUtils.clamp(distanceRef.current + delta * 0.6, 3, 12);
+    };
+
+    container.style.cursor = "grab";
+    container.addEventListener("mousedown", handleMouseDown);
+    container.addEventListener("mousemove", handleMouseMove);
+    container.addEventListener("mouseup", stopDrag);
+    container.addEventListener("mouseleave", stopDrag);
+    container.addEventListener("wheel", handleWheel, { passive: true });
+
+    return () => {
+      container.style.cursor = "default";
+      container.removeEventListener("mousedown", handleMouseDown);
+      container.removeEventListener("mousemove", handleMouseMove);
+      container.removeEventListener("mouseup", stopDrag);
+      container.removeEventListener("mouseleave", stopDrag);
+      container.removeEventListener("wheel", handleWheel);
     };
   }, [supported, mode]);
 
@@ -182,7 +250,7 @@ export function Canvas3D() {
   }, [supported, mode]);
 
   return (
-    <div className="relative h-[360px] w-full overflow-hidden rounded-2xl border border-slate-300 bg-slate-100 shadow-inner">
+    <div className="relative h-[70vh] min-h-[480px] w-full overflow-hidden rounded-2xl border border-slate-300 bg-slate-100 shadow-inner">
       {mode === "3d" && supported && <div ref={containerRef} className="absolute inset-0" />}
       {(mode === "2d" || !supported) && <FlatPlaceholder />}
 
