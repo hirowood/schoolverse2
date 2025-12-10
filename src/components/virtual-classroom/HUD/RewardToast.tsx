@@ -22,6 +22,12 @@ export function RewardToast({ open, isCorrect, monsterName, xp, bonusXp, coins, 
           isCorrect ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"
         }`}
       >
+        {/* シンプルなスパーク演出 */}
+        <div className="pointer-events-none absolute -top-2 left-3 flex gap-1">
+          <span className="h-2 w-2 animate-ping rounded-full bg-emerald-400" />
+          <span className="h-2 w-2 animate-ping rounded-full bg-amber-400" style={{ animationDelay: "100ms" }} />
+          <span className="h-2 w-2 animate-ping rounded-full bg-blue-400" style={{ animationDelay: "200ms" }} />
+        </div>
         <div className="flex items-center justify-between px-4 py-3">
           <div>
             <p className="text-xs font-semibold uppercase text-slate-500">Battle Result</p>

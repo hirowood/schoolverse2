@@ -690,4 +690,4 @@ type VirtualRoomStore = {
 
 ---
 
-**次のアクション**: Phase 2 継続（AI問題生成・3D/HUD本番統合・報酬演出強化）
+**次のアクション**: Phase 2 継続（AI問題品質向上・R3F導入による3D/HUD本番化・報酬演出強化）
