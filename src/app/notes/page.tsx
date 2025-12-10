@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState, Suspense } from "react";
+import type { ChangeEvent, FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import NotesOnboarding from "@/components/notes/NotesOnboarding";
 import SkeletonBlock from "@/components/ui/SkeletonBlock";
 import OcrEnhanced from "@/components/notes/OcrEnhanced";

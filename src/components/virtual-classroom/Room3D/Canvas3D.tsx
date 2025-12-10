@@ -1,8 +1,8 @@
 "use client";
 
-// Lightweight three.js renderer without @react-three/fiber to avoid React hook conflicts.
+// 3D/2D 切り替え可能な軽量 three.js 実装（R3F不使用）。3Dが重い/落ちる環境でも 2D に即切替できます。
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 function hasWebGL(): boolean {
@@ -15,14 +15,27 @@ function hasWebGL(): boolean {
   }
 }
 
+function FlatPlaceholder() {
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-700">
+      <div className="text-xl font-bold">2D Classroom Preview</div>
+      <p className="text-sm text-slate-600">3Dが利用できない場合はこのモードで閲覧できます。</p>
+      <div className="mt-2 h-24 w-48 rounded-xl bg-white/70 shadow-inner border border-slate-300 flex items-center justify-center text-slate-500">
+        Flat Mode
+      </div>
+    </div>
+  );
+}
+
 export function Canvas3D() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const frameRef = useRef<number | null>(null);
-  const [supported] = useState(() => hasWebGL());
+  const supported = useMemo(() => hasWebGL(), []);
+  const [mode, setMode] = useState<"3d" | "2d">(() => (supported ? "3d" : "2d"));
 
   useEffect(() => {
-    if (!supported) return;
+    if (!supported || mode !== "3d") return;
     const container = containerRef.current;
     if (!container) return;
 
@@ -116,18 +129,36 @@ export function Canvas3D() {
         renderer.domElement.parentElement.removeChild(renderer.domElement);
       }
     };
-  }, [supported]);
+  }, [supported, mode]);
 
   return (
-    <div className="relative h-[320px] w-full overflow-hidden rounded-2xl border border-slate-300 bg-slate-100 shadow-inner">
-      {!supported && (
-        <div className="absolute inset-0 flex items-center justify-center text-slate-600">
-          WebGL未対応のため2Dプレビューに切替
-        </div>
-      )}
-      <div ref={containerRef} className="absolute inset-0" />
-      <div className="pointer-events-none absolute left-3 top-3 rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-bold text-white shadow">
-        3D Mode (three.js)
+    <div className="relative h-[360px] w-full overflow-hidden rounded-2xl border border-slate-300 bg-slate-100 shadow-inner">
+      {mode === "3d" && supported && <div ref={containerRef} className="absolute inset-0" />}
+      {(mode === "2d" || !supported) && <FlatPlaceholder />}
+
+      <div className="absolute left-3 top-3 flex items-center gap-2 z-10">
+        <span className={`rounded-full px-3 py-1 text-[11px] font-bold text-white shadow ${mode === "3d" && supported ? "bg-emerald-500" : "bg-blue-500"}`}>
+          {mode === "3d" && supported ? "3D Mode (three.js)" : "2D Mode"}
+        </span>
+      </div>
+
+      <div className="absolute right-3 top-3 z-10 flex gap-2">
+        <button
+          type="button"
+          onClick={() => setMode("3d")}
+          disabled={!supported}
+          className={`rounded-md px-3 py-1 text-xs font-semibold shadow ${mode === "3d" ? "bg-emerald-600 text-white" : "bg-white text-slate-700 border border-slate-200"} ${!supported ? "opacity-50 cursor-not-allowed" : ""}`}
+          title={!supported ? "WebGL非対応のため使用不可" : "3D表示に切り替え"}
+        >
+          3Dに切替
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("2d")}
+          className={`rounded-md px-3 py-1 text-xs font-semibold shadow ${mode === "2d" || !supported ? "bg-blue-600 text-white" : "bg-white text-slate-700 border border-slate-200"}`}
+        >
+          2Dに切替
+        </button>
       </div>
     </div>
   );
