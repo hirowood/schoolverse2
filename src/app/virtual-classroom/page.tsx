@@ -28,7 +28,7 @@ const Canvas3D = dynamic(
 export default function VirtualClassroomPage() {
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
-      <div className="mx-auto max-w-6xl px-4 pt-8 space-y-6">
+      <div className="mx-auto w-full max-w-7xl xl:max-w-[1400px] px-3 sm:px-6 lg:px-10 pt-8 space-y-6">
         {/* ヘッダー */}
         <div className="flex items-start justify-between gap-4">
           <div>
