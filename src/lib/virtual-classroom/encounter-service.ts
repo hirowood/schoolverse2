@@ -55,7 +55,8 @@ export async function startEncounter(params: StartEncounterParams): Promise<Star
     select: { id: true },
   });
 
-  const { correctAnswer, ...questionForClient } = question;
+  const { correctAnswer: _omit, ...questionForClient } = question;
+  void _omit;
 
   return {
     encounterId: encounter.id,

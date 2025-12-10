@@ -1,7 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { BattleHUD } from "@/components/virtual-classroom/HUD/BattleHUD";
-import { Canvas3D } from "@/components/virtual-classroom/Room3D/Canvas3D";
+
+const Canvas3D = dynamic(
+  () => import("@/components/virtual-classroom/Room3D/Canvas3D").then((m) => m.Canvas3D),
+  { ssr: false, loading: () => <div className="h-[520px] w-full rounded-2xl border border-slate-200 bg-slate-100 shadow-inner" /> },
+);
 
 export default function VirtualClassroomPage() {
   return (

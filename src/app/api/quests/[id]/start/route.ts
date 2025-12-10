@@ -3,15 +3,16 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { startQuest } from "@/lib/quests/service";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 export async function POST(_: Request, { params }: Params) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const result = await startQuest(userId, params.id);
+    const result = await startQuest(userId, id);
     return NextResponse.json(result);
   } catch (error) {
     console.error("[quests/start] error", error);

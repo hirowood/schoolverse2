@@ -1,28 +1,17 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 "use client";
 
+import "@/types/r3f";
 import { Canvas } from "@react-three/fiber";
 import { Environment, OrbitControls, ContactShadows } from "@react-three/drei";
 import { Suspense } from "react";
-
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      group: any;
-      mesh: any;
-      boxGeometry: any;
-      meshStandardMaterial: any;
-      ambientLight: any;
-      directionalLight: any;
-      planeGeometry: any;
-    }
-  }
-}
 
 type DeskProps = { position: [number, number, number] };
 
 function Desk({ position }: DeskProps) {
   return (
+    // @ts-expect-error - r3f intrinsic elements are added via @react-three/fiber types
     <group position={position}>
       <mesh castShadow receiveShadow>
         <boxGeometry args={[1.4, 0.2, 1]} />

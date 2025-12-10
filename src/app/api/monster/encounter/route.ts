@@ -23,11 +23,7 @@ export async function POST(request: Request) {
     roomId: typeof roomId === "string" ? roomId : null,
     position:
       position && typeof position === "object"
-        ? {
-          x: Number((position as any).x ?? 0),
-          y: Number((position as any).y ?? 0),
-          z: Number((position as any).z ?? 0),
-        }
+        ? parsePosition(position as Record<string, unknown>)
         : null,
     category: typeof category === "string" ? category : null,
     playerLevel: typeof playerLevel === "number" ? playerLevel : null,
@@ -41,4 +37,12 @@ export async function POST(request: Request) {
     success: true,
     data: encounter,
   });
+}
+
+function parsePosition(pos: Record<string, unknown>) {
+  return {
+    x: typeof pos.x === "number" ? pos.x : Number(pos.x ?? 0),
+    y: typeof pos.y === "number" ? pos.y : Number(pos.y ?? 0),
+    z: typeof pos.z === "number" ? pos.z : Number(pos.z ?? 0),
+  };
 }

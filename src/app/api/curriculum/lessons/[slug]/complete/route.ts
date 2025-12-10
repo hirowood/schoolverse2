@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/api/session";
 import { completeLesson } from "@/lib/curriculum/progress-service";
 
-export async function POST(request: Request, { params }: { params: { slug: string } }) {
+type RouteParams = { params: Promise<{ slug: string }> };
+
+export async function POST(request: Request, { params }: RouteParams) {
+  const { slug } = await params;
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ success: false, error: "unauthorized" }, { status: 401 });
@@ -21,7 +24,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
   const rating = typeof body.rating === "number" ? body.rating : undefined;
 
   try {
-    const result = await completeLesson(user, params.slug, {
+    const result = await completeLesson(user, slug, {
       timeSpentSec,
       score,
       notes,
@@ -52,7 +55,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
       return NextResponse.json({ success: false, error: "not_found" }, { status: 404 });
     }
 
-    console.error(`POST /api/curriculum/lessons/${params?.slug}/complete error`, error);
+    console.error(`POST /api/curriculum/lessons/${slug}/complete error`, error);
     return NextResponse.json({ success: false, error: "internal_error" }, { status: 500 });
   }
 }

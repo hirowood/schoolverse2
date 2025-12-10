@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useUserChat } from "@/hooks/useUserChat";
 import type { UserPreview } from "@/features/user-chat/types";
 import { ChatSidebar } from "@/components/user-chat/ChatSidebar";
@@ -33,8 +33,6 @@ export function UserChat() {
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
   const [showSidebar, setShowSidebar] = useState(true);
-
-  const activeTyping = useMemo(() => typingUsers.map((u) => u.name), [typingUsers]);
 
   const handleSend = async () => {
     const text = input.trim();

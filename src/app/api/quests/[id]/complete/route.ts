@@ -4,9 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { completeQuest } from "@/lib/quests/service";
 import type { CompleteQuestPayload } from "@/types/quest";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: Params) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -14,7 +15,7 @@ export async function POST(request: Request, { params }: Params) {
   const payload = (await request.json().catch(() => ({}))) as CompleteQuestPayload;
 
   try {
-    const result = await completeQuest(userId, params.id, payload);
+    const result = await completeQuest(userId, id, payload);
     return NextResponse.json(result);
   } catch (error) {
     console.error("[quests/complete] error", error);

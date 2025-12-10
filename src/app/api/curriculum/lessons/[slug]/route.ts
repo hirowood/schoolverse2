@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/api/session";
 import { getLessonWithProgress } from "@/lib/curriculum/progress-service";
 
-export async function GET(_req: Request, { params }: { params: { slug: string } }) {
+type RouteParams = { params: Promise<{ slug: string }> };
+
+export async function GET(_req: Request, { params }: RouteParams) {
+  const { slug } = await params;
   try {
     const user = await getSessionUser();
-    const result = await getLessonWithProgress(user, params.slug);
+    const result = await getLessonWithProgress(user, slug);
     if (!result) {
       return NextResponse.json({ success: false, error: "not_found" }, { status: 404 });
     }
@@ -19,7 +22,7 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
       },
     });
   } catch (error) {
-    console.error(`GET /api/curriculum/lessons/${params?.slug} error`, error);
+    console.error(`GET /api/curriculum/lessons/${slug} error`, error);
     return NextResponse.json({ success: false, error: "internal_error" }, { status: 500 });
   }
 }

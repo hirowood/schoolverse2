@@ -23,7 +23,8 @@ export async function getQuestionForMonster(monsterId: string): Promise<MonsterQ
 
 export function redactAnswer(question: MonsterQuestion | null) {
   if (!question) return null;
-  const { correctAnswer, ...rest } = question;
+  const { correctAnswer: _omit, ...rest } = question;
+  void _omit;
   return rest;
 }
 

@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/api/session";
 import { startLesson } from "@/lib/curriculum/progress-service";
 
-export async function POST(_req: Request, { params }: { params: { slug: string } }) {
+type RouteParams = { params: Promise<{ slug: string }> };
+
+export async function POST(_req: Request, { params }: RouteParams) {
+  const { slug } = await params;
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ success: false, error: "unauthorized" }, { status: 401 });
   }
 
   try {
-    const result = await startLesson(user, params.slug);
+    const result = await startLesson(user, slug);
     return NextResponse.json({
       success: true,
       data: {
@@ -26,7 +29,7 @@ export async function POST(_req: Request, { params }: { params: { slug: string }
       return NextResponse.json({ success: false, error: "not_found" }, { status: 404 });
     }
 
-    console.error(`POST /api/curriculum/lessons/${params?.slug}/start error`, error);
+    console.error(`POST /api/curriculum/lessons/${slug}/start error`, error);
     return NextResponse.json({ success: false, error: "internal_error" }, { status: 500 });
   }
 }

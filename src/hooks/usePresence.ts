@@ -15,7 +15,7 @@ export function usePresence(userId: string | null) {
   const [myStatus, setMyStatus] = useState<UserStatus>("offline");
   const channelRef = useRef<RealtimeChannel | null>(null);
   const awayTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastActivityRef = useRef<number>(Date.now());
+  const lastActivityRef = useRef<number>(0);
 
   const supabase = useMemo<SupabaseClient | null>(() => {
     if (typeof window === "undefined") return null;
@@ -49,6 +49,10 @@ export function usePresence(userId: string | null) {
       updateStatus("away");
     }, AWAY_TIMEOUT_MS);
   }, [myStatus, updateStatus]);
+
+  useEffect(() => {
+    lastActivityRef.current = Date.now();
+  }, []);
 
   useEffect(() => {
     if (!supabase || !userId) return;
