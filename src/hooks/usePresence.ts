@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
 import type { PresenceMap, PresenceState, UserStatus } from "@/features/user-chat/types";
 
-const AWAY_TIMEOUT_MS = 5 * 60 * 1000; // 5分
-const ACTIVITY_DEBOUNCE_MS = 30 * 1000; // 30秒
+const AWAY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const ACTIVITY_DEBOUNCE_MS = 30 * 1000; // 30 seconds
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
