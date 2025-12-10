@@ -26,14 +26,14 @@
     "@dnd-kit/utilities": "^3.2.1",
     "@excalidraw/excalidraw": "0.18.0",
     "@prisma/client": "6.19.0",
-    "@react-three/drei": "9.56.6",
+    "@react-three/drei": "9.122.0",
     "@react-three/fiber": "8.13.7",
     "@supabase/supabase-js": "^2.48.0",
     "@types/three": "^0.181.0",
     "bcryptjs": "^3.0.3",
     "dagre": "^0.8.5",
     "html-to-image": "^1.11.11",
-    "next": "15.1.6",
+    "next": "15.5.7",
     "next-auth": "^4.24.13",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -52,10 +52,16 @@
     "babel-plugin-react-compiler": "1.0.0",
     "dotenv": "^16.4.5",
     "eslint": "^9",
-    "eslint-config-next": "16.0.3",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-config-next": "15.5.7",
     "prisma": "6.19.0",
     "tailwindcss": "^4",
     "typescript": "5.9.3",
     "vitest": "^4.0.13"
+  },
+  "overrides": {
+    "mermaid": "^11.12.2",
+    "dompurify": "^3.2.4",
+    "nanoid": "^5.0.9"
   }
 }
