@@ -68,3 +68,25 @@ export type WsServerMessage =
   | { type: "typing"; roomId: string; userId: string; isTyping: boolean }
   | { type: "read"; roomId: string; userId: string; messageId: string; readAt: string }
   | { type: "error"; message: string };
+
+// Presence（オンライン状態）
+export type UserStatus = "online" | "away" | "offline";
+
+export type PresenceState = {
+  status: UserStatus;
+  lastActiveAt: string;
+  currentRoomId: string | null;
+};
+
+export type PresenceMap = Record<string, PresenceState>;
+
+// ルーム内の入力中状態
+export type RoomPresenceState = {
+  typing: boolean;
+  userName?: string;
+};
+
+export type TypingUser = {
+  id: string;
+  name: string;
+};

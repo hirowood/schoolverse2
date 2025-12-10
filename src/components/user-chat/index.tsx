@@ -2,14 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useUserChat } from "@/hooks/useUserChat";
-import type { ChatRoomMessage, UserPreview } from "@/features/user-chat/types";
+import type { ChatRoomMember, ChatRoomMessage, UserPreview } from "@/features/user-chat/types";
+import { OnlineIndicator } from "@/components/user-chat/shared/OnlineIndicator";
 
 export function UserChat() {
   const {
     rooms,
     activeRoom,
     messages,
-    typing,
+    typingUsers,
     loadingRooms,
     loadingMessages,
     hasMoreMessages,
@@ -24,6 +25,8 @@ export function UserChat() {
     loadMore,
     searchUsers,
     createRoom,
+    currentUser,
+    getUserStatus,
   } = useUserChat();
 
   const [input, setInput] = useState("");
@@ -40,11 +43,7 @@ export function UserChat() {
     if (last) markRead(last.id);
   }, [activeRoom, markRead, messages]);
 
-  const activeTyping = useMemo(() => {
-    if (!activeRoom) return [];
-    const set = typing[activeRoom.id];
-    return set ? Array.from(set) : [];
-  }, [activeRoom, typing]);
+  const activeTyping = useMemo(() => typingUsers.map((u) => u.name), [typingUsers]);
 
   const handleSend = async () => {
     const text = input.trim();
@@ -122,33 +121,41 @@ export function UserChat() {
             </p>
           ) : (
             <div className="space-y-2 overflow-y-auto pr-1" style={{ maxHeight: "400px" }}>
-              {rooms.map((room) => (
-                <button
-                  key={room.id}
-                  onClick={() => selectRoom(room.id)}
-                  className={`flex w-full flex-col rounded-lg border px-3 py-2 text-left shadow-sm transition ${
-                    activeRoom?.id === room.id
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white hover:-translate-y-0.5 hover:shadow-md"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="line-clamp-1 text-sm font-semibold">
-                      {room.title || (room.type === "dm" ? "ダイレクト" : "グループ")}
-                    </p>
-                    <span className="text-[10px] uppercase">{room.type}</span>
-                  </div>
-                  {room.lastMessage && (
-                    <p
-                      className={`line-clamp-1 text-xs ${
-                        activeRoom?.id === room.id ? "text-slate-200" : "text-slate-600"
-                      }`}
-                    >
-                      {room.lastMessage.content}
-                    </p>
-                  )}
-                </button>
-              ))}
+              {rooms.map((room) => {
+                const primaryMember =
+                  room.members?.find((m) => m.userId !== currentUser?.id) ?? room.members?.[0];
+                const status = primaryMember ? getUserStatus(primaryMember.userId) : "offline";
+                return (
+                  <button
+                    key={room.id}
+                    onClick={() => selectRoom(room.id)}
+                    className={`flex w-full flex-col rounded-lg border px-3 py-2 text-left shadow-sm transition ${
+                      activeRoom?.id === room.id
+                        ? "border-slate-900 bg-slate-900 text-white"
+                        : "border-slate-200 bg-white hover:-translate-y-0.5 hover:shadow-md"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <OnlineIndicator status={status} size="sm" />
+                        <p className="line-clamp-1 text-sm font-semibold">
+                          {room.title || (room.type === "dm" ? "ダイレクト" : "グループ")}
+                        </p>
+                      </div>
+                      <span className="text-[10px] uppercase">{room.type}</span>
+                    </div>
+                    {room.lastMessage && (
+                      <p
+                        className={`line-clamp-1 text-xs ${
+                          activeRoom?.id === room.id ? "text-slate-200" : "text-slate-600"
+                        }`}
+                      >
+                        {room.lastMessage.content}
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -167,9 +174,18 @@ export function UserChat() {
       <section className="flex h-full flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
         <header className="border-b border-slate-200 px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Room</p>
-          <h3 className="text-lg font-semibold text-slate-900">
-            {activeRoom?.title || (activeRoom?.type === "dm" ? "ダイレクトメッセージ" : "グループ")}
-          </h3>
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="text-lg font-semibold text-slate-900">
+              {activeRoom?.title || (activeRoom?.type === "dm" ? "ダイレクトメッセージ" : "グループ")}
+            </h3>
+            {activeRoom?.members && (
+              <div className="flex flex-wrap gap-2">
+                {activeRoom.members.map((member) => (
+                  <RoomStatusBadge key={member.id} member={member} getUserStatus={getUserStatus} />
+                ))}
+              </div>
+            )}
+          </div>
         </header>
 
         <div className="flex-1 min-h-0 overflow-hidden">
@@ -178,6 +194,7 @@ export function UserChat() {
             isLoading={loadingMessages}
             hasMore={hasMoreMessages}
             onLoadMore={loadMore}
+            currentUserId={currentUser?.id}
           />
           <div ref={bottomRef} />
         </div>
@@ -210,11 +227,13 @@ function MessageList({
   isLoading,
   hasMore,
   onLoadMore,
+  currentUserId,
 }: {
   messages: ChatRoomMessage[];
   isLoading?: boolean;
   hasMore?: boolean;
   onLoadMore?: () => void;
+  currentUserId?: string | null;
 }) {
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -246,14 +265,14 @@ function MessageList({
         </button>
       )}
       {messages.map((message) => (
-        <MessageItem key={message.id} message={message} />
+        <MessageItem key={message.id} message={message} currentUserId={currentUserId} />
       ))}
     </div>
   );
 }
 
-function MessageItem({ message }: { message: ChatRoomMessage }) {
-  const isSelf = false; // UI用のシンプル表示（サーバー側のsenderIdと現在のユーザーID比較は省略）
+function MessageItem({ message, currentUserId }: { message: ChatRoomMessage; currentUserId?: string | null }) {
+  const isSelf = currentUserId ? message.senderId === currentUserId : false;
   const readCount = message.reads?.length ?? 0;
   return (
     <div className={`flex w-full ${isSelf ? "justify-end" : "justify-start"}`}>
@@ -310,5 +329,21 @@ function MessageInput({
         送信
       </button>
     </div>
+  );
+}
+
+function RoomStatusBadge({
+  member,
+  getUserStatus,
+}: {
+  member: ChatRoomMember;
+  getUserStatus: (userId: string) => "online" | "away" | "offline";
+}) {
+  const status = getUserStatus(member.userId);
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700">
+      <OnlineIndicator status={status} size="sm" />
+      <span>{member.user?.name ?? member.user?.email ?? member.userId}</span>
+    </span>
   );
 }

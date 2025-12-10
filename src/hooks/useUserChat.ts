@@ -2,14 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type {
-  ChatRoom,
-  ChatRoomMessage,
-  ChatRoomType,
-  UserPreview,
-} from "@/features/user-chat/types";
-
-type TypingState = Record<string, Set<string>>;
+import type { ChatRoom, ChatRoomMessage, ChatRoomType, UserPreview } from "@/features/user-chat/types";
+import { usePresence } from "@/hooks/usePresence";
+import { useRoomPresence } from "@/hooks/useRoomPresence";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -22,8 +17,8 @@ export function useUserChat() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [searchResults, setSearchResults] = useState<UserPreview[]>([]);
-  const [typing, setTyping] = useState<TypingState>({});
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null } | null>(null);
   const subscriptionRef = useRef<ReturnType<SupabaseClient["channel"]> | null>(null);
 
   const activeRoom = useMemo(
@@ -36,6 +31,13 @@ export function useUserChat() {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
     return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }, []);
+
+  const { presenceMap, myStatus, setCurrentRoom, getUserStatus, recordActivity } = usePresence(currentUser?.id ?? null);
+  const { typingUsers, setTyping } = useRoomPresence(
+    activeRoomId,
+    currentUser?.id ?? null,
+    currentUser?.name ?? currentUser?.email ?? null,
+  );
 
   const fetchRooms = useCallback(
     async (type?: ChatRoomType | "all") => {
@@ -101,37 +103,35 @@ export function useUserChat() {
     async (content: string) => {
       const text = content.trim();
       if (!text || !activeRoomId) return;
+      recordActivity();
       await fetch(`/api/user-chat/rooms/${activeRoomId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: text }),
       });
     },
-    [activeRoomId],
+    [activeRoomId, recordActivity],
   );
 
   const sendTyping = useCallback(
     (isTyping: boolean) => {
-      setTyping((prev) => {
-        const set = new Set(prev[activeRoomId ?? ""] ?? []);
-        if (isTyping) set.add("me");
-        else set.delete("me");
-        return activeRoomId ? { ...prev, [activeRoomId]: set } : prev;
-      });
+      recordActivity();
+      setTyping(isTyping);
     },
-    [activeRoomId],
+    [recordActivity, setTyping],
   );
 
   const markRead = useCallback(
     async (messageId: string) => {
       if (!activeRoomId) return;
+      recordActivity();
       await fetch(`/api/user-chat/rooms/${activeRoomId}/read`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messageId }),
       });
     },
-    [activeRoomId],
+    [activeRoomId, recordActivity],
   );
 
   const searchUsers = useCallback(async (q: string) => {
@@ -210,18 +210,37 @@ export function useUserChat() {
   }, [supabase, activeRoomId]);
 
   useEffect(() => {
+    // セッション取得
+    const fetchSession = async () => {
+      try {
+        const res = await fetch("/api/auth/session");
+        if (!res.ok) return;
+        const data = (await res.json()) as { user?: { id?: string; name?: string | null; email?: string | null } };
+        if (data?.user?.id) {
+          setCurrentUser({ id: data.user.id, name: data.user.name, email: data.user.email });
+        }
+      } catch (e) {
+        console.error("Failed to fetch session", e);
+      }
+    };
+    void fetchSession();
     fetchRooms();
     return () => {
       if (subscriptionRef.current && supabase) supabase.removeChannel(subscriptionRef.current);
     };
   }, [fetchRooms, supabase]);
 
+  // Presence: room tracking
+  useEffect(() => {
+    setCurrentRoom(activeRoomId ?? null);
+  }, [activeRoomId, setCurrentRoom]);
+
   return {
     rooms,
     activeRoom,
     activeRoomId,
     messages,
-    typing,
+    typingUsers,
     loadingRooms,
     loadingMessages,
     hasMoreMessages,
@@ -238,5 +257,9 @@ export function useUserChat() {
     searchUsers,
     createRoom,
     setActiveRoomId,
+    currentUser,
+    getUserStatus,
+    presenceMap,
+    myStatus,
   };
 }
