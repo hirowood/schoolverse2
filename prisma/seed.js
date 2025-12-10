@@ -727,7 +727,7 @@ async function seedMonsters() {
     }
   }
   const questionTotal = MONSTER_QUESTIONS.reduce((sum, m) => sum + m.questions.length, 0);
-  console.log(? Monsters seeded ( definitions,  questions));
+  console.log(`✅ Monsters seeded (${MONSTER_DEFINITIONS.length} definitions, ${questionTotal} questions)`);
 }
 
 // ============================================
@@ -757,7 +757,7 @@ async function seedSpawnZones() {
       create: zone,
     });
   }
-  console.log(? Spawn zones seeded ( zones));
+  console.log(`✅ Spawn zones seeded (${SPAWN_ZONES.length} zones)`);
 }
 
 // ============================================
