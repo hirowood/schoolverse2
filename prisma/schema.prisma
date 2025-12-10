@@ -1141,11 +1141,12 @@ model MonsterQuestion {
   monsterId      String
   monster        MonsterDefinition  @relation(fields: [monsterId], references: [id], onDelete: Cascade)
   questionText   String             @db.Text
-  questionType   String             @default("text")
+  questionType   String             @default("multiple_choice")
   options        Json?
   correctAnswer  String
   explanation    String?            @db.Text
   hints          String[]           @default([])
+  codeSnippet    String?            @db.Text
   difficulty     Int                @default(1)
   timeLimit      Int                @default(60)
   bonusXp        Int                @default(0)

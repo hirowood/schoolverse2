@@ -9,9 +9,10 @@ export const MONSTER_RARITY_CONFIG: Record<MonsterRarity, { spawnRate: number; x
 };
 
 export const MONSTER_CATEGORIES = [
-  { slug: "math", name: "数学" },
-  { slug: "japanese", name: "国語" },
-  { slug: "english", name: "英語" },
-  { slug: "science", name: "理科" },
-  { slug: "social", name: "社会" },
+  { slug: "frontend", name: "フロントエンド" },
+  { slug: "react", name: "React" },
+  { slug: "backend", name: "バックエンド" },
+  { slug: "infra", name: "インフラ" },
+  { slug: "fullstack", name: "フルスタック" },
+  { slug: "thinking", name: "思考スキル" },
 ];

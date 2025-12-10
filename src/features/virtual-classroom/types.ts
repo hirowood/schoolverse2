@@ -56,11 +56,12 @@ export type MonsterQuestion = {
   id: string;
   monsterId: string;
   questionText: string;
-  questionType: "text" | "multiple_choice" | "fill_blank" | string;
+  questionType: "multiple_choice" | "text" | "fill_blank" | "code" | string;
   options?: MonsterQuestionOption[] | null;
   correctAnswer: string;
   explanation?: string | null;
   hints: string[];
+  codeSnippet?: string | null;
   difficulty: number;
   timeLimit: number;
   bonusXp: number;
