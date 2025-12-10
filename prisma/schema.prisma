@@ -77,6 +77,8 @@ model User {
   roomMessages         RoomMessage[]
   whiteboardSnapshots  WhiteboardSnapshot[]
   roomRecordings       RoomRecording[]
+  monsterEncounters    MonsterEncounter[]
+  monsterStats         UserMonsterStats?
 }
 
 model CredoItem {
@@ -985,6 +987,8 @@ model VirtualRoom {
   whiteboards      Whiteboard[]
   messages         RoomMessage[]
   recordings       RoomRecording[]
+  encounters       MonsterEncounter[]
+  spawnZones       SpawnZone[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
@@ -1095,6 +1099,140 @@ model RoomRecording {
   createdAt      DateTime    @default(now())
   room           VirtualRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
   recordedBy     User        @relation(fields: [recordedById], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+}
+
+// ===== Virtual Classroom Monsters =====
+
+model MonsterDefinition {
+  id             String              @id @default(cuid())
+  name           String
+  slug           String              @unique
+  description    String?
+  category       String
+  subcategory    String?
+  difficulty     Int                 @default(1)
+  rarity         String              @default("common")
+  baseXp         Int                 @default(10)
+  baseCoin       Int                 @default(5)
+  spriteUrl      String?
+  modelUrl       String?
+  color          String              @default("#94a3b8")
+  size           Float               @default(1.0)
+  animations     Json?
+  minPlayerLevel Int                 @default(1)
+  maxPlayerLevel Int?
+  spawnWeight    Int                 @default(100)
+  spawnZones     String[]            @default([])
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  encounters     MonsterEncounter[]
+  questionBank   MonsterQuestion[]
+
+  @@index([category])
+  @@index([difficulty])
+  @@index([rarity])
+}
+
+model MonsterQuestion {
+  id             String             @id @default(cuid())
+  monsterId      String
+  monster        MonsterDefinition  @relation(fields: [monsterId], references: [id], onDelete: Cascade)
+  questionText   String             @db.Text
+  questionType   String             @default("text")
+  options        Json?
+  correctAnswer  String
+  explanation    String?            @db.Text
+  hints          String[]           @default([])
+  difficulty     Int                @default(1)
+  timeLimit      Int                @default(60)
+  bonusXp        Int                @default(0)
+  tags           String[]           @default([])
+  isAiGenerated  Boolean            @default(false)
+  usageCount     Int                @default(0)
+  correctRate    Float?
+  isActive       Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([monsterId])
+  @@index([difficulty])
+}
+
+model MonsterEncounter {
+  id             String            @id @default(cuid())
+  userId         String
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  monsterId      String
+  monster        MonsterDefinition @relation(fields: [monsterId], references: [id])
+  roomId         String?
+  room           VirtualRoom?      @relation(fields: [roomId], references: [id])
+  questionText   String            @db.Text
+  questionType   String
+  options        Json?
+  correctAnswer  String
+  userAnswer     String?
+  isCorrect      Boolean?
+  answeredAt     DateTime?
+  timeSpentSec   Int?
+  hintsUsed      Int               @default(0)
+  xpEarned       Int               @default(0)
+  bonusXpEarned  Int               @default(0)
+  coinsEarned    Int               @default(0)
+  status         String            @default("active")
+  positionX      Float?
+  positionY      Float?
+  positionZ      Float?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, status])
+  @@index([monsterId])
+  @@index([roomId])
+}
+
+model UserMonsterStats {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalEncounters      Int      @default(0)
+  totalDefeated        Int      @default(0)
+  totalFled            Int      @default(0)
+  totalTimeout         Int      @default(0)
+  correctAnswers       Int      @default(0)
+  wrongAnswers         Int      @default(0)
+  totalXpFromMonsters  Int      @default(0)
+  totalCoinsFromMonsters Int    @default(0)
+  categoryStats        Json     @default("{}")
+  rarityStats          Json     @default("{}")
+  currentStreak        Int      @default(0)
+  longestStreak        Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model SpawnZone {
+  id              String       @id @default(cuid())
+  roomId          String?
+  room            VirtualRoom? @relation(fields: [roomId], references: [id])
+  name            String
+  slug            String
+  minX            Float
+  maxX            Float
+  minY            Float        @default(0)
+  maxY            Float        @default(2)
+  minZ            Float
+  maxZ            Float
+  spawnCategories String[]     @default([])
+  spawnInterval   Int          @default(30)
+  maxMonsters     Int          @default(3)
+  difficultyMin   Int          @default(1)
+  difficultyMax   Int          @default(5)
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
 
   @@index([roomId])
 }

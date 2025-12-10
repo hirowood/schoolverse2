@@ -239,6 +239,133 @@ const TEST_ROOMS = [
 ];
 
 // ============================================
+// 新規データ: モンスター定義・質問
+// ============================================
+const MONSTER_DEFINITIONS = [
+  { slug: "slime_math_1", name: "スライム・計算", category: "math", subcategory: "arithmetic", difficulty: 1, rarity: "common", baseXp: 10, baseCoin: 5, color: "#22c55e", spawnWeight: 120, spawnZones: ["classroom_front", "classroom_mid"] },
+  { slug: "goblin_math_2", name: "ゴブリン計算士", category: "math", subcategory: "algebra", difficulty: 2, rarity: "uncommon", baseXp: 18, baseCoin: 9, color: "#16a34a", spawnWeight: 80, spawnZones: ["classroom_mid"] },
+  { slug: "mage_geometry", name: "幾何の魔術師", category: "math", subcategory: "geometry", difficulty: 3, rarity: "rare", baseXp: 30, baseCoin: 15, color: "#0ea5e9", spawnWeight: 40, spawnZones: ["classroom_back"] },
+  { slug: "dragon_calculus", name: "微積ドラゴン", category: "math", subcategory: "calculus", difficulty: 5, rarity: "epic", baseXp: 80, baseCoin: 40, color: "#2563eb", spawnWeight: 10, spawnZones: ["classroom_back"] },
+  { slug: "spirit_japanese", name: "文学の精霊", category: "japanese", subcategory: "reading", difficulty: 2, rarity: "common", baseXp: 14, baseCoin: 7, color: "#f97316", spawnWeight: 100, spawnZones: ["classroom_mid", "classroom_back"] },
+  { slug: "dragon_kanji", name: "漢字ドラゴン", category: "japanese", subcategory: "kanji", difficulty: 3, rarity: "uncommon", baseXp: 24, baseCoin: 12, color: "#ea580c", spawnWeight: 60, spawnZones: ["classroom_front"] },
+  { slug: "fairy_english_vocab", name: "英単語フェアリー", category: "english", subcategory: "vocabulary", difficulty: 1, rarity: "common", baseXp: 12, baseCoin: 6, color: "#a855f7", spawnWeight: 130, spawnZones: ["classroom_front", "classroom_mid"] },
+  { slug: "golem_grammar", name: "文法ゴーレム", category: "english", subcategory: "grammar", difficulty: 2, rarity: "uncommon", baseXp: 20, baseCoin: 10, color: "#7c3aed", spawnWeight: 80, spawnZones: ["classroom_mid"] },
+  { slug: "phoenix_english_read", name: "読解フェニックス", category: "english", subcategory: "reading", difficulty: 4, rarity: "rare", baseXp: 40, baseCoin: 18, color: "#6366f1", spawnWeight: 25, spawnZones: ["classroom_back"] },
+  { slug: "slime_science_lab", name: "実験スライム", category: "science", subcategory: "chemistry", difficulty: 1, rarity: "common", baseXp: 10, baseCoin: 5, color: "#0ea5e9", spawnWeight: 110, spawnZones: ["classroom_front"] },
+  { slug: "golem_elements", name: "元素ゴーレム", category: "science", subcategory: "periodic", difficulty: 2, rarity: "uncommon", baseXp: 18, baseCoin: 9, color: "#06b6d4", spawnWeight: 70, spawnZones: ["classroom_mid"] },
+  { slug: "sprite_physics", name: "力学スプライト", category: "science", subcategory: "physics", difficulty: 3, rarity: "rare", baseXp: 28, baseCoin: 14, color: "#0ea5e9", spawnWeight: 35, spawnZones: ["classroom_back"] },
+  { slug: "ghost_history", name: "歴史の亡霊", category: "social", subcategory: "history", difficulty: 2, rarity: "common", baseXp: 14, baseCoin: 7, color: "#facc15", spawnWeight: 100, spawnZones: ["classroom_mid", "classroom_back"] },
+  { slug: "master_geography", name: "地理マスター", category: "social", subcategory: "geography", difficulty: 3, rarity: "uncommon", baseXp: 22, baseCoin: 11, color: "#84cc16", spawnWeight: 60, spawnZones: ["classroom_back"] },
+  { slug: "strategist_civics", name: "公民の策士", category: "social", subcategory: "civics", difficulty: 4, rarity: "rare", baseXp: 36, baseCoin: 18, color: "#22d3ee", spawnWeight: 30, spawnZones: ["classroom_back"] },
+  { slug: "rare_slime_math", name: "レアスライム・数学", category: "math", subcategory: "mixed", difficulty: 3, rarity: "rare", baseXp: 32, baseCoin: 16, color: "#22c55e", spawnWeight: 20, spawnZones: ["classroom_front"] },
+  { slug: "legendary_scholar", name: "伝説の学者", category: "english", subcategory: "advanced", difficulty: 5, rarity: "legendary", baseXp: 120, baseCoin: 60, color: "#f59e0b", spawnWeight: 5, spawnZones: ["classroom_back"] },
+  { slug: "mystic_poet", name: "詩のミスティック", category: "japanese", subcategory: "poem", difficulty: 4, rarity: "epic", baseXp: 60, baseCoin: 30, color: "#ef4444", spawnWeight: 12, spawnZones: ["classroom_mid"] },
+  { slug: "arcane_biologist", name: "秘術の生物学者", category: "science", subcategory: "biology", difficulty: 4, rarity: "epic", baseXp: 55, baseCoin: 28, color: "#10b981", spawnWeight: 15, spawnZones: ["classroom_back"] },
+  { slug: "shadow_economist", name: "影の経済学者", category: "social", subcategory: "economics", difficulty: 5, rarity: "legendary", baseXp: 130, baseCoin: 70, color: "#0f172a", spawnWeight: 4, spawnZones: ["classroom_back"] },
+];
+
+const MONSTER_QUESTIONS = [
+  {
+    slug: "slime_math_1",
+    questions: [
+      {
+        id: "slime_math_1-q1",
+        questionText: "2x + 3 = 7 を解け",
+        questionType: "text",
+        options: null,
+        correctAnswer: "x=2",
+        explanation: "移項して2x=4よりx=2。",
+        hints: ["両辺から3を引く", "2で割る"],
+        difficulty: 1,
+        timeLimit: 60,
+        bonusXp: 0,
+        isAiGenerated: false,
+      },
+    ],
+  },
+  {
+    slug: "fairy_english_vocab",
+    questions: [
+      {
+        id: "fairy_english_vocab-q1",
+        questionText: "「achieve」の意味として最も近いものを選べ",
+        questionType: "multiple_choice",
+        options: [
+          { label: "A", value: "達成する", isCorrect: true },
+          { label: "B", value: "失う" },
+          { label: "C", value: "探す" },
+          { label: "D", value: "遅れる" },
+        ],
+        correctAnswer: "達成する",
+        explanation: "achieve = 達成する、成し遂げる。",
+        hints: ["accomplishに近い語"],
+        difficulty: 1,
+        timeLimit: 45,
+        bonusXp: 5,
+        isAiGenerated: false,
+      },
+    ],
+  },
+];
+
+// ============================================
+// 新規データ: スポーンゾーン
+// ============================================
+const SPAWN_ZONES = [
+  {
+    id: "spawn-classroom-front",
+    roomId: "test-classroom-1",
+    name: "教室前方",
+    slug: "classroom_front",
+    minX: -6,
+    maxX: 6,
+    minY: 0,
+    maxY: 2,
+    minZ: -1,
+    maxZ: 3,
+    spawnCategories: ["math", "english"],
+    spawnInterval: 30,
+    maxMonsters: 3,
+    difficultyMin: 1,
+    difficultyMax: 3,
+  },
+  {
+    id: "spawn-classroom-mid",
+    roomId: "test-classroom-1",
+    name: "教室中央",
+    slug: "classroom_mid",
+    minX: -6,
+    maxX: 6,
+    minY: 0,
+    maxY: 2,
+    minZ: 3,
+    maxZ: 7,
+    spawnCategories: ["japanese", "math", "english"],
+    spawnInterval: 40,
+    maxMonsters: 2,
+    difficultyMin: 1,
+    difficultyMax: 4,
+  },
+  {
+    id: "spawn-classroom-back",
+    roomId: "test-classroom-1",
+    name: "教室後方",
+    slug: "classroom_back",
+    minX: -6,
+    maxX: 6,
+    minY: 0,
+    maxY: 2,
+    minZ: 7,
+    maxZ: 12,
+    spawnCategories: ["science", "social", "math"],
+    spawnInterval: 50,
+    maxMonsters: 2,
+    difficultyMin: 2,
+    difficultyMax: 5,
+  },
+];
+
+// ============================================
 // シード関数: ユーザー
 // ============================================
 async function seedUsers() {
@@ -295,6 +422,130 @@ async function seedAvatarTemplates() {
     });
   }
   console.log("✅ Avatar templates seeded (7 items)");
+}
+
+
+// ============================================
+// シード関数: モンスター定義・問題
+// ============================================
+async function seedMonsters() {
+  const monsterIdMap = new Map();
+  for (const monster of MONSTER_DEFINITIONS) {
+    const record = await prisma.monsterDefinition.upsert({
+      where: { slug: monster.slug },
+      update: {
+        name: monster.name,
+        description: monster.description ?? null,
+        category: monster.category,
+        subcategory: monster.subcategory ?? null,
+        difficulty: monster.difficulty,
+        rarity: monster.rarity,
+        baseXp: monster.baseXp,
+        baseCoin: monster.baseCoin,
+        spriteUrl: monster.spriteUrl ?? null,
+        modelUrl: monster.modelUrl ?? null,
+        color: monster.color ?? null,
+        size: monster.size ?? 1.0,
+        minPlayerLevel: monster.minPlayerLevel ?? 1,
+        maxPlayerLevel: monster.maxPlayerLevel ?? null,
+        spawnWeight: monster.spawnWeight ?? 100,
+        spawnZones: monster.spawnZones ?? [],
+        isActive: true,
+      },
+      create: {
+        name: monster.name,
+        slug: monster.slug,
+        description: monster.description ?? null,
+        category: monster.category,
+        subcategory: monster.subcategory ?? null,
+        difficulty: monster.difficulty,
+        rarity: monster.rarity,
+        baseXp: monster.baseXp,
+        baseCoin: monster.baseCoin,
+        spriteUrl: monster.spriteUrl ?? null,
+        modelUrl: monster.modelUrl ?? null,
+        color: monster.color ?? null,
+        size: monster.size ?? 1.0,
+        minPlayerLevel: monster.minPlayerLevel ?? 1,
+        maxPlayerLevel: monster.maxPlayerLevel ?? null,
+        spawnWeight: monster.spawnWeight ?? 100,
+        spawnZones: monster.spawnZones ?? [],
+        isActive: true,
+      },
+    });
+    monsterIdMap.set(monster.slug, record.id);
+  }
+
+  for (const entry of MONSTER_QUESTIONS) {
+    const monsterId = monsterIdMap.get(entry.slug);
+    if (!monsterId) continue;
+    for (const q of entry.questions) {
+      await prisma.monsterQuestion.upsert({
+        where: { id: q.id },
+        update: {
+          monsterId,
+          questionText: q.questionText,
+          questionType: q.questionType,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation,
+          hints: q.hints,
+          difficulty: q.difficulty,
+          timeLimit: q.timeLimit,
+          bonusXp: q.bonusXp,
+          tags: q.tags ?? [],
+          isAiGenerated: q.isAiGenerated,
+        },
+        create: {
+          id: q.id,
+          monsterId,
+          questionText: q.questionText,
+          questionType: q.questionType,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation,
+          hints: q.hints,
+          difficulty: q.difficulty,
+          timeLimit: q.timeLimit,
+          bonusXp: q.bonusXp,
+          tags: q.tags ?? [],
+          isAiGenerated: q.isAiGenerated,
+        },
+      });
+    }
+  }
+  const questionTotal = MONSTER_QUESTIONS.reduce((sum, m) => sum + m.questions.length, 0);
+  console.log(? Monsters seeded ( definitions,  questions));
+}
+
+// ============================================
+// シード関数: スポーンゾーン
+// ============================================
+async function seedSpawnZones() {
+  for (const zone of SPAWN_ZONES) {
+    await prisma.spawnZone.upsert({
+      where: { id: zone.id },
+      update: {
+        roomId: zone.roomId,
+        name: zone.name,
+        slug: zone.slug,
+        minX: zone.minX,
+        maxX: zone.maxX,
+        minY: zone.minY,
+        maxY: zone.maxY,
+        minZ: zone.minZ,
+        maxZ: zone.maxZ,
+        spawnCategories: zone.spawnCategories,
+        spawnInterval: zone.spawnInterval,
+        maxMonsters: zone.maxMonsters,
+        difficultyMin: zone.difficultyMin,
+        difficultyMax: zone.difficultyMax,
+        isActive: true,
+      },
+      create: zone,
+    });
+  }
+  console.log(? Spawn zones seeded ( zones));
 }
 
 // ============================================
@@ -404,6 +655,8 @@ async function main() {
   // バーチャル教室用シード
   await seedAvatarTemplates();
   await seedTestRooms();
+  await seedMonsters();
+  await seedSpawnZones();
 
   console.log("\n🎉 Seed completed successfully!");
 }
