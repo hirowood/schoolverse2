@@ -22,10 +22,6 @@
         "name": "next"
       }
     ],
-    "types": [
-      "node",
-      "@react-three/fiber"
-    ],
     "paths": {
       "@/*": [
         "./src/*"

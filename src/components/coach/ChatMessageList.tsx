@@ -6,7 +6,7 @@ import { MessageBubble } from "./MessageBubble";
 type Props = {
   messages: ChatMessage[];
   isLoading: boolean;
-  bottomRef: React.RefObject<HTMLDivElement | null>;
+  bottomRef: React.RefObject<HTMLDivElement>;
 };
 
 export const ChatMessageList = ({ messages, isLoading, bottomRef }: Props) => (

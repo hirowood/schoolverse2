@@ -3,7 +3,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Text, Grid } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -30,7 +30,7 @@ function PlayerAvatar() {
 
   useFrame((_, delta) => {
     const speed = 3 * delta;
-    let [x, y, z] = position;
+    let [x, , z] = position;
     
     if (keysPressed.current.has("w") || keysPressed.current.has("arrowup")) z -= speed;
     if (keysPressed.current.has("s") || keysPressed.current.has("arrowdown")) z += speed;

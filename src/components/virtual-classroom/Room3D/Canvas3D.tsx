@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { Canvas3DErrorBoundary } from "./Canvas3DErrorBoundary";
 
 /** WebGLサポートチェック */
@@ -55,7 +55,20 @@ function WebGLNotSupported() {
 /** 簡易2D教室（フォールバック用） */
 function Simple2DClassroom() {
   const [playerPos, setPlayerPos] = useState({ x: 50, y: 75 });
-  const [activeZone, setActiveZone] = useState<string | null>(null);
+  const activeZone = useMemo(() => {
+    const zones = [
+      { name: 'FE', x: 8, y: 30 },
+      { name: 'React', x: 8, y: 50 },
+      { name: 'BE', x: 8, y: 70 },
+      { name: 'Infra', x: 92, y: 30 },
+      { name: 'Full', x: 92, y: 50 },
+      { name: 'Think', x: 92, y: 70 },
+    ];
+    const zone = zones.find(z =>
+      Math.abs(z.x - playerPos.x) < 10 && Math.abs(z.y - playerPos.y) < 12
+    );
+    return zone?.name ?? null;
+  }, [playerPos]);
 
   // キーボード操作
   useEffect(() => {
@@ -77,21 +90,6 @@ function Simple2DClassroom() {
   }, []);
 
   // ゾーン判定
-  useEffect(() => {
-    const zones = [
-      { name: 'FE', x: 8, y: 30 },
-      { name: 'React', x: 8, y: 50 },
-      { name: 'BE', x: 8, y: 70 },
-      { name: 'Infra', x: 92, y: 30 },
-      { name: 'Full', x: 92, y: 50 },
-      { name: 'Think', x: 92, y: 70 },
-    ];
-    const zone = zones.find(z => 
-      Math.abs(z.x - playerPos.x) < 10 && Math.abs(z.y - playerPos.y) < 12
-    );
-    setActiveZone(zone?.name || null);
-  }, [playerPos]);
-
   return (
     <div className="absolute inset-0 bg-gradient-to-b from-slate-200 to-slate-300 overflow-hidden select-none">
       {/* 黒板 */}
@@ -217,20 +215,16 @@ function Canvas3DInner() {
 
 export function Canvas3D() {
   const [mode, setMode] = useState<"loading" | "3d" | "2d">("loading");
-  const [webglSupported, setWebglSupported] = useState(true);
+  const [webglSupported] = useState(() => (typeof window === "undefined" ? true : checkWebGLSupport()));
 
   useEffect(() => {
-    // クライアントサイドでのみ実行
-    const supported = checkWebGLSupport();
-    setWebglSupported(supported);
-    
     // 少し遅延させてハイドレーション問題を回避
     const timer = setTimeout(() => {
-      setMode(supported ? "3d" : "2d");
+      setMode(webglSupported ? "3d" : "2d");
     }, 200);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [webglSupported]);
 
   const switchTo2D = useCallback(() => {
     setMode("2d");
