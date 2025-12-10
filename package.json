@@ -26,7 +26,10 @@
     "@dnd-kit/utilities": "^3.2.1",
     "@excalidraw/excalidraw": "0.18.0",
     "@prisma/client": "6.19.0",
+    "@react-three/drei": "^9.77.3",
+    "@react-three/fiber": "^8.15.13",
     "@supabase/supabase-js": "^2.48.0",
+    "@types/three": "^0.181.0",
     "bcryptjs": "^3.0.3",
     "dagre": "^0.8.5",
     "html-to-image": "^1.11.11",
@@ -36,6 +39,7 @@
     "react-dom": "18.2.0",
     "reactflow": "^11.11.3",
     "tesseract.js": "^6.0.1",
+    "three": "^0.181.2",
     "ws": "^8.18.3",
     "zod": "^4.1.13",
     "zustand": "^5.0.4"
