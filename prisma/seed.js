@@ -880,6 +880,97 @@ const MONSTER_QUESTIONS = [
   },
 ];
 
+function ensureFiveQuestions() {
+  const slugToDef = Object.fromEntries(MONSTER_DEFINITIONS.map((d) => [d.slug, d]));
+
+  function buildPlaceholder(slug, index) {
+    const def = slugToDef[slug];
+    const baseName = def?.name ?? slug;
+    const num = index + 1;
+    const types = ["multiple_choice", "text", "code"];
+    const type = types[index % types.length];
+
+    if (type === "multiple_choice") {
+      return {
+        id: `${slug}-auto-mc-${num}`,
+        questionText: `${baseName} の基礎チェック #${num}: 正しい選択肢を選んでください`,
+        questionType: "multiple_choice",
+        options: [
+          { label: "A", value: `${baseName} の正答`, isCorrect: true },
+          { label: "B", value: "誤答1" },
+          { label: "C", value: "誤答2" },
+          { label: "D", value: "誤答3" },
+        ],
+        correctAnswer: `${baseName} の正答`,
+        explanation: "A が正解です。",
+        hints: ["基礎知識を思い出しましょう"],
+        difficulty: Math.min(3, def?.difficulty ?? 2),
+        timeLimit: 50,
+        bonusXp: 2,
+        isAiGenerated: false,
+      };
+    }
+
+    if (type === "code") {
+      return {
+        id: `${slug}-auto-code-${num}`,
+        questionText: `${baseName} のコード読解 #${num}: TODO部分を正しく埋めてください`,
+        questionType: "code",
+        codeSnippet: "// TODO: ここに回答を記述\n",
+        options: null,
+        correctAnswer: "TODO",
+        explanation: "コード問題のダミーです。",
+        hints: ["コードの意図を考える"],
+        difficulty: Math.min(3, (def?.difficulty ?? 2) + 1),
+        timeLimit: 60,
+        bonusXp: 3,
+        isAiGenerated: false,
+      };
+    }
+
+    return {
+      id: `${slug}-auto-text-${num}`,
+      questionText: `${baseName} の基礎用語を答えてください #${num}`,
+      questionType: "text",
+      options: null,
+      correctAnswer: `${baseName}`,
+      explanation: "テキスト問題のダミーです。",
+      hints: ["キーワードを想起"],
+      difficulty: Math.min(2, def?.difficulty ?? 1),
+      timeLimit: 45,
+      bonusXp: 2,
+      isAiGenerated: false,
+    };
+  }
+
+  const questionMap = new Map();
+  for (const entry of MONSTER_QUESTIONS) {
+    questionMap.set(entry.slug, entry.questions);
+  }
+
+  for (const monster of MONSTER_DEFINITIONS) {
+    const current = questionMap.get(monster.slug) ?? [];
+    const existing = current.length;
+    const next = [...current];
+    if (existing < 5) {
+      const needed = 5 - existing;
+      for (let i = 0; i < needed; i++) {
+        next.push(buildPlaceholder(monster.slug, i));
+      }
+    }
+    questionMap.set(monster.slug, next);
+  }
+
+  MONSTER_QUESTIONS.splice(
+    0,
+    MONSTER_QUESTIONS.length,
+    ...Array.from(questionMap.entries()).map(([slug, questions]) => ({
+      slug,
+      questions,
+    })),
+  );
+}
+
 // ============================================
 // 新規データ: スポーンゾーン
 // ============================================
@@ -1001,6 +1092,8 @@ async function seedAvatarTemplates() {
 // シード関数: モンスター定義・問題
 // ============================================
 async function seedMonsters() {
+  ensureFiveQuestions();
+
   const monsterIdMap = new Map();
   for (const monster of MONSTER_DEFINITIONS) {
     const record = await prisma.monsterDefinition.upsert({
