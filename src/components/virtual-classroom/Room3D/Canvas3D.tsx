@@ -3,6 +3,7 @@
 "use client";
 
 import "@/types/r3f";
+import { useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Environment, OrbitControls, ContactShadows } from "@react-three/drei";
 import { Suspense } from "react";
@@ -60,6 +61,41 @@ function ClassroomScene() {
 }
 
 export function Canvas3D() {
+  const [mounted, setMounted] = useState(false);
+  const webglSupported = useMemo(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const canvas = document.createElement("canvas");
+      return !!(canvas.getContext("webgl") || canvas.getContext("experimental-webgl"));
+    } catch {
+      return false;
+    }
+  }, []);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="relative h-[520px] w-full rounded-2xl border border-slate-200 bg-slate-50 shadow-inner">
+        <div className="absolute inset-0 flex items-center justify-center text-slate-500">Loading 3D...</div>
+      </div>
+    );
+  }
+
+  if (!webglSupported) {
+    return (
+      <div className="relative h-[520px] w-full rounded-2xl border border-amber-200 bg-amber-50 shadow-inner">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-amber-700">
+          <p className="font-semibold">WebGL がサポートされていないため 3D 教室を表示できません。</p>
+          <p className="text-sm">別のブラウザをお試しください。</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative h-[520px] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-inner">
       <Suspense fallback={<div className="absolute inset-0 flex items-center justify-center text-slate-500">Loading 3D...</div>}>
