@@ -257,8 +257,8 @@ export function Canvas3D() {
   }, [supported, mode]);
 
   return (
-    <div className="relative h-[70vh] min-h-[480px] w-full overflow-hidden rounded-2xl border border-slate-300 bg-slate-100 shadow-inner">
-      {mode === "3d" && supported && <div ref={containerRef} className="absolute inset-0" />}
+    <div className="relative h-[calc(100vh-160px)] min-h-[560px] w-full overflow-hidden rounded-2xl border border-slate-300 bg-slate-100 shadow-inner">
+      {mode === "3d" && supported && <div ref={containerRef} className="absolute inset-0 cursor-grab" />}
       {(mode === "2d" || !supported) && <FlatPlaceholder />}
 
       <div className="absolute left-3 top-3 flex items-center gap-2 z-10">
