@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Canvas3DErrorBoundary } from "./Canvas3DErrorBoundary";
 
-// R3Fコンポーネントを遅延読み込み
-const Canvas3DContent = lazy(() => 
-  import("./Canvas3DContent").then(m => ({ default: m.Canvas3DContent }))
-);
+/** WebGLサポートチェック */
+function checkWebGLSupport(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+    return !!gl;
+  } catch {
+    return false;
+  }
+}
 
 /** ローディングUI */
 function LoadingFallback() {
@@ -38,8 +45,7 @@ function WebGLNotSupported() {
       <div>
         <p className="font-bold text-amber-800 text-lg">WebGLがサポートされていません</p>
         <p className="mt-2 text-sm text-amber-700 max-w-md">
-          3D教室を表示するには、WebGL対応のブラウザ（Chrome、Firefox、Edge等）が必要です。
-          ブラウザを更新するか、別のブラウザをお試しください。
+          3D教室を表示するには、WebGL対応のブラウザが必要です。
         </p>
       </div>
     </div>
@@ -48,132 +54,224 @@ function WebGLNotSupported() {
 
 /** 簡易2D教室（フォールバック用） */
 function Simple2DClassroom() {
+  const [playerPos, setPlayerPos] = useState({ x: 50, y: 75 });
+  const [activeZone, setActiveZone] = useState<string | null>(null);
+
+  // キーボード操作
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const speed = 3;
+      setPlayerPos(prev => {
+        let { x, y } = prev;
+        switch (e.key.toLowerCase()) {
+          case 'w': case 'arrowup': y = Math.max(20, y - speed); break;
+          case 's': case 'arrowdown': y = Math.min(85, y + speed); break;
+          case 'a': case 'arrowleft': x = Math.max(5, x - speed); break;
+          case 'd': case 'arrowright': x = Math.min(95, x + speed); break;
+        }
+        return { x, y };
+      });
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // ゾーン判定
+  useEffect(() => {
+    const zones = [
+      { name: 'FE', x: 8, y: 30 },
+      { name: 'React', x: 8, y: 50 },
+      { name: 'BE', x: 8, y: 70 },
+      { name: 'Infra', x: 92, y: 30 },
+      { name: 'Full', x: 92, y: 50 },
+      { name: 'Think', x: 92, y: 70 },
+    ];
+    const zone = zones.find(z => 
+      Math.abs(z.x - playerPos.x) < 10 && Math.abs(z.y - playerPos.y) < 12
+    );
+    setActiveZone(zone?.name || null);
+  }, [playerPos]);
+
   return (
-    <div className="absolute inset-0 flex flex-col bg-gradient-to-b from-slate-100 to-slate-200 p-6 overflow-hidden">
-      {/* 天井 */}
-      <div className="h-2 bg-slate-300 rounded-b-lg mb-4" />
-      
+    <div className="absolute inset-0 bg-gradient-to-b from-slate-200 to-slate-300 overflow-hidden select-none">
       {/* 黒板 */}
-      <div className="mx-auto mb-6 h-20 w-4/5 rounded-lg bg-gradient-to-b from-slate-800 to-slate-900 shadow-lg flex items-center justify-center border-4 border-amber-800">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 w-3/4 h-16 bg-gradient-to-b from-slate-800 to-slate-900 rounded-lg shadow-xl border-4 border-amber-700 flex items-center justify-center">
         <div className="text-center">
           <span className="text-white text-lg font-bold">📚 Schoolverse</span>
-          <p className="text-green-300 text-xs mt-1">バーチャル教室</p>
+          <p className="text-green-400 text-xs">バーチャル教室 (2D Mode)</p>
         </div>
       </div>
-      
-      {/* 机グリッド */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className="grid grid-cols-5 gap-4 perspective-500">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <div key={i} className="relative group">
-              {/* 机 */}
-              <div className="h-10 w-14 rounded bg-amber-200 shadow-md border border-amber-300 transform -skew-x-2" />
-              {/* 椅子 */}
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-4 w-6 rounded-t bg-green-600 shadow" />
-            </div>
-          ))}
+
+      {/* スポーンゾーン（左） */}
+      {[
+        { name: 'FE', color: 'bg-blue-500', y: '25%' },
+        { name: 'React', color: 'bg-cyan-500', y: '45%' },
+        { name: 'BE', color: 'bg-green-500', y: '65%' },
+      ].map(zone => (
+        <div 
+          key={zone.name}
+          className={`absolute left-4 ${zone.color} ${activeZone === zone.name ? 'ring-4 ring-yellow-400 scale-110' : ''} w-12 h-12 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg transition-all`}
+          style={{ top: zone.y }}
+        >
+          {zone.name}
         </div>
+      ))}
+
+      {/* スポーンゾーン（右） */}
+      {[
+        { name: 'Infra', color: 'bg-orange-500', y: '25%' },
+        { name: 'Full', color: 'bg-purple-500', y: '45%' },
+        { name: 'Think', color: 'bg-yellow-500', y: '65%' },
+      ].map(zone => (
+        <div 
+          key={zone.name}
+          className={`absolute right-4 ${zone.color} ${activeZone === zone.name ? 'ring-4 ring-yellow-400 scale-110' : ''} w-12 h-12 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg transition-all`}
+          style={{ top: zone.y }}
+        >
+          {zone.name}
+        </div>
+      ))}
+
+      {/* 机グリッド */}
+      <div className="absolute top-24 left-1/2 -translate-x-1/2 grid grid-cols-5 gap-3">
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="relative">
+            <div className="h-8 w-12 rounded bg-amber-200 shadow-md border border-amber-300" />
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-3 w-5 rounded-t bg-green-600" />
+          </div>
+        ))}
       </div>
 
       {/* プレイヤー */}
-      <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center">
+      <div 
+        className="absolute transition-all duration-100 flex flex-col items-center pointer-events-none"
+        style={{ left: `${playerPos.x}%`, top: `${playerPos.y}%`, transform: 'translate(-50%, -50%)' }}
+      >
         <div className="text-3xl animate-bounce">🧑‍🎓</div>
-        <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full mt-1">You</span>
+        <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full shadow">You</span>
       </div>
 
-      {/* ステータスバー */}
-      <div className="mt-auto pt-4 border-t border-slate-300">
-        <p className="text-center text-xs text-slate-500">
-          ⚠️ 3D描画が利用できないため、簡易表示モードです
-        </p>
+      {/* アクティブゾーン表示 */}
+      {activeZone && (
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-lg text-sm animate-pulse">
+          🎯 {activeZone}ゾーンに入りました！
+        </div>
+      )}
+
+      {/* 操作ガイド */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-lg text-xs flex gap-4">
+        <span>⬆️ W</span>
+        <span>⬇️ S</span>
+        <span>⬅️ A</span>
+        <span>➡️ D</span>
+        <span className="text-yellow-300">ゾーンに近づくとモンスター出現！</span>
       </div>
     </div>
   );
 }
 
-/** WebGLサポートチェック */
-function checkWebGLSupport(): boolean {
-  if (typeof window === "undefined") return true;
-  try {
-    const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl2") || canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-    return !!gl;
-  } catch {
-    return false;
-  }
-}
+/** 3Dコンテンツ（動的インポート） */
+function Canvas3DInner() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [Component, setComponent] = useState<React.ComponentType | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-/** R3F/Threeの利用可否チェック */
-async function checkR3FSupport(): Promise<boolean> {
-  try {
-    await import("@react-three/fiber");
-    await import("three");
-    return true;
-  } catch (e) {
-    console.warn("[Canvas3D] R3F/Three.js not available:", e);
-    return false;
+  useEffect(() => {
+    let mounted = true;
+
+    const loadComponent = async () => {
+      try {
+        const mod = await import("./Canvas3DContent");
+        if (mounted) {
+          setComponent(() => mod.Canvas3DContent);
+        }
+      } catch (err) {
+        console.error("[Canvas3D] Failed to load 3D content:", err);
+        if (mounted) {
+          setError(err instanceof Error ? err.message : "Unknown error");
+        }
+      }
+    };
+
+    loadComponent();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (error) {
+    return <Simple2DClassroom />;
   }
+
+  if (!Component) {
+    return <LoadingFallback />;
+  }
+
+  return (
+    <div ref={containerRef} className="absolute inset-0">
+      <Component />
+    </div>
+  );
 }
 
 export function Canvas3D() {
-  const [status, setStatus] = useState<"loading" | "ready" | "no-webgl" | "no-r3f" | "error">("loading");
+  const [mode, setMode] = useState<"loading" | "3d" | "2d">("loading");
+  const [webglSupported, setWebglSupported] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
+    // クライアントサイドでのみ実行
+    const supported = checkWebGLSupport();
+    setWebglSupported(supported);
+    
+    // 少し遅延させてハイドレーション問題を回避
+    const timer = setTimeout(() => {
+      setMode(supported ? "3d" : "2d");
+    }, 200);
 
-    const init = async () => {
-      // 1. WebGLチェック
-      if (!checkWebGLSupport()) {
-        if (!cancelled) setStatus("no-webgl");
-        return;
-      }
+    return () => clearTimeout(timer);
+  }, []);
 
-      // 2. R3F/Threeチェック
-      const r3fOk = await checkR3FSupport();
-      if (!cancelled) {
-        setStatus(r3fOk ? "ready" : "no-r3f");
-      }
-    };
-
-    // ハイドレーション完了を待つ
-    const timer = setTimeout(init, 150);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+  const switchTo2D = useCallback(() => {
+    setMode("2d");
   }, []);
 
   return (
     <div className="relative h-[520px] w-full overflow-hidden rounded-2xl border border-slate-300 bg-slate-100 shadow-xl">
-      {status === "loading" && <LoadingFallback />}
+      {mode === "loading" && <LoadingFallback />}
 
-      {status === "no-webgl" && <WebGLNotSupported />}
+      {mode === "2d" && (
+        webglSupported ? <Simple2DClassroom /> : <WebGLNotSupported />
+      )}
 
-      {status === "no-r3f" && <Simple2DClassroom />}
-
-      {status === "ready" && (
-        <Canvas3DErrorBoundary fallback={<Simple2DClassroom />}>
-          <Suspense fallback={<LoadingFallback />}>
-            <Canvas3DContent />
-          </Suspense>
+      {mode === "3d" && (
+        <Canvas3DErrorBoundary 
+          fallback={<Simple2DClassroom />}
+          onError={switchTo2D}
+        >
+          <Canvas3DInner />
         </Canvas3DErrorBoundary>
       )}
 
       {/* ステータスバッジ */}
-      <div className="pointer-events-none absolute left-4 top-4 flex items-center gap-2">
-        <span className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
-          {status === "ready" ? "3D Mode" : "2D Mode"}
+      <div className="pointer-events-none absolute left-4 top-4 flex items-center gap-2 z-10">
+        <span className={`rounded-full px-3 py-1 text-xs font-bold text-white shadow-lg ${mode === "3d" ? "bg-emerald-500" : "bg-blue-500"}`}>
+          {mode === "3d" ? "3D Mode" : "2D Mode"}
         </span>
-        {status === "ready" && (
-          <span className="rounded-full bg-slate-800/70 px-2 py-1 text-xs text-white backdrop-blur">
-            Three.js
-          </span>
-        )}
       </div>
 
-      {/* 操作ヒント */}
-      {status === "ready" && (
-        <div className="pointer-events-none absolute bottom-4 right-4 rounded-lg bg-black/50 px-3 py-2 text-xs text-white backdrop-blur">
+      {/* モード切替ボタン */}
+      <button
+        onClick={() => setMode(mode === "3d" ? "2d" : "3d")}
+        className="absolute right-4 top-4 z-10 rounded-lg bg-slate-800/70 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 transition-colors"
+        disabled={!webglSupported && mode === "2d"}
+      >
+        {mode === "3d" ? "2Dに切替" : "3Dに切替"}
+      </button>
+
+      {/* 操作ヒント（3Dモード） */}
+      {mode === "3d" && (
+        <div className="pointer-events-none absolute bottom-4 right-4 rounded-lg bg-black/50 px-3 py-2 text-xs text-white backdrop-blur z-10">
           <p>🖱️ ドラッグ: 回転</p>
           <p>🔍 スクロール: ズーム</p>
         </div>

@@ -23,20 +23,19 @@
     "@dnd-kit/utilities": "^3.2.1",
     "@excalidraw/excalidraw": "0.18.0",
     "@prisma/client": "6.19.0",
-    "@react-three/drei": "9.122.0",
-    "@react-three/fiber": "8.13.7",
+    "@react-three/drei": "^9.117.0",
+    "@react-three/fiber": "^8.17.0",
     "@supabase/supabase-js": "^2.48.0",
-    "@types/three": "^0.181.0",
     "bcryptjs": "^3.0.3",
     "dagre": "^0.8.5",
     "html-to-image": "^1.11.11",
     "next": "15.5.7",
     "next-auth": "^4.24.13",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "reactflow": "^11.11.3",
     "tesseract.js": "^6.0.1",
-    "three": "0.159.0",
+    "three": "^0.170.0",
     "ws": "^8.18.3",
     "zod": "^4.1.13",
     "zustand": "^5.0.4"
@@ -44,8 +43,9 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "20.19.25",
-    "@types/react": "18.2.79",
-    "@types/react-dom": "18.2.25",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/three": "^0.170.0",
     "babel-plugin-react-compiler": "1.0.0",
     "dotenv": "^16.4.5",
     "eslint": "^9",
@@ -59,14 +59,6 @@
   "overrides": {
     "mermaid": "^11.12.2",
     "dompurify": "^3.2.4",
-    "nanoid": "^5.0.9",
-    "@react-three/fiber": {
-      "react": "$react",
-      "react-dom": "$react-dom"
-    },
-    "@react-three/drei": {
-      "react": "$react",
-      "react-dom": "$react-dom"
-    }
+    "nanoid": "^5.0.9"
   }
 }
