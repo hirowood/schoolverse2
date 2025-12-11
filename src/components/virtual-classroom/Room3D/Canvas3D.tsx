@@ -75,7 +75,9 @@ function FlatPlaceholder() {
   const teacherX = Math.floor(size * 0.6);
   const teacherY = Math.floor(size * 0.55);
   pixels[teacherY][teacherX] = "T";
-  pixels[teacherY + 1]?.[teacherX + 1] = "T";
+  if (pixels[teacherY + 1] && pixels[teacherY + 1][teacherX + 1] !== undefined) {
+    pixels[teacherY + 1][teacherX + 1] = "T";
+  }
 
   // 机（オレンジ）を複数配置
   const desks = [
