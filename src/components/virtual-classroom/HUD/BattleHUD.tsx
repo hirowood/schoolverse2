@@ -8,6 +8,7 @@ import { RewardToast } from "./RewardToast";
 
 export function BattleHUD() {
   const [category, setCategory] = useState<string | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const {
     encounterId,
     monster,
@@ -20,6 +21,25 @@ export function BattleHUD() {
     resetBattle,
     isBattleActive,
   } = useVirtualRoomStore();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("vc_sound_enabled");
+    if (stored !== null) {
+      // defer to next frame to avoid sync setState warning
+      requestAnimationFrame(() => setSoundEnabled(stored === "true"));
+    }
+  }, []);
+
+  const toggleSound = () => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("vc_sound_enabled", String(next));
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!result) return;
@@ -52,6 +72,15 @@ export function BattleHUD() {
         >
           遭遇開始
         </button>
+        <label className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">
+          <input
+            type="checkbox"
+            checked={soundEnabled}
+            onChange={toggleSound}
+            className="h-4 w-4 accent-emerald-600"
+          />
+          サウンド
+        </label>
         {(encounterId || isBattleActive) && (
           <button
             type="button"
@@ -84,6 +113,7 @@ export function BattleHUD() {
         bonusXp={result?.bonusXpEarned ?? 0}
         coins={result?.coinsEarned ?? 0}
         onClose={resetBattle}
+        soundEnabled={soundEnabled}
       />
     </>
   );

@@ -13,6 +13,8 @@ type Props = {
   soundEnabled?: boolean;
 };
 
+const formatNum = (v: number) => v.toLocaleString("ja-JP");
+
 export function RewardToast({
   open,
   isCorrect,
@@ -134,19 +136,19 @@ export function RewardToast({
           <div className="px-2 py-2">
             <p className="text-[11px] uppercase text-slate-500">XP</p>
             <p className="animate-pulse text-emerald-700" aria-label={`XP ${displayXp}`}>
-              {displayXp}
+              {formatNum(displayXp)}
             </p>
           </div>
           <div className="border-l border-white/70 px-2 py-2">
             <p className="text-[11px] uppercase text-slate-500">Bonus</p>
             <p className="text-emerald-600" aria-label={`Bonus XP ${displayBonus}`}>
-              +{displayBonus}
+              +{formatNum(displayBonus)}
             </p>
           </div>
           <div className="border-l border-white/70 px-2 py-2">
             <p className="text-[11px] uppercase text-slate-500">Coins</p>
             <p className={`text-amber-700 ${isCorrect ? "animate-pulse" : ""}`} aria-label={`Coins ${displayCoins}`}>
-              {displayCoins}
+              {formatNum(displayCoins)}
             </p>
           </div>
         </div>
