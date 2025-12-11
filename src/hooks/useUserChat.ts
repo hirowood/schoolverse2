@@ -132,7 +132,11 @@ export function useUserChat() {
   const sendMessage = useCallback(
     async (content: string) => {
       const text = content.trim();
-      if (!text || !activeRoomId) return;
+      if (!text) return;
+      if (!activeRoomId) {
+        setError("送信先ルームが選択されていません");
+        return;
+      }
       recordActivity();
       const res = await fetch(`/api/user-chat/rooms/${activeRoomId}/messages`, {
         method: "POST",
@@ -192,7 +196,13 @@ export function useUserChat() {
           return;
         }
         const data = (await res.json()) as { users?: UserPreview[] };
-        setSearchResults(data.users ?? []);
+        const users = data.users ?? [];
+        setSearchResults(users);
+        if (users.length === 0) {
+          setError("該当するユーザーが見つかりませんでした");
+        } else {
+          setError(null);
+        }
       } catch (e) {
         setError("検索に失敗しました");
         setSearchResults([]);
