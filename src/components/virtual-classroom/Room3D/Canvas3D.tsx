@@ -164,6 +164,7 @@ function FlatPlaceholder({
           style={{ imageRendering: "pixelated" }}
         >
           <div className="relative h-full w-full">
+            {/* グリッド本体 */}
             <div
               className="grid h-full w-full"
               style={{
@@ -183,8 +184,19 @@ function FlatPlaceholder({
                 )),
               )}
             </div>
-            {/* リモートプレイヤーを目立たせるオーバーレイ（枠付き） */}
+            {/* プレイヤーとリモートを目立たせるオーバーレイ（滑らかな移動） */}
             <div className="pointer-events-none absolute inset-0">
+              <div
+                className="absolute rounded-sm border border-white shadow-[0_0_0_2px_rgba(0,0,0,0.08)]"
+                style={{
+                  width: `${100 / size}%`,
+                  height: `${100 / size}%`,
+                  left: `${(pos.x / size) * 100}%`,
+                  top: `${(pos.y / size) * 100}%`,
+                  backgroundColor: "#22c55e",
+                  transition: "left 140ms ease, top 140ms ease",
+                }}
+              />
               {remoteList.map((p, idx) => (
                 <div
                   key={`${p.x}-${p.y}-${idx}`}
@@ -195,6 +207,7 @@ function FlatPlaceholder({
                     left: `${(p.x / size) * 100}%`,
                     top: `${(p.y / size) * 100}%`,
                     backgroundColor: p.color,
+                    transition: "left 160ms ease, top 160ms ease",
                   }}
                 />
               ))}
