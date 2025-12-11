@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChatRoom, ChatRoomMessage, TypingUser } from "@/features/user-chat/types";
@@ -38,16 +38,47 @@ export function ChatMain({
 }: Props) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  
+  // FIX: Hold onMarkRead in ref to remove from deps
+  const onMarkReadRef = useRef(onMarkRead);
+  useEffect(() => {
+    onMarkReadRef.current = onMarkRead;
+  }, [onMarkRead]);
+
+  // FIX: Track last marked message ID
+  const lastMarkedIdRef = useRef<string | null>(null);
+  const markReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // FIX: Improved mark read logic
   useEffect(() => {
     if (!room) return;
     const last = messages[messages.length - 1];
-    if (last) void onMarkRead(last.id);
-  }, [room, messages, onMarkRead]);
+    if (!last) return;
+    
+    // Skip if same message ID
+    if (lastMarkedIdRef.current === last.id) return;
+    
+    // Clear existing timer
+    if (markReadTimeoutRef.current) {
+      clearTimeout(markReadTimeoutRef.current);
+    }
+    
+    // Debounce: 500ms delay
+    markReadTimeoutRef.current = setTimeout(() => {
+      lastMarkedIdRef.current = last.id;
+      void onMarkReadRef.current(last.id);
+    }, 500);
+    
+    return () => {
+      if (markReadTimeoutRef.current) {
+        clearTimeout(markReadTimeoutRef.current);
+      }
+    };
+  }, [room, messages]); // Removed onMarkRead from deps
 
   const typingNames = useMemo(() => typingUsers.map((u) => u.name), [typingUsers]);
 

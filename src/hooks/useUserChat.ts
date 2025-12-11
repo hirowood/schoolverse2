@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -41,8 +41,16 @@ export function useUserChat() {
   const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null } | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const subscriptionRef = useRef<ReturnType<SupabaseClient["channel"]> | null>(null);
-  const lastMarkReadRef = useRef<{ roomId: string; ts: number; messageId?: string }>({ roomId: "", ts: 0 });
+
+  // 修正: 既読スロットリング用のref
+  const lastMarkReadRef = useRef<{ roomId: string; ts: number; messageId: string }>({ roomId: "", ts: 0, messageId: "" });
   const markReadInFlight = useRef<boolean>(false);
+  const unreadCountsRef = useRef<Record<string, number>>({});
+  
+  // unreadCountsをrefと同期
+  useEffect(() => {
+    unreadCountsRef.current = unreadCounts;
+  }, [unreadCounts]);
 
   const activeRoom = useMemo(
     () => rooms.find((r) => r.id === activeRoomId) ?? null,
@@ -84,7 +92,7 @@ export function useUserChat() {
         const qs = new URLSearchParams();
         if (type && type !== "all") qs.set("type", type);
         const res = await fetch(`/api/user-chat/rooms?${qs.toString()}`);
-        if (!res.ok) throw new Error("ルーム取得に失敗しました");
+        if (!res.ok) throw new Error("luomu");
         const data = (await res.json()) as { rooms: ChatRoom[] };
         const roomsData = data.rooms ?? [];
         const mappedUnread = roomsData.reduce<Record<string, number>>((acc, room) => {
@@ -112,9 +120,9 @@ export function useUserChat() {
       try {
         const res = await fetch(`/api/user-chat/rooms/${roomId}/messages?limit=30`);
         if (res.status === 401) {
-          throw new Error("サインインが必要です");
+          throw new Error("signin_required");
         }
-        if (!res.ok) throw new Error("メッセージ取得に失敗しました");
+        if (!res.ok) throw new Error("msg_fail");
         const data = (await res.json()) as { messages: ChatRoomMessage[]; nextCursor: string | null };
         setMessages(data.messages ?? []);
         setHasMoreMessages(Boolean(data.nextCursor));
@@ -152,10 +160,9 @@ export function useUserChat() {
       const text = content.trim();
       if (!text) return;
       if (!activeRoomId) {
-        setError("送信先ルームが選択されていません");
+        setError("no_room");
         return;
       }
-      // 楽観的に末尾へ追加
       const optimisticId = `optimistic-${Date.now()}`;
       const optimisticMessage: ChatRoomMessage = {
         id: optimisticId,
@@ -174,11 +181,10 @@ export function useUserChat() {
         body: JSON.stringify({ content: text }),
       });
       if (res.status === 401) {
-        setError("サインインが必要です");
+        setError("signin_required");
       } else if (!res.ok) {
-        setError("メッセージ送信に失敗しました");
+        setError("send_fail");
       }
-      // 最新を取得して整合性を保つ
       void fetchMessages(activeRoomId);
     },
     [activeRoomId, recordActivity, fetchMessages, currentUser?.id],
@@ -192,35 +198,55 @@ export function useUserChat() {
     [recordActivity, setTyping],
   );
 
+  // FIX: Stabilize markRead (remove unreadCounts from deps)
   const markRead = useCallback(
     async (messageId: string) => {
       if (!activeRoomId) return;
-      // クライアント側で連続リクエストを抑制（429回避）
+      
       const now = Date.now();
       const last = lastMarkReadRef.current;
-      if (last.roomId === activeRoomId && last.messageId === messageId) return;
+      
+      // Skip if same messageId
+      if (last.messageId === messageId) return;
+      
+      // Skip if same room within 8s
       if (last.roomId === activeRoomId && now - last.ts < 8000) return;
-      if ((unreadCounts[activeRoomId] ?? 0) === 0) return;
+      
+      // Skip if unread=0 (read from ref)
+      if ((unreadCountsRef.current[activeRoomId] ?? 0) === 0) return;
+      
+      // Skip if in flight
       if (markReadInFlight.current) return;
+      
       markReadInFlight.current = true;
       lastMarkReadRef.current = { roomId: activeRoomId, ts: now, messageId };
+      
       recordActivity();
+      
       try {
-        await fetch(`/api/user-chat/rooms/${activeRoomId}/read`, {
+        const res = await fetch(`/api/user-chat/rooms/${activeRoomId}/read`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messageId }),
         });
-        setUnreadCounts((prev) => ({ ...prev, [activeRoomId]: 0 }));
-        setRooms((prev) => prev.map((room) => (room.id === activeRoomId ? { ...room, unreadCount: 0 } : room)));
+        
+        if (res.ok) {
+          setUnreadCounts((prev) => {
+            const next = { ...prev, [activeRoomId]: 0 };
+            unreadCountsRef.current = next;
+            return next;
+          });
+          setRooms((prev) => prev.map((room) => (room.id === activeRoomId ? { ...room, unreadCount: 0 } : room)));
+        }
       } catch {
-        // ignore errors to avoid loops
+        // Ignore errors to prevent loops
       } finally {
         markReadInFlight.current = false;
       }
     },
-    [activeRoomId, recordActivity, unreadCounts],
+    [activeRoomId, recordActivity], // Removed unreadCounts
   );
+
 
   const searchUsers = useCallback(
     async (q: string) => {
@@ -233,12 +259,12 @@ export function useUserChat() {
         setError(null);
         const res = await fetch(`/api/user-chat/search-users?q=${encodeURIComponent(keyword)}&limit=20`);
         if (res.status === 401) {
-          setError("検索するにはサインインが必要です");
+          setError("signin_required");
           setSearchResults([]);
           return;
         }
         if (!res.ok) {
-          setError("検索に失敗しました");
+          setError("search_fail");
           setSearchResults([]);
           return;
         }
@@ -246,12 +272,12 @@ export function useUserChat() {
         const users = data.users ?? [];
         setSearchResults(users);
         if (users.length === 0) {
-          setError("該当するユーザーが見つかりませんでした");
+          setError("no_users_found");
         } else {
           setError(null);
         }
       } catch (e) {
-        setError("検索に失敗しました");
+        setError("search_fail");
         setSearchResults([]);
         console.error("searchUsers error", e);
       }
@@ -267,7 +293,7 @@ export function useUserChat() {
         body: JSON.stringify({ type, participantIds: [participantId] }),
       });
       if (!res.ok) {
-        setError("ルーム作成に失敗しました");
+        setError("create_fail");
         return null;
       }
       const data = (await res.json()) as { room: ChatRoom };
@@ -279,15 +305,14 @@ export function useUserChat() {
     [fetchMessages],
   );
 
-  // Supabase Realtime: メッセージ挿入を監視
+  // Supabase Realtime: Watch message inserts
   useEffect(() => {
     if (!supabase) {
-      setError("Supabaseの環境変数が未設定です");
+      setError("supabase_not_configured");
       return;
     }
     if (!activeRoomId) return;
 
-    // 既存チャネルを解除
     if (subscriptionRef.current) {
       supabase.removeChannel(subscriptionRef.current);
       subscriptionRef.current = null;
@@ -300,7 +325,11 @@ export function useUserChat() {
         { event: "INSERT", schema: "public", table: "ChatRoomMessage", filter: `roomId=eq.${activeRoomId}` },
         (payload) => {
           const msg = payload.new as ChatRoomMessage;
-          setMessages((prev) => [...prev, msg]);
+          setMessages((prev) => {
+            // Duplicate check
+            if (prev.some((m) => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
           setRooms((prev) =>
             prev.map((r) =>
               r.id === activeRoomId
@@ -327,7 +356,6 @@ export function useUserChat() {
   }, [supabase, activeRoomId]);
 
   useEffect(() => {
-    // セッション取得
     const fetchSession = async () => {
       try {
         const res = await fetch("/api/auth/session");
@@ -354,7 +382,6 @@ export function useUserChat() {
     return () => clearInterval(timer);
   }, [fetchUnreadCounts]);
 
-  // Presence: room tracking
   useEffect(() => {
     setCurrentRoom(activeRoomId ?? null);
   }, [activeRoomId, setCurrentRoom]);
