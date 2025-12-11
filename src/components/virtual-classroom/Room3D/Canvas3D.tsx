@@ -47,6 +47,13 @@ function FlatPlaceholder({
   );
   const [pos, setPos] = useState({ x: Math.floor(size / 2), y: Math.floor(size / 2) });
 
+  // 初期位置を同期
+  useEffect(() => {
+    const worldPos = { x: gridToWorld(pos.x), y: 0.6, z: gridToWorld(pos.y) };
+    setPosition(worldPos);
+    broadcastPosition(worldPos);
+  }, [broadcastPosition, gridToWorld, pos.x, pos.y, setPosition]);
+
   const movePlayer = useCallback((dx: number, dy: number) => {
     setPos((p) => {
       const next = {
@@ -164,7 +171,9 @@ function FlatPlaceholder({
               row.map((cell, x) => (
                 <div
                   key={`${x}-${y}`}
-                  style={{ backgroundColor: colorMap[cell] ?? "transparent" }}
+                  style={{
+                    backgroundColor: remoteCells.get(`${x}-${y}`) ?? colorMap[cell] ?? "transparent",
+                  }}
                   className="h-full w-full"
                 />
               )),
@@ -375,7 +384,7 @@ export function Canvas3D({
       lastTimeRef.current = now;
 
       // WASD move the box on the floor plane
-      const speed = 2.5; // units per second
+      const speed = 2.0; // units per second (少し抑えて滑らかに)
       const moveX =
         (pressedKeysRef.current.has("d") || pressedKeysRef.current.has("arrowright") ? 1 : 0) -
         (pressedKeysRef.current.has("a") || pressedKeysRef.current.has("arrowleft") ? 1 : 0);
@@ -423,7 +432,7 @@ export function Canvas3D({
 
       // Other players lerp updates
       otherPlayerRefs.current.forEach(({ mesh, label, target }) => {
-        mesh.position.lerp(target, 0.1);
+        mesh.position.lerp(target, 0.18);
         mesh.position.y = 0.4;
         label.position.copy(mesh.position).add(new THREE.Vector3(0, 0.8, 0));
         label.lookAt(camera.position);
