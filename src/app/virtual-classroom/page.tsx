@@ -122,10 +122,10 @@ export default function VirtualClassroomPage() {
 
       {/* ユーザーチャット（モーダル） */}
       {chatOpen && (
-        <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/30 px-3 pt-16 sm:pt-20">
-          <div className="w-full max-w-[520px]">
-            <div className="h-[80vh] sm:h-[78vh] rounded-2xl border border-slate-200 bg-white shadow-2xl ring-1 ring-slate-100 overflow-hidden flex flex-col text-[12px] leading-tight">
-              <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+        <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/30 px-3 pt-12 sm:pt-16">
+          <div className="w-full max-w-[560px]">
+            <div className="max-h-[82vh] rounded-2xl border border-slate-200 bg-white shadow-2xl ring-1 ring-slate-100 overflow-hidden flex flex-col text-[12px] leading-tight">
+              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase text-slate-500">User Chat</p>
                   <p className="text-[13px] font-bold text-slate-900">教室チャット</p>
@@ -141,8 +141,8 @@ export default function VirtualClassroomPage() {
                   閉じる
                 </button>
               </div>
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <div className="h-full w-full overflow-hidden text-[12px] leading-tight [&_*]:text-[12px] [&_input]:text-[12px] [&_textarea]:text-[12px]">
+              <div className="flex-1 min-h-0 overflow-hidden px-2 pb-3">
+                <div className="h-full w-full overflow-hidden rounded-xl border border-slate-100 text-[12px] leading-tight [&_*]:text-[12px] [&_input]:text-[12px] [&_textarea]:text-[12px]">
                   <UserChat
                     onInputFocusChange={(focused) => {
                       setChatInputFocused(focused);
