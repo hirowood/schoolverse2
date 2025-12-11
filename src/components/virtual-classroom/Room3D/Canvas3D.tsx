@@ -1,11 +1,21 @@
 "use client";
 
-// 3D/2D 切り替え可能な軽量 three.js 実装（R3F不使用）。3Dが重い/落ちる環境でも 2D に即切替できます。
-
+// three.jsの軽量実装（R3F非依存）。3D/2Dトグル、WASD移動、FPS視点。
+// 他プレイヤー表示: Presenceから位置を受け取りキューブ＋ラベルで描画、lerpで補間。
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useVirtualRoomStore } from "@/stores/useVirtualRoomStore";
-import { useClassroomPresence } from "@/hooks/useClassroomPresence";
+import {
+  useClassroomPresence,
+  type UseClassroomPresenceResult,
+} from "@/hooks/useClassroomPresence";
+
+type Props = {
+  roomId?: string | null;
+  userId?: string | null;
+  userName?: string | null;
+  presence?: UseClassroomPresenceResult | null;
+};
 
 function hasWebGL(): boolean {
   if (typeof window === "undefined") return false;
@@ -29,7 +39,42 @@ function FlatPlaceholder() {
   );
 }
 
-export function Canvas3D() {
+type OtherPlayerMesh = {
+  mesh: THREE.Mesh;
+  label: THREE.Sprite;
+  target: THREE.Vector3;
+};
+
+function createLabelSprite(text: string, color = "#0f172a"): THREE.Sprite {
+  const canvas = document.createElement("canvas");
+  const size = 256;
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fillRect(0, 0, size, size);
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.strokeRect(0, 0, size, size);
+    ctx.fillStyle = color;
+    ctx.font = "bold 48px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, size / 2, size / 2);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(1.5, 0.6, 1);
+  return sprite;
+}
+
+export function Canvas3D({
+  roomId = "default",
+  userId = null,
+  userName = null,
+  presence,
+}: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const frameRef = useRef<number | null>(null);
@@ -44,12 +89,17 @@ export function Canvas3D() {
   const [mode, setMode] = useState<"3d" | "2d">(() => (supported ? "3d" : "2d"));
   const { setPosition, triggerAutoEncounter } = useVirtualRoomStore();
   const lastZoneRef = useRef<string | null>(null);
-  const { broadcastPosition } = useClassroomPresence("default", null, null);
+  const presenceHook = useClassroomPresence(roomId, userId, userName, !presence);
+  const effectivePresence = presence ?? presenceHook;
+  const { broadcastPosition, otherPlayers } = effectivePresence;
+  const otherPlayerRefs = useRef<Map<string, OtherPlayerMesh>>(new Map());
+  const othersGroupRef = useRef<THREE.Group | null>(null);
 
   useEffect(() => {
     if (!supported || mode !== "3d") return;
     const container = containerRef.current;
     if (!container) return;
+    const playerRefs = otherPlayerRefs.current;
 
     // Scene basics
     const scene = new THREE.Scene();
@@ -103,6 +153,11 @@ export function Canvas3D() {
     box.castShadow = true;
     scene.add(box);
 
+    // Other players group
+    const othersGroup = new THREE.Group();
+    scene.add(othersGroup);
+    othersGroupRef.current = othersGroup;
+
     // Resize handler
     const handleResize = () => {
       if (!rendererRef.current) return;
@@ -133,17 +188,13 @@ export function Canvas3D() {
         (pressedKeysRef.current.has("w") || pressedKeysRef.current.has("arrowup") ? 1 : 0);
 
       if (moveX !== 0 || moveZ !== 0) {
-        // カメラの向きに合わせた移動ベクトル (ゼルダ64風)
+        // カメラの向きに合わせた移動ベクトル
         const forward = new THREE.Vector3(Math.sin(yawRef.current), 0, Math.cos(yawRef.current));
         const right = new THREE.Vector3(forward.z, 0, -forward.x);
-        const moveVec = new THREE.Vector3()
-          .addScaledVector(right, moveX)
-          .addScaledVector(forward, moveZ);
+        const moveVec = new THREE.Vector3().addScaledVector(right, moveX).addScaledVector(forward, moveZ);
         const len = moveVec.length() || 1;
         moveVec.divideScalar(len).multiplyScalar(speed * delta);
-
         box.position.add(moveVec);
-        // keep inside floor bounds
         box.position.x = THREE.MathUtils.clamp(box.position.x, -5.5, 5.5);
         box.position.z = THREE.MathUtils.clamp(box.position.z, -5.5, 5.5);
       }
@@ -151,7 +202,8 @@ export function Canvas3D() {
       box.rotation.x = t * 0.6;
       box.rotation.y = t * 0.8;
       box.position.y = 0.6 + Math.sin(t) * 0.15;
-      // push position to store + zone detection
+
+      // push position to store + zone detection (store handles zone)
       setPosition({ x: box.position.x, y: box.position.y, z: box.position.z });
       broadcastPosition({ x: box.position.x, y: box.position.y, z: box.position.z });
       const currentZone = useVirtualRoomStore.getState().currentZone;
@@ -159,6 +211,7 @@ export function Canvas3D() {
         lastZoneRef.current = currentZone?.id ?? null;
         void triggerAutoEncounter(currentZone);
       }
+
       // FPSライクな視点: プレイヤーを中心にカメラを回す
       const r = distanceRef.current;
       const yaw = yawRef.current;
@@ -172,6 +225,14 @@ export function Canvas3D() {
       camera.position.copy(target).add(offset);
       camera.lookAt(target);
 
+      // Other players lerp updates
+      otherPlayerRefs.current.forEach(({ mesh, label, target }) => {
+        mesh.position.lerp(target, 0.1);
+        mesh.position.y = 0.4;
+        label.position.copy(mesh.position).add(new THREE.Vector3(0, 0.8, 0));
+        label.lookAt(camera.position);
+      });
+
       renderer.render(scene, camera);
     };
     animate();
@@ -181,18 +242,88 @@ export function Canvas3D() {
       window.removeEventListener("resize", handleResize);
       desks.forEach((m) => scene.remove(m));
       scene.remove(box);
+      scene.remove(othersGroup);
+      othersGroupRef.current = null;
+      playerRefs.forEach(({ mesh, label }) => {
+        if (mesh.material instanceof THREE.Material) {
+          mesh.material.dispose();
+        }
+        mesh.geometry.dispose();
+        if (label.material instanceof THREE.SpriteMaterial) {
+          label.material.map?.dispose();
+          label.material.dispose();
+        }
+      });
       floorGeo.dispose();
       floorMat.dispose();
       deskGeo.dispose();
       deskMat.dispose();
       boxGeo.dispose();
       boxMat.dispose();
+      othersGroup.children.forEach((child) => {
+        if (child instanceof THREE.Mesh) child.geometry.dispose();
+      });
       renderer.dispose();
       if (renderer.domElement.parentElement) {
         renderer.domElement.parentElement.removeChild(renderer.domElement);
       }
+      playerRefs.clear();
     };
   }, [supported, mode, setPosition, triggerAutoEncounter, broadcastPosition]);
+
+  // Other players sync: create, update targets, clean up missing
+  useEffect(() => {
+    const group = othersGroupRef.current;
+    if (!group) return;
+
+    const seen = new Set<string>();
+    otherPlayers.forEach((player, key) => {
+      seen.add(key);
+      let entry = otherPlayerRefs.current.get(key);
+      if (!entry) {
+        const geom = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+        const mat = new THREE.MeshStandardMaterial({
+          color: player.avatarColor ?? "#64748b",
+          emissive: new THREE.Color("#000000"),
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+
+        const label = createLabelSprite(player.userName ?? "プレイヤー", "#0f172a");
+        const target = new THREE.Vector3(player.position.x, 0.4, player.position.z);
+        mesh.position.copy(target);
+        label.position.copy(target).add(new THREE.Vector3(0, 0.8, 0));
+
+        group.add(mesh);
+        group.add(label);
+        otherPlayerRefs.current.set(key, { mesh, label, target });
+        entry = otherPlayerRefs.current.get(key)!;
+      }
+
+      entry.target.set(player.position.x, 0.4, player.position.z);
+      const mat = entry.mesh.material as THREE.MeshStandardMaterial;
+      mat.color = new THREE.Color(player.avatarColor ?? "#64748b");
+      mat.emissive.set(player.status === "battling" ? "#ef4444" : "#000000");
+      entry.label.position.copy(entry.mesh.position).add(new THREE.Vector3(0, 0.8, 0));
+    });
+
+    // Remove players that have left
+    otherPlayerRefs.current.forEach((entry, key) => {
+      if (seen.has(key)) return;
+      group.remove(entry.mesh);
+      group.remove(entry.label);
+      if (entry.mesh.material instanceof THREE.Material) {
+        entry.mesh.material.dispose();
+      }
+      entry.mesh.geometry.dispose();
+      if (entry.label.material instanceof THREE.SpriteMaterial) {
+        entry.label.material.map?.dispose();
+        entry.label.material.dispose();
+      }
+      otherPlayerRefs.current.delete(key);
+    });
+  }, [otherPlayers]);
 
   // Mouse look & zoom: FPS-like camera pivoting around the player
   useEffect(() => {
@@ -278,11 +409,6 @@ export function Canvas3D() {
         <span className={`rounded-full px-3 py-1 text-[11px] font-bold text-white shadow ${mode === "3d" && supported ? "bg-emerald-500" : "bg-blue-500"}`}>
           {mode === "3d" && supported ? "3D Mode (three.js)" : "2D Mode"}
         </span>
-        {mode === "3d" && supported && (
-          <span className="rounded-md bg-white/80 px-2 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200 shadow-sm">
-            WASD / ↑↓←→ で移動
-          </span>
-        )}
       </div>
 
       <div className="absolute right-3 top-3 z-10 flex gap-2">

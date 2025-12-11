@@ -39,7 +39,8 @@ export default function VirtualClassroomPage() {
   const { data: session } = useSession();
   const userId = (session?.user as { id?: string } | undefined)?.id ?? null;
   const userName = session?.user?.name ?? session?.user?.email ?? "Guest";
-  const { otherPlayers, isConnected, playerCount } = useClassroomPresence("default", userId, userName);
+  const presence = useClassroomPresence("default", userId, userName);
+  const { otherPlayers, isConnected, playerCount } = presence;
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
       <div className="mx-auto w-full px-3 sm:px-6 lg:px-10 pt-8 space-y-6">
@@ -67,7 +68,7 @@ export default function VirtualClassroomPage() {
           }
         >
           <ShakeEffect active={showShake}>
-            <Canvas3D />
+            <Canvas3D roomId="default" userId={userId} userName={userName} presence={presence} />
           </ShakeEffect>
         </Suspense>
         <div className="flex justify-end">

@@ -27,6 +27,15 @@ export type ClassroomPresenceState = {
   currentMonster: string | null;
 };
 
+export type UseClassroomPresenceResult = {
+  otherPlayers: Map<string, PlayerState>;
+  isConnected: boolean;
+  avatarColor: string;
+  broadcastPosition: (position: { x: number; y: number; z: number }) => void;
+  broadcastBattleState: (isBattling: boolean, monsterName?: string | null) => void;
+  playerCount: number;
+};
+
 const AVATAR_COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#eab308", "#ef4444", "#84cc16"];
 
 function getAvatarColor(userId: string): string {
@@ -35,7 +44,12 @@ function getAvatarColor(userId: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-export function useClassroomPresence(roomId: string | null, userId: string | null, userName: string | null) {
+export function useClassroomPresence(
+  roomId: string | null,
+  userId: string | null,
+  userName: string | null,
+  enabled = true,
+): UseClassroomPresenceResult {
   const [otherPlayers, setOtherPlayers] = useState<Map<string, PlayerState>>(new Map());
   const [isConnected, setIsConnected] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -43,15 +57,16 @@ export function useClassroomPresence(roomId: string | null, userId: string | nul
   const currentStateRef = useRef<ClassroomPresenceState | null>(null);
 
   const supabase = useMemo<SupabaseClient | null>(() => {
+    if (!enabled) return null;
     if (typeof window === "undefined" || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
     return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }, []);
+  }, [enabled]);
 
   const avatarColor = useMemo(() => (userId ? getAvatarColor(userId) : "#94a3b8"), [userId]);
 
   const broadcastPosition = useCallback(
     (position: { x: number; y: number; z: number }) => {
-      if (!channelRef.current || !userId) return;
+      if (!enabled || !channelRef.current || !userId) return;
       const now = Date.now();
       if (now - lastBroadcastRef.current < POSITION_BROADCAST_INTERVAL) return;
       lastBroadcastRef.current = now;
@@ -66,22 +81,25 @@ export function useClassroomPresence(roomId: string | null, userId: string | nul
       currentStateRef.current = newState;
       channelRef.current.track(newState);
     },
-    [userId, avatarColor, userName],
+    [enabled, userId, avatarColor, userName],
   );
 
-  const broadcastBattleState = useCallback((isBattling: boolean, monsterName: string | null = null) => {
-    if (!channelRef.current || !currentStateRef.current) return;
-    const newState: ClassroomPresenceState = {
-      ...currentStateRef.current,
-      status: isBattling ? "battling" : "exploring",
-      currentMonster: monsterName,
-    };
-    currentStateRef.current = newState;
-    channelRef.current.track(newState);
-  }, []);
+  const broadcastBattleState = useCallback(
+    (isBattling: boolean, monsterName: string | null = null) => {
+      if (!enabled || !channelRef.current || !currentStateRef.current) return;
+      const newState: ClassroomPresenceState = {
+        ...currentStateRef.current,
+        status: isBattling ? "battling" : "exploring",
+        currentMonster: monsterName,
+      };
+      currentStateRef.current = newState;
+      channelRef.current.track(newState);
+    },
+    [enabled],
+  );
 
   useEffect(() => {
-    if (!supabase || !roomId || !userId) return;
+    if (!enabled || !supabase || !roomId || !userId) return;
 
     const channel = supabase.channel(`classroom-${roomId}`, { config: { presence: { key: userId } } });
 
@@ -91,7 +109,7 @@ export function useClassroomPresence(roomId: string | null, userId: string | nul
         const players = new Map<string, PlayerState>();
         for (const [key, presences] of Object.entries(state)) {
           if (key === userId || presences.length === 0) continue;
-        const p = presences[0] as unknown as ClassroomPresenceState;
+          const p = presences[0] as unknown as ClassroomPresenceState;
           players.set(key, {
             userId: key,
             position: p.position ?? { x: 0, y: 0, z: 0 },
@@ -151,7 +169,7 @@ export function useClassroomPresence(roomId: string | null, userId: string | nul
       setIsConnected(false);
       setOtherPlayers(new Map());
     };
-  }, [supabase, roomId, userId, avatarColor, userName]);
+  }, [enabled, supabase, roomId, userId, avatarColor, userName]);
 
   return {
     otherPlayers,
