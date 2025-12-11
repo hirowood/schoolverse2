@@ -542,6 +542,16 @@ export function Canvas3D({
         if (child instanceof THREE.Mesh) child.geometry.dispose();
       });
       renderer.dispose();
+      // WebGLコンテキストを明示的に失効させてリーク防止
+      try {
+        const gl = renderer.getContext();
+        if (gl && typeof gl.getExtension === "function") {
+          const lose = gl.getExtension("WEBGL_lose_context");
+          lose?.loseContext();
+        }
+      } catch {
+        // noop
+      }
       if (renderer.domElement.parentElement) {
         renderer.domElement.parentElement.removeChild(renderer.domElement);
       }
