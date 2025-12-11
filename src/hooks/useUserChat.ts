@@ -9,6 +9,26 @@ import { useRoomPresence } from "@/hooks/useRoomPresence";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+function getSharedUserChatClient(): SupabaseClient | null {
+  if (typeof window === "undefined" || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  const g = globalThis as typeof globalThis & { __sbUserChatClient?: SupabaseClient };
+  if (g.__sbUserChatClient) return g.__sbUserChatClient;
+  g.__sbUserChatClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      storageKey: "sb-schoolverse2-userchat",
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: {
+        "X-Client-Context": "userchat",
+      },
+    },
+  });
+  return g.__sbUserChatClient;
+}
+
 export function useUserChat() {
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
@@ -28,23 +48,7 @@ export function useUserChat() {
     [activeRoomId, rooms],
   );
 
-  const supabase = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        storageKey: "sb-schoolverse2-userchat",
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-      },
-      global: {
-        headers: {
-          "X-Client-Context": "userchat",
-        },
-      },
-    });
-  }, []);
+  const supabase = useMemo(() => getSharedUserChatClient(), []);
 
   const { presenceMap, myStatus, setCurrentRoom, getUserStatus, recordActivity } = usePresence(currentUser?.id ?? null);
   const { typingUsers, setTyping } = useRoomPresence(
@@ -160,9 +164,12 @@ export function useUserChat() {
         setError("サインインが必要です");
       } else if (!res.ok) {
         setError("メッセージ送信に失敗しました");
+      } else {
+        // 送信後に最新メッセージを再取得して遅延を解消
+        void fetchMessages(activeRoomId);
       }
     },
-    [activeRoomId, recordActivity],
+    [activeRoomId, recordActivity, fetchMessages],
   );
 
   const sendTyping = useCallback(
