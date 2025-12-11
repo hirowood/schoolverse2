@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { useVirtualRoomStore } from "@/stores/useVirtualRoomStore";
 import {
   useClassroomPresence,
+  type PlayerState,
   type UseClassroomPresenceResult,
 } from "@/hooks/useClassroomPresence";
 
@@ -27,9 +28,20 @@ function hasWebGL(): boolean {
   }
 }
 
-function FlatPlaceholder() {
+function FlatPlaceholder({
+  broadcastPosition,
+  setPosition,
+  otherPlayers,
+}: {
+  broadcastPosition: (pos: { x: number; y: number; z: number }) => void;
+  setPosition: (pos: { x: number; y: number; z: number }) => void;
+  otherPlayers: Map<string, PlayerState>;
+}) {
   // 簡易なドット絵教室（移動可能）
   const size = 32;
+  const worldRange = 5.5;
+  const gridToWorld = (value: number) => (value / (size - 1)) * (worldRange * 2) - worldRange;
+  const worldToGrid = (value: number) => Math.round(((value + worldRange) / (worldRange * 2)) * (size - 1));
   const [pos, setPos] = useState({ x: Math.floor(size / 2), y: Math.floor(size / 2) });
 
   useEffect(() => {
@@ -43,14 +55,20 @@ function FlatPlaceholder() {
       if (key === "arrowright" || key === "d") dx = 1;
       if (dx === 0 && dy === 0) return;
       e.preventDefault();
-      setPos((p) => ({
-        x: Math.min(size - 1, Math.max(0, p.x + dx)),
-        y: Math.min(size - 1, Math.max(0, p.y + dy)),
-      }));
+      setPos((p) => {
+        const next = {
+          x: Math.min(size - 1, Math.max(0, p.x + dx)),
+          y: Math.min(size - 1, Math.max(0, p.y + dy)),
+        };
+        const worldPos = { x: gridToWorld(next.x), y: 0.6, z: gridToWorld(next.y) };
+        setPosition(worldPos);
+        broadcastPosition(worldPos);
+        return next;
+      });
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, []);
+  }, [broadcastPosition, setPosition, size]);
 
   const pixels = Array.from({ length: size }, () => Array.from({ length: size }, () => "."));
 
@@ -94,6 +112,14 @@ function FlatPlaceholder() {
 
   // プレイヤー
   pixels[pos.y][pos.x] = "P";
+
+  const remoteCells = new Map<string, string>();
+  otherPlayers.forEach((player) => {
+    const gx = worldToGrid(player.position.x);
+    const gy = worldToGrid(player.position.z);
+    const key = `${gx}-${gy}`;
+    remoteCells.set(key, player.avatarColor ?? "#22c55e");
+  });
 
   const colorMap: Record<string, string> = {
     ".": "transparent",
@@ -505,7 +531,13 @@ export function Canvas3D({
   return (
     <div className="relative h-[calc(100vh-160px)] min-h-[560px] w-full overflow-hidden rounded-2xl border border-slate-300 bg-slate-100 shadow-inner">
       {mode === "3d" && supported && <div ref={containerRef} className="absolute inset-0 cursor-grab" />}
-      {(mode === "2d" || !supported) && <FlatPlaceholder />}
+      {(mode === "2d" || !supported) && (
+        <FlatPlaceholder
+          broadcastPosition={broadcastPosition}
+          setPosition={setPosition}
+          otherPlayers={otherPlayers}
+        />
+      )}
 
       <div className="absolute left-3 top-3 flex items-center gap-2 z-10">
         <span className={`rounded-full px-3 py-1 text-[11px] font-bold text-white shadow ${mode === "3d" && supported ? "bg-emerald-500" : "bg-blue-500"}`}>
