@@ -120,7 +120,7 @@ export function Canvas3D({
     scene.add(ambient);
     const directional = new THREE.DirectionalLight(0xffffff, 0.9);
     directional.position.set(6, 8, 4);
-    directional.castShadow = true;
+    directional.castShadow = false;
     scene.add(directional);
 
     // Floor
@@ -128,7 +128,7 @@ export function Canvas3D({
     const floorMat = new THREE.MeshStandardMaterial({ color: "#e2e8f0" });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
+    floor.receiveShadow = false;
     scene.add(floor);
 
     // Desk grid (軽量版 2x3)
@@ -285,8 +285,8 @@ export function Canvas3D({
           emissive: new THREE.Color("#000000"),
         });
         const mesh = new THREE.Mesh(geom, mat);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
 
         const label = createLabelSprite(player.userName ?? "プレイヤー", "#0f172a");
         const target = new THREE.Vector3(player.position.x, 0.4, player.position.z);
