@@ -16,6 +16,7 @@ type Props = {
   userId?: string | null;
   userName?: string | null;
   presence?: UseClassroomPresenceResult | null;
+  paused?: boolean;
 };
 
 function hasWebGL(): boolean {
@@ -354,10 +355,12 @@ export function Canvas3D({
   userId = null,
   userName = null,
   presence,
+  paused = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const frameRef = useRef<number | null>(null);
+  const animateRef = useRef<(() => void) | null>(null);
   const pressedKeysRef = useRef<Set<string>>(new Set());
   const lastTimeRef = useRef<number | null>(null);
   const yawRef = useRef<number>(Math.PI * 1.25); // 初期カメラ角度
@@ -368,12 +371,32 @@ export function Canvas3D({
   const supported = useMemo(() => hasWebGL(), []);
   const [mode, setMode] = useState<"3d" | "2d">(() => (supported ? "3d" : "2d"));
   const { setPosition, triggerAutoEncounter } = useVirtualRoomStore();
+  const pausedRef = useRef<boolean>(paused);
   const lastZoneRef = useRef<string | null>(null);
   const presenceHook = useClassroomPresence(roomId, userId, userName, !presence);
   const effectivePresence = presence ?? presenceHook;
   const { broadcastPosition, otherPlayers } = effectivePresence;
   const otherPlayerRefs = useRef<Map<string, OtherPlayerMesh>>(new Map());
   const othersGroupRef = useRef<THREE.Group | null>(null);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
+  useEffect(() => {
+    if (!supported || mode !== "3d") return;
+    if (paused) {
+      if (frameRef.current) {
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+      rendererRef.current?.setAnimationLoop?.(null);
+    } else {
+      if (!frameRef.current && animateRef.current) {
+        animateRef.current();
+      }
+    }
+  }, [mode, paused, supported]);
 
   useEffect(() => {
     if (!supported || mode !== "3d") return;
@@ -448,7 +471,9 @@ export function Canvas3D({
 
     // Animate
     const animate = () => {
+      animateRef.current = animate;
       frameRef.current = requestAnimationFrame(animate);
+      if (pausedRef.current) return;
       const now = performance.now();
       const t = now * 0.001;
 

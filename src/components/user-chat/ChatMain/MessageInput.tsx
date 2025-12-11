@@ -3,16 +3,21 @@ type Props = {
   onChange: (value: string) => void;
   onSend: () => void;
   onBlur?: () => void;
+  onFocusChange?: (focused: boolean) => void;
   disabled?: boolean;
 };
 
-export function MessageInput({ value, onChange, onSend, onBlur, disabled }: Props) {
+export function MessageInput({ value, onChange, onSend, onBlur, onFocusChange, disabled }: Props) {
   return (
     <div className="flex items-end gap-2">
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onBlur={onBlur}
+        onFocus={() => onFocusChange?.(true)}
+        onBlur={() => {
+          onBlur?.();
+          onFocusChange?.(false);
+        }}
         placeholder="メッセージを入力..."
         className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-inner focus:border-slate-400 focus:outline-none"
         rows={3}

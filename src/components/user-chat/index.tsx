@@ -6,7 +6,13 @@ import type { UserPreview } from "@/features/user-chat/types";
 import { ChatSidebar } from "@/components/user-chat/ChatSidebar";
 import { ChatMain } from "@/components/user-chat/ChatMain";
 
-export function UserChat() {
+type Props = {
+  onInputFocusChange?: (focused: boolean) => void;
+};
+
+export function UserChat({ onInputFocusChange }: Props) {
+  // 入力フォーカスハンドラを親に渡せるように optional prop に拡張しても良いが、
+  // 既存のシグネチャを保つためまずは内部で扱う
   const {
     rooms,
     activeRoom,
@@ -88,6 +94,7 @@ export function UserChat() {
           onSendMessage={handleSend}
           onTyping={sendTyping}
           onMarkRead={markRead}
+          onInputFocusChange={onInputFocusChange}
           getUserStatus={getUserStatus}
           currentUserId={currentUser?.id}
           onBack={() => setShowSidebar(true)}

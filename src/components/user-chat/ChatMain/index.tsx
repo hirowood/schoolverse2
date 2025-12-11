@@ -17,6 +17,7 @@ type Props = {
   onSendMessage: (text: string) => Promise<void>;
   onTyping: (isTyping: boolean) => void;
   onMarkRead: (messageId: string) => Promise<void>;
+  onInputFocusChange?: (focused: boolean) => void;
   getUserStatus: (userId: string) => "online" | "away" | "offline";
   currentUserId?: string | null;
   onBack?: () => void;
@@ -32,6 +33,7 @@ export function ChatMain({
   onSendMessage,
   onTyping,
   onMarkRead,
+  onInputFocusChange,
   getUserStatus,
   currentUserId,
   onBack,
@@ -114,6 +116,7 @@ export function ChatMain({
             onTyping(true);
           }}
           onBlur={() => onTyping(false)}
+          onFocusChange={onInputFocusChange}
           onSend={handleSend}
           disabled={!room}
         />

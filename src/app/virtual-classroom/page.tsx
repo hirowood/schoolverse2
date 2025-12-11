@@ -40,6 +40,7 @@ const UserChat = dynamic(
 
 export default function VirtualClassroomPage() {
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatInputFocused, setChatInputFocused] = useState(false);
   const showConfetti = useVirtualRoomStore((s) => s.showConfetti);
   const showShake = useVirtualRoomStore((s) => s.showShake);
   const { data: session } = useSession();
@@ -66,19 +67,25 @@ export default function VirtualClassroomPage() {
         </div>
 
         {/* 3Dキャンバス */}
-        <Suspense
-          fallback={
-            <div className="h-[520px] w-full rounded-2xl border border-slate-200 bg-slate-100 shadow-inner flex items-center justify-center">
-              <p className="text-slate-500">読み込み中...</p>
-            </div>
-          }
-        >
-          <ShakeEffect active={showShake}>
-            <div className="relative min-h-[360px] sm:min-h-[520px] md:min-h-[600px] w-full">
-              <Canvas3D roomId="default" userId={userId} userName={userName} presence={presence} />
-            </div>
-          </ShakeEffect>
-        </Suspense>
+      <Suspense
+        fallback={
+          <div className="h-[520px] w-full rounded-2xl border border-slate-200 bg-slate-100 shadow-inner flex items-center justify-center">
+            <p className="text-slate-500">読み込み中...</p>
+          </div>
+        }
+      >
+        <ShakeEffect active={showShake}>
+          <div className="relative min-h-[360px] sm:min-h-[520px] md:min-h-[600px] w-full">
+            <Canvas3D
+              roomId="default"
+              userId={userId}
+              userName={userName}
+              presence={presence}
+              paused={chatInputFocused && chatOpen}
+            />
+          </div>
+        </ShakeEffect>
+      </Suspense>
         <div className="flex justify-end">
           <ZoneIndicator />
         </div>
@@ -135,7 +142,11 @@ export default function VirtualClassroomPage() {
           </div>
           <div className="flex-1 min-h-0">
             <div className="h-full w-full text-[12px] leading-tight [&_*]:text-[12px] [&_input]:text-[12px] [&_textarea]:text-[12px]">
-              <UserChat />
+              <UserChat
+                onInputFocusChange={(focused) => {
+                  setChatInputFocused(focused);
+                }}
+              />
             </div>
           </div>
         </div>
@@ -143,7 +154,13 @@ export default function VirtualClassroomPage() {
 
       <button
         type="button"
-        onClick={() => setChatOpen((v) => !v)}
+        onClick={() => {
+          setChatOpen((v) => {
+            const next = !v;
+            if (!next) setChatInputFocused(false);
+            return next;
+          });
+        }}
         className="fixed bottom-28 right-3 z-50 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg ring-2 ring-emerald-200"
       >
         {chatOpen ? "チャットを閉じる" : "チャットを開く"}
