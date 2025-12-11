@@ -659,6 +659,10 @@ export function Canvas3D({
     if (!supported || mode !== "3d") return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement as HTMLElement | null;
+      if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.getAttribute("contenteditable") === "true")) {
+        return;
+      }
       const key = e.key.toLowerCase();
       if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
         pressedKeysRef.current.add(key);
@@ -666,6 +670,10 @@ export function Canvas3D({
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement as HTMLElement | null;
+      if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.getAttribute("contenteditable") === "true")) {
+        return;
+      }
       const key = e.key.toLowerCase();
       pressedKeysRef.current.delete(key);
     };
