@@ -133,11 +133,11 @@ export async function GET() {
     const pendingQuests = await prisma.questProgress.count({
       where: {
         userId: user.id,
-        status: "active",
         quest: {
-          startDate: { lte: today },
-          endDate: { gte: today },
+          isActive: true,
         },
+        assignedDate: today,
+        isCompleted: false,
       },
     });
 

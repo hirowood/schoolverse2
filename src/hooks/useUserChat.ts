@@ -175,7 +175,9 @@ export function useUserChat() {
         roomId: activeRoomId,
         content: text,
         senderId: currentUser?.id ?? "me",
+        messageType: "text",
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         reads: [],
       };
       setMessages((prev) => [...prev, optimisticMessage]);
