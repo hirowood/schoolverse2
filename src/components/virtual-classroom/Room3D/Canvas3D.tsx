@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import { useVirtualRoomStore } from "@/stores/useVirtualRoomStore";
 
 function hasWebGL(): boolean {
   if (typeof window === "undefined") return false;
@@ -27,6 +28,16 @@ function FlatPlaceholder() {
   );
 }
 
+function resolveZone(pos: THREE.Vector3): string | null {
+  // ラフなゾーン判定（位置ベース）
+  if (pos.x > 2) return "frontend";
+  if (pos.x < -2) return "backend";
+  if (pos.z > 2) return "infra";
+  if (pos.z < -2) return "react";
+  if (pos.x > -2 && pos.x < 2 && pos.z > -2 && pos.z < 2) return "fullstack";
+  return "thinking";
+}
+
 export function Canvas3D() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -40,6 +51,8 @@ export function Canvas3D() {
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
   const supported = useMemo(() => hasWebGL(), []);
   const [mode, setMode] = useState<"3d" | "2d">(() => (supported ? "3d" : "2d"));
+  const { setPosition, setZone, triggerAutoEncounter } = useVirtualRoomStore();
+  const lastZoneRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!supported || mode !== "3d") return;
@@ -146,6 +159,14 @@ export function Canvas3D() {
       box.rotation.x = t * 0.6;
       box.rotation.y = t * 0.8;
       box.position.y = 0.6 + Math.sin(t) * 0.15;
+      // push position to store + zone detection
+      setPosition({ x: box.position.x, y: box.position.y, z: box.position.z });
+      const zone = resolveZone(box.position);
+      if (zone !== lastZoneRef.current) {
+        lastZoneRef.current = zone;
+        setZone(zone);
+        void triggerAutoEncounter(zone);
+      }
       // FPSライクな視点: プレイヤーを中心にカメラを回す
       const r = distanceRef.current;
       const yaw = yawRef.current;
@@ -179,7 +200,7 @@ export function Canvas3D() {
         renderer.domElement.parentElement.removeChild(renderer.domElement);
       }
     };
-  }, [supported, mode]);
+  }, [supported, mode, setPosition, setZone, triggerAutoEncounter]);
 
   // Mouse look & zoom: FPS-like camera pivoting around the player
   useEffect(() => {

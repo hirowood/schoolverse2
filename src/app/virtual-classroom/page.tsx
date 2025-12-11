@@ -2,6 +2,10 @@
 
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
+import { ConfettiEffect } from "@/components/virtual-classroom/Effects/ConfettiEffect";
+import { ShakeEffect } from "@/components/virtual-classroom/Effects/ShakeEffect";
+import { ZoneIndicator } from "@/components/virtual-classroom/HUD/ZoneIndicator";
+import { useVirtualRoomStore } from "@/stores/useVirtualRoomStore";
 
 // BattleHUDも遅延読み込み（3D関連の依存がある場合に備えて）
 const BattleHUD = dynamic(
@@ -26,6 +30,8 @@ const Canvas3D = dynamic(
 );
 
 export default function VirtualClassroomPage() {
+  const showConfetti = useVirtualRoomStore((s) => s.showConfetti);
+  const showShake = useVirtualRoomStore((s) => s.showShake);
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
       <div className="mx-auto w-full px-3 sm:px-6 lg:px-10 pt-8 space-y-6">
@@ -52,8 +58,13 @@ export default function VirtualClassroomPage() {
             </div>
           }
         >
-          <Canvas3D />
+          <ShakeEffect active={showShake}>
+            <Canvas3D />
+          </ShakeEffect>
         </Suspense>
+        <div className="flex justify-end">
+          <ZoneIndicator />
+        </div>
 
         {/* 操作説明 */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -81,6 +92,7 @@ export default function VirtualClassroomPage() {
 
       {/* バトルHUD（オーバーレイ） */}
       <BattleHUD />
+      <ConfettiEffect active={showConfetti} />
     </main>
   );
 }

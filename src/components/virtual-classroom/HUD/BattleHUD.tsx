@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useVirtualEncounter } from "@/hooks/useVirtualEncounter";
 import { BattleOverlay } from "@/components/virtual-classroom/Battle/BattleOverlay";
 import { MONSTER_CATEGORIES } from "@/features/virtual-classroom/constants";
+import { useVirtualRoomStore } from "@/stores/useVirtualRoomStore";
 import { RewardToast } from "./RewardToast";
 
 export function BattleHUD() {
@@ -17,16 +17,17 @@ export function BattleHUD() {
     error,
     startEncounter,
     answerEncounter,
-    resetEncounter,
-  } = useVirtualEncounter();
+    resetBattle,
+    isBattleActive,
+  } = useVirtualRoomStore();
 
   useEffect(() => {
     if (!result) return;
     const timer = setTimeout(() => {
-      resetEncounter();
+      resetBattle();
     }, 4500);
     return () => clearTimeout(timer);
-  }, [result, resetEncounter]);
+  }, [result, resetBattle]);
 
   return (
     <>
@@ -45,23 +46,23 @@ export function BattleHUD() {
         </select>
         <button
           type="button"
-          onClick={() => startEncounter(category)}
+          onClick={() => startEncounter({ category })}
           disabled={loading}
           className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md disabled:opacity-60"
         >
           遭遇開始
         </button>
-        {encounterId && (
+        {(encounterId || isBattleActive) && (
           <button
             type="button"
             className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
-            onClick={resetEncounter}
+            onClick={resetBattle}
           >
             リセット
           </button>
         )}
         <span className="text-xs text-slate-500">
-          {encounterId ? "バトル中" : loading ? "ロード中…" : "待機中"}
+          {encounterId || isBattleActive ? "バトル中" : loading ? "ロード中" : "待機中"}
         </span>
       </div>
 
@@ -72,7 +73,7 @@ export function BattleHUD() {
         loading={loading}
         error={error}
         onAnswer={answerEncounter}
-        onClose={resetEncounter}
+        onClose={resetBattle}
       />
 
       <RewardToast
@@ -82,7 +83,7 @@ export function BattleHUD() {
         xp={result?.xpEarned ?? 0}
         bonusXp={result?.bonusXpEarned ?? 0}
         coins={result?.coinsEarned ?? 0}
-        onClose={resetEncounter}
+        onClose={resetBattle}
       />
     </>
   );

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useVirtualEncounter } from "@/hooks/useVirtualEncounter";
 import { BattleOverlay } from "@/components/virtual-classroom/Battle/BattleOverlay";
 import { MONSTER_CATEGORIES } from "@/features/virtual-classroom/constants";
+import { useVirtualRoomStore } from "@/stores/useVirtualRoomStore";
 
 export default function VirtualClassroomDemoPage() {
+  const [category, setCategory] = useState<string | null>(null);
   const {
     encounterId,
     monster,
@@ -15,17 +16,16 @@ export default function VirtualClassroomDemoPage() {
     error,
     startEncounter,
     answerEncounter,
-    resetEncounter,
-  } = useVirtualEncounter();
-  const [category, setCategory] = useState<string | null>(null);
+    resetBattle,
+  } = useVirtualRoomStore();
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 space-y-6">
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Virtual Classroom</p>
-        <h1 className="text-2xl font-bold text-slate-900">モンスター遭遇デモ</h1>
+        <h1 className="text-2xl font-bold text-slate-900">バーチャル教室 デモ</h1>
         <p className="text-sm text-slate-600 mt-2">
-          カテゴリを選択して「遭遇開始」を押すと、遭遇APIと解答APIを通したミニバトルを体験できます。
+          カテゴリを選んで遭遇開始→回答→結果表示の流れを確認するデモです。
         </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -44,7 +44,7 @@ export default function VirtualClassroomDemoPage() {
           <button
             type="button"
             className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-            onClick={() => startEncounter(category)}
+            onClick={() => startEncounter({ category })}
             disabled={loading}
           >
             遭遇開始
@@ -53,7 +53,7 @@ export default function VirtualClassroomDemoPage() {
             <button
               type="button"
               className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
-              onClick={resetEncounter}
+              onClick={resetBattle}
             >
               リセット
             </button>
@@ -67,22 +67,18 @@ export default function VirtualClassroomDemoPage() {
             {encounterId
               ? result
                 ? result.isCorrect
-                  ? "バトル終了（正解）"
-                  : "バトル終了（不正解）"
-                : "バトル進行中"
+                  ? "バトル終了：勝利"
+                  : "バトル終了：敗北"
+                : "バトル中"
               : "待機中"}
           </p>
           {monster && (
             <p className="text-sm text-slate-700 mt-1">
-              出現: {monster.name} / {monster.category} / レア度 {monster.rarity}
+              敵: {monster.name} / {monster.category} / レアリティ {monster.rarity}
             </p>
           )}
         </div>
       </div>
-
-      <p className="text-sm text-slate-500">
-        このページはデモ用の簡易UIです。3D環境やHUD統合前に遭遇APIと解答APIの挙動を確認できます。
-      </p>
 
       <BattleOverlay
         monster={monster}
@@ -91,7 +87,7 @@ export default function VirtualClassroomDemoPage() {
         loading={loading}
         error={error}
         onAnswer={answerEncounter}
-        onClose={resetEncounter}
+        onClose={resetBattle}
       />
     </main>
   );
