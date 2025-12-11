@@ -15,6 +15,7 @@ import {
   QuickAccessGrid,
   TimeTrackerCard,
   DailyGoalCard,
+  NotificationsCard,
 } from "./_components";
 
 const Canvas3D = dynamic(
@@ -91,6 +92,7 @@ export default function DashboardPage() {
           <DailyGoalCard />
         </div>
         <div className="space-y-4 lg:col-span-3">
+          <NotificationsCard />
           <GameStatusCard />
           <CredoProgressCard />
           <RecentAchievementsCard />

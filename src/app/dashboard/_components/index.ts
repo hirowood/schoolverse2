@@ -8,3 +8,4 @@ export { RecentAchievementsCard } from "./RecentAchievementsCard";
 export { QuickAccessGrid } from "./QuickAccessGrid";
 export { TimeTrackerCard } from "./TimeTrackerCard";
 export { DailyGoalCard } from "./DailyGoalCard";
+export { NotificationsCard } from "./NotificationsCard";
