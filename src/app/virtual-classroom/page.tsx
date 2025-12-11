@@ -115,26 +115,28 @@ export default function VirtualClassroomPage() {
 
       {/* ユーザーチャット（右端オーバーレイ） */}
       <div
-        className={`fixed right-3 top-20 z-50 w-[360px] max-w-[92vw] transition-transform duration-300 ${
+        className={`fixed right-3 top-20 z-50 w-[320px] max-w-[92vw] transition-transform duration-300 ${
           chatOpen ? "translate-x-0 opacity-100" : "translate-x-[120%] opacity-0"
         }`}
       >
-        <div className="h-[70vh] rounded-2xl border border-slate-200 bg-white shadow-2xl ring-1 ring-slate-100 overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+        <div className="h-[60vh] rounded-2xl border border-slate-200 bg-white shadow-2xl ring-1 ring-slate-100 overflow-hidden flex flex-col text-[12px] leading-tight">
+          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-1.5">
             <div>
               <p className="text-[11px] font-semibold uppercase text-slate-500">User Chat</p>
-              <p className="text-sm font-bold text-slate-900">教室チャット</p>
+              <p className="text-[13px] font-bold text-slate-900">教室チャット</p>
             </div>
             <button
               type="button"
               onClick={() => setChatOpen(false)}
-              className="rounded-md px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+              className="rounded-md px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100"
             >
               閉じる
             </button>
           </div>
           <div className="flex-1 min-h-0">
-            <UserChat />
+            <div className="h-full w-full text-[12px] leading-tight [&_*]:text-[12px] [&_input]:text-[12px] [&_textarea]:text-[12px]">
+              <UserChat />
+            </div>
           </div>
         </div>
       </div>
