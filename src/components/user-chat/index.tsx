@@ -40,6 +40,14 @@ export function UserChat({ onInputFocusChange }: Props) {
   const [search, setSearch] = useState("");
   const [showSidebar, setShowSidebar] = useState(true);
 
+  // ルームが選択済みならメインを優先表示（モーダルで見えない問題の回避）
+  useEffect(() => {
+    if (!activeRoom) return;
+    // 非同期に切り替えてレンダー負荷を避ける
+    const id = setTimeout(() => setShowSidebar(false), 0);
+    return () => clearTimeout(id);
+  }, [activeRoom]);
+
   const handleSend = async () => {
     const text = input.trim();
     if (!text) return;
@@ -66,7 +74,7 @@ export function UserChat({ onInputFocusChange }: Props) {
   };
 
   return (
-    <div className="min-h-[520px] space-y-4 lg:grid lg:grid-cols-[320px,1fr] lg:gap-4 lg:space-y-0">
+    <div className="flex h-full min-h-[520px] flex-col gap-3 overflow-hidden lg:grid lg:grid-cols-[320px,1fr] lg:gap-4 lg:space-y-0 lg:overflow-visible">
       <div className={`${showSidebar ? "block" : "hidden"} lg:block`}>
         <ChatSidebar
           rooms={rooms}
@@ -83,7 +91,7 @@ export function UserChat({ onInputFocusChange }: Props) {
         />
       </div>
 
-      <div className={`${showSidebar ? "hidden" : "block"} lg:block`}>
+      <div className={`${showSidebar ? "hidden" : "block"} lg:block h-full min-h-0`}>
         <ChatMain
           room={activeRoom}
           messages={messages}
