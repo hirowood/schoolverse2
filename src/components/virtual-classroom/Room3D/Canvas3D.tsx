@@ -40,9 +40,25 @@ function FlatPlaceholder({
   // 簡易なドット絵教室（移動可能）
   const size = 32;
   const worldRange = 5.5;
-  const gridToWorld = (value: number) => (value / (size - 1)) * (worldRange * 2) - worldRange;
-  const worldToGrid = (value: number) => Math.round(((value + worldRange) / (worldRange * 2)) * (size - 1));
+  const gridToWorld = useCallback((value: number) => (value / (size - 1)) * (worldRange * 2) - worldRange, [size, worldRange]);
+  const worldToGrid = useCallback(
+    (value: number) => Math.round(((value + worldRange) / (worldRange * 2)) * (size - 1)),
+    [size, worldRange],
+  );
   const [pos, setPos] = useState({ x: Math.floor(size / 2), y: Math.floor(size / 2) });
+
+  const movePlayer = useCallback((dx: number, dy: number) => {
+    setPos((p) => {
+      const next = {
+        x: Math.min(size - 1, Math.max(0, p.x + dx)),
+        y: Math.min(size - 1, Math.max(0, p.y + dy)),
+      };
+      const worldPos = { x: gridToWorld(next.x), y: 0.6, z: gridToWorld(next.y) };
+      setPosition(worldPos);
+      broadcastPosition(worldPos);
+      return next;
+    });
+  }, [broadcastPosition, setPosition, size, gridToWorld]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -55,20 +71,11 @@ function FlatPlaceholder({
       if (key === "arrowright" || key === "d") dx = 1;
       if (dx === 0 && dy === 0) return;
       e.preventDefault();
-      setPos((p) => {
-        const next = {
-          x: Math.min(size - 1, Math.max(0, p.x + dx)),
-          y: Math.min(size - 1, Math.max(0, p.y + dy)),
-        };
-        const worldPos = { x: gridToWorld(next.x), y: 0.6, z: gridToWorld(next.y) };
-        setPosition(worldPos);
-        broadcastPosition(worldPos);
-        return next;
-      });
+      movePlayer(dx, dy);
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [broadcastPosition, setPosition, size]);
+  }, [movePlayer]);
 
   const pixels = Array.from({ length: size }, () => Array.from({ length: size }, () => "."));
 
@@ -162,6 +169,67 @@ function FlatPlaceholder({
                 />
               )),
             )}
+          </div>
+        </div>
+      </div>
+      {/* モバイル用バーチャルコントローラ */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="pointer-events-auto absolute bottom-4 left-4 flex gap-4">
+          <div className="grid h-24 w-24 grid-cols-3 grid-rows-3 gap-1">
+            <button
+              type="button"
+              aria-label="上に移動"
+              className="col-start-2 row-start-1 rounded-full bg-white/80 text-slate-700 shadow ring-1 ring-slate-300"
+              onClick={() => movePlayer(0, -1)}
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              aria-label="左に移動"
+              className="col-start-1 row-start-2 rounded-full bg-white/80 text-slate-700 shadow ring-1 ring-slate-300"
+              onClick={() => movePlayer(-1, 0)}
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              aria-label="右に移動"
+              className="col-start-3 row-start-2 rounded-full bg-white/80 text-slate-700 shadow ring-1 ring-slate-300"
+              onClick={() => movePlayer(1, 0)}
+            >
+              →
+            </button>
+            <button
+              type="button"
+              aria-label="下に移動"
+              className="col-start-2 row-start-3 rounded-full bg-white/80 text-slate-700 shadow ring-1 ring-slate-300"
+              onClick={() => movePlayer(0, 1)}
+            >
+              ↓
+            </button>
+          </div>
+          <div className="flex flex-col items-center gap-3">
+            <button
+              type="button"
+              aria-label="Aボタン（決定）"
+              className="h-12 w-12 rounded-full bg-emerald-500 text-white text-lg font-bold shadow ring-2 ring-emerald-200"
+              onClick={() => {
+                // 決定アクション（将来のインタラクション用）
+              }}
+            >
+              A
+            </button>
+            <button
+              type="button"
+              aria-label="Bボタン（メニュー予定）"
+              className="h-12 w-12 rounded-full bg-amber-500 text-white text-lg font-bold shadow ring-2 ring-amber-200"
+              onClick={() => {
+                // メニュー表示予定のプレースホルダ
+              }}
+            >
+              B
+            </button>
           </div>
         </div>
       </div>
