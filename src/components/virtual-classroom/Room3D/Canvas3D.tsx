@@ -127,16 +127,55 @@ function FlatPlaceholder({
   // プレイヤー
   pixels[pos.y][pos.x] = "P";
 
-  const remoteCells = new Map<string, string>();
-  const remoteList: { x: number; y: number; color: string }[] = [];
-  otherPlayers.forEach((player) => {
-    const gx = THREE.MathUtils.clamp(worldToGrid(player.position.x), 0, size - 1);
-    const gy = THREE.MathUtils.clamp(worldToGrid(player.position.z), 0, size - 1);
-    const key = `${gx}-${gy}`;
-    const color = player.status === "battling" ? "#ef4444" : player.avatarColor ?? "#22c55e";
-    remoteCells.set(key, color);
-    remoteList.push({ x: gx, y: gy, color });
-  });
+  // 他プレイヤー位置のスムージング用
+  const targetsRef = useRef<Map<string, { x: number; y: number; color: string }>>(new Map());
+  const displayRef = useRef<Map<string, { x: number; y: number; color: string }>>(new Map());
+  const animRef = useRef<number | null>(null);
+  const [renderRemotes, setRenderRemotes] = useState<{ x: number; y: number; color: string }[]>([]);
+
+  useEffect(() => {
+    // 更新されたターゲットをセット
+    const nextTargets = new Map<string, { x: number; y: number; color: string }>();
+    otherPlayers.forEach((player) => {
+      const gx = THREE.MathUtils.clamp(worldToGrid(player.position.x), 0, size - 1);
+      const gy = THREE.MathUtils.clamp(worldToGrid(player.position.z), 0, size - 1);
+      const color = player.status === "battling" ? "#ef4444" : player.avatarColor ?? "#22c55e";
+      nextTargets.set(player.userId, { x: gx, y: gy, color });
+      if (!displayRef.current.has(player.userId)) {
+        // 初回は即座に表示位置を合わせる
+        displayRef.current.set(player.userId, { x: gx, y: gy, color });
+      }
+    });
+    // 消えたプレイヤーを除去
+    displayRef.current.forEach((_, key) => {
+      if (!nextTargets.has(key)) displayRef.current.delete(key);
+    });
+    targetsRef.current = nextTargets;
+
+    // スムージングループ
+    const tick = () => {
+      const updated = new Map<string, { x: number; y: number; color: string }>();
+      displayRef.current.forEach((cur, key) => {
+        const target = targetsRef.current.get(key);
+        if (!target) return;
+        const lerp = 0.25;
+        const nx = cur.x + (target.x - cur.x) * lerp;
+        const ny = cur.y + (target.y - cur.y) * lerp;
+        updated.set(key, { x: nx, y: ny, color: target.color });
+      });
+      displayRef.current = updated;
+      setRenderRemotes(Array.from(displayRef.current.values()));
+      animRef.current = requestAnimationFrame(tick);
+    };
+
+    if (animRef.current) cancelAnimationFrame(animRef.current);
+    animRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      animRef.current = null;
+    };
+  }, [otherPlayers, size, worldToGrid]);
 
   const colorMap: Record<string, string> = {
     ".": "transparent",
@@ -177,7 +216,7 @@ function FlatPlaceholder({
                   <div
                     key={`${x}-${y}`}
                     style={{
-                      backgroundColor: remoteCells.get(`${x}-${y}`) ?? colorMap[cell] ?? "transparent",
+                      backgroundColor: colorMap[cell] ?? "transparent",
                     }}
                     className="h-full w-full"
                   />
@@ -197,7 +236,7 @@ function FlatPlaceholder({
                   transition: "left 140ms ease, top 140ms ease",
                 }}
               />
-              {remoteList.map((p, idx) => (
+              {renderRemotes.map((p, idx) => (
                 <div
                   key={`${p.x}-${p.y}-${idx}`}
                   className="absolute rounded-sm border border-white shadow-[0_0_0_2px_rgba(0,0,0,0.08)]"
@@ -207,7 +246,7 @@ function FlatPlaceholder({
                     left: `${(p.x / size) * 100}%`,
                     top: `${(p.y / size) * 100}%`,
                     backgroundColor: p.color,
-                    transition: "left 160ms ease, top 160ms ease",
+                    transition: "left 200ms ease, top 200ms ease",
                   }}
                 />
               ))}
