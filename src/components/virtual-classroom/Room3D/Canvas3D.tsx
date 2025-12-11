@@ -28,26 +28,46 @@ function hasWebGL(): boolean {
 }
 
 function FlatPlaceholder() {
-  // 簡易なドット絵教室（ピクセルパターン）
-  const pixels = [
-    // 16x16 グリッドをRGBで表現
-    "................",
-    "................",
-    "...GGGGGGGGGG...",
-    "...G........G...",
-    "...G....##..G...",
-    "...G........G...",
-    "...G....P...G...",
-    "...G........G...",
-    "...G........G...",
-    "...G....TT..G...",
-    "...G........G...",
-    "...GGGGGGGGGG...",
-    "................",
-    "................",
-    "................",
-    "................",
-  ];
+  // 簡易なドット絵教室（移動可能）
+  const [pos, setPos] = useState({ x: 7, y: 7 });
+  const size = 16;
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      let dx = 0;
+      let dy = 0;
+      if (key === "arrowup" || key === "w") dy = -1;
+      if (key === "arrowdown" || key === "s") dy = 1;
+      if (key === "arrowleft" || key === "a") dx = -1;
+      if (key === "arrowright" || key === "d") dx = 1;
+      if (dx === 0 && dy === 0) return;
+      e.preventDefault();
+      setPos((p) => ({
+        x: Math.min(size - 1, Math.max(0, p.x + dx)),
+        y: Math.min(size - 1, Math.max(0, p.y + dy)),
+      }));
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
+
+  const pixels = Array.from({ length: size }, () => Array.from({ length: size }, () => "."));
+
+  // 窓や机の簡易配置
+  for (let x = 3; x <= 12; x++) pixels[2][x] = "G";
+  for (let x = 3; x <= 12; x++) pixels[11][x] = "G";
+  for (let y = 3; y <= 10; y++) {
+    pixels[y][3] = "G";
+    pixels[y][12] = "G";
+  }
+  pixels[5][8] = "#";
+  pixels[6][8] = "#";
+  pixels[9][8] = "T";
+  pixels[9][9] = "T";
+
+  // プレイヤー
+  pixels[pos.y][pos.x] = "P";
 
   const colorMap: Record<string, string> = {
     ".": "transparent",
@@ -60,14 +80,16 @@ function FlatPlaceholder() {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-700">
       <div className="text-lg font-bold">2D Classroom (Pixel)</div>
-      <p className="text-xs text-slate-600">WebGL非対応時はこちらのドット絵ビューをご利用ください。</p>
+      <p className="text-xs text-slate-600 text-center px-4">
+        WebGL非対応時はこちらのドット絵ビューをご利用ください。WASD/矢印キーで移動できます。
+      </p>
       <div
-        className="rounded-2xl border border-slate-300 bg-white/80 p-3 shadow-inner"
+        className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-inner"
         style={{ imageRendering: "pixelated" }}
       >
-        <div className="grid h-48 w-48 grid-cols-16 grid-rows-16">
+        <div className="grid h-80 w-80 grid-cols-16 grid-rows-16">
           {pixels.flatMap((row, y) =>
-            row.split("").map((cell, x) => (
+            row.map((cell, x) => (
               <div
                 key={`${x}-${y}`}
                 style={{ backgroundColor: colorMap[cell] ?? "transparent" }}
@@ -77,6 +99,7 @@ function FlatPlaceholder() {
           )}
         </div>
       </div>
+      <p className="text-[11px] text-slate-500">ドット絵背景・机/キャラクターの追加予定</p>
     </div>
   );
 }
