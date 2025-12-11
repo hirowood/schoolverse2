@@ -880,7 +880,9 @@ const MONSTER_QUESTIONS = [
   },
 ];
 
-function ensureFiveQuestions() {
+const MIN_QUESTIONS_PER_MONSTER = 10;
+
+function ensureMinimumQuestions() {
   const slugToDef = Object.fromEntries(MONSTER_DEFINITIONS.map((d) => [d.slug, d]));
 
   function buildPlaceholder(slug, index) {
@@ -889,6 +891,7 @@ function ensureFiveQuestions() {
     const num = index + 1;
     const types = ["multiple_choice", "text", "code"];
     const type = types[index % types.length];
+    const tags = [def?.category, def?.subcategory].filter(Boolean);
 
     if (type === "multiple_choice") {
       return {
@@ -896,10 +899,10 @@ function ensureFiveQuestions() {
         questionText: `${baseName} の基礎チェック #${num}: 正しい選択肢を選んでください`,
         questionType: "multiple_choice",
         options: [
-          { label: "A", value: `${baseName} の正答`, isCorrect: true },
-          { label: "B", value: "誤答1" },
-          { label: "C", value: "誤答2" },
-          { label: "D", value: "誤答3" },
+          { label: "A", value: `${baseName} に関する正しい説明`, isCorrect: true },
+          { label: "B", value: `${baseName} と無関係な説明` },
+          { label: "C", value: `よくある誤解 #${num}` },
+          { label: "D", value: "ランダムな選択肢" },
         ],
         correctAnswer: `${baseName} の正答`,
         explanation: "A が正解です。",
@@ -907,7 +910,8 @@ function ensureFiveQuestions() {
         difficulty: Math.min(3, def?.difficulty ?? 2),
         timeLimit: 50,
         bonusXp: 2,
-        isAiGenerated: false,
+        tags,
+        isAiGenerated: true,
       };
     }
 
@@ -924,7 +928,8 @@ function ensureFiveQuestions() {
         difficulty: Math.min(3, (def?.difficulty ?? 2) + 1),
         timeLimit: 60,
         bonusXp: 3,
-        isAiGenerated: false,
+        tags,
+        isAiGenerated: true,
       };
     }
 
@@ -939,7 +944,8 @@ function ensureFiveQuestions() {
       difficulty: Math.min(2, def?.difficulty ?? 1),
       timeLimit: 45,
       bonusXp: 2,
-      isAiGenerated: false,
+      tags,
+      isAiGenerated: true,
     };
   }
 
@@ -952,10 +958,10 @@ function ensureFiveQuestions() {
     const current = questionMap.get(monster.slug) ?? [];
     const existing = current.length;
     const next = [...current];
-    if (existing < 5) {
-      const needed = 5 - existing;
+    if (existing < MIN_QUESTIONS_PER_MONSTER) {
+      const needed = MIN_QUESTIONS_PER_MONSTER - existing;
       for (let i = 0; i < needed; i++) {
-        next.push(buildPlaceholder(monster.slug, i));
+        next.push(buildPlaceholder(monster.slug, existing + i));
       }
     }
     questionMap.set(monster.slug, next);
@@ -1092,7 +1098,7 @@ async function seedAvatarTemplates() {
 // シード関数: モンスター定義・問題
 // ============================================
 async function seedMonsters() {
-  ensureFiveQuestions();
+  ensureMinimumQuestions();
 
   const monsterIdMap = new Map();
   for (const monster of MONSTER_DEFINITIONS) {
