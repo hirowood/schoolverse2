@@ -55,6 +55,7 @@ export function useClassroomPresence(
   const channelRef = useRef<RealtimeChannel | null>(null);
   const lastBroadcastRef = useRef<number>(0);
   const currentStateRef = useRef<ClassroomPresenceState | null>(null);
+  const lastKnownPositionRef = useRef<{ x: number; y: number; z: number }>({ x: 0, y: 0, z: 0 });
 
   const supabase = useMemo<SupabaseClient | null>(() => {
     if (!enabled) return null;
@@ -66,7 +67,9 @@ export function useClassroomPresence(
 
   const broadcastPosition = useCallback(
     (position: { x: number; y: number; z: number }) => {
-      if (!enabled || !channelRef.current || !userId) return;
+      if (!enabled || !userId) return;
+      lastKnownPositionRef.current = position;
+      if (!channelRef.current) return;
       const now = Date.now();
       if (now - lastBroadcastRef.current < POSITION_BROADCAST_INTERVAL) return;
       lastBroadcastRef.current = now;
@@ -150,7 +153,7 @@ export function useClassroomPresence(
         if (status === "SUBSCRIBED") {
           setIsConnected(true);
           const initialState: ClassroomPresenceState = {
-            position: { x: 0, y: 0, z: 0 },
+            position: lastKnownPositionRef.current,
             status: "exploring",
             avatarColor,
             userName: userName ?? "Guest",
