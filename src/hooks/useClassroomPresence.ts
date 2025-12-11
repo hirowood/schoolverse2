@@ -60,7 +60,14 @@ export function useClassroomPresence(
   const supabase = useMemo<SupabaseClient | null>(() => {
     if (!enabled) return null;
     if (typeof window === "undefined" || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        storageKey: "sb-schoolverse2-classroom",
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    });
   }, [enabled]);
 
   const avatarColor = useMemo(() => (userId ? getAvatarColor(userId) : "#94a3b8"), [userId]);

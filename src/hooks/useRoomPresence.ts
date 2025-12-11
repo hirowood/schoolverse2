@@ -18,7 +18,14 @@ export function useRoomPresence(roomId: string | null, userId: string | null, us
   const supabase = useMemo<SupabaseClient | null>(() => {
     if (typeof window === "undefined") return null;
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        storageKey: "sb-schoolverse2-roompresence",
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    });
   }, []);
 
   useEffect(() => {

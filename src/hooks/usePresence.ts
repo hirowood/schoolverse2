@@ -20,7 +20,14 @@ export function usePresence(userId: string | null) {
   const supabase = useMemo<SupabaseClient | null>(() => {
     if (typeof window === "undefined") return null;
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        storageKey: "sb-schoolverse2-presence",
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    });
   }, []);
 
   const updateStatus = useCallback(
