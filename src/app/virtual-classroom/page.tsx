@@ -23,7 +23,7 @@ const Canvas3D = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="relative h-[520px] w-full rounded-2xl border border-slate-200 bg-slate-50 shadow-inner">
+      <div className="relative min-h-[360px] sm:h-[520px] w-full rounded-2xl border border-slate-200 bg-slate-50 shadow-inner">
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-500">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-blue-500" />
           <p className="text-sm">3D教室を準備中...</p>
@@ -68,7 +68,9 @@ export default function VirtualClassroomPage() {
           }
         >
           <ShakeEffect active={showShake}>
-            <Canvas3D roomId="default" userId={userId} userName={userName} presence={presence} />
+            <div className="relative min-h-[360px] sm:min-h-[520px] md:min-h-[600px] w-full">
+              <Canvas3D roomId="default" userId={userId} userName={userName} presence={presence} />
+            </div>
           </ShakeEffect>
         </Suspense>
         <div className="flex justify-end">
