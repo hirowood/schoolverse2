@@ -68,6 +68,8 @@
 |------|:----:|------|----------|
 | バーチャル教室 | 96% | three.js軽量版＋2Dフォールバック、FPSカメラ＆WASD、キャンバス全幅、他プレイヤー表示、2D補間同期、チャットパネル最適化 | AI問題品質向上、E2Eスモーク |
 | モンスターエンカウンター | 80% | 設計＋シード拡充（155問）＋遭遇/解答API＋HUD＋AI補完 | バトルUI本番統合、報酬演出強化 |
+| **ビデオ通話（WebRTC）** | 5% | 詳細設計済み（WebRTC・空間オーディオ・録画）、DBスキーマ準備済み | 実装着手、シグナリングサーバー、P2P接続 |
+| ホワイトボード共有 | 5% | 詳細設計済み（Excalidraw/Yjs CRDT同期） | 実装着手、リアルタイム同期 |
 | コミュニティ機能 | 0% | 未着手 | 設計から |
 
 ---
@@ -178,9 +180,10 @@ schoolverse2/
 
 ### バーチャル教室（DB準備済み）
 - `VirtualRoom` - 仮想教室
-- `RoomParticipant` - 参加者
+- `RoomParticipant` - 参加者（位置、アバター、ビデオ/オーディオ状態）
 - `Whiteboard` / `WhiteboardSnapshot` - ホワイトボード
 - `RoomMessage` - 教室内チャット
+- `RoomRecording` - 会議録画
 - `AvatarTemplate` - アバター
 - `MonsterDefinition` / `MonsterQuestion` - モンスター定義・問題
 - `MonsterEncounter` / `UserMonsterStats` - 遭遇・統計
@@ -209,6 +212,8 @@ schoolverse2/
 ### Phase 2: 拡張（予定）
 - [ ] バーチャル教室実装
 - [ ] モンスターエンカウンター
+- [ ] **ビデオ通話（WebRTC）** ⭐核心機能
+- [ ] **ホワイトボード共有**
 - [ ] 詳細スキルツリー
 - [ ] モバイル最適化
 

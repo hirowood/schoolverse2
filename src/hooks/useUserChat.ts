@@ -93,6 +93,9 @@ export function useUserChat() {
       setLoadingMessages(true);
       try {
         const res = await fetch(`/api/user-chat/rooms/${roomId}/messages?limit=30`);
+        if (res.status === 401) {
+          throw new Error("サインインが必要です");
+        }
         if (!res.ok) throw new Error("メッセージ取得に失敗しました");
         const data = (await res.json()) as { messages: ChatRoomMessage[]; nextCursor: string | null };
         setMessages(data.messages ?? []);
@@ -131,11 +134,16 @@ export function useUserChat() {
       const text = content.trim();
       if (!text || !activeRoomId) return;
       recordActivity();
-      await fetch(`/api/user-chat/rooms/${activeRoomId}/messages`, {
+      const res = await fetch(`/api/user-chat/rooms/${activeRoomId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: text }),
       });
+      if (res.status === 401) {
+        setError("サインインが必要です");
+      } else if (!res.ok) {
+        setError("メッセージ送信に失敗しました");
+      }
     },
     [activeRoomId, recordActivity],
   );
