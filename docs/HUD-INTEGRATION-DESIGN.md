@@ -58,6 +58,7 @@ src/
 #### 実装メモ (2025-12-11)
 - ZustandストアとCanvas3D/BattleHUDを統合し、ゾーン検知→30%自動遭遇を実装
 - Supabase Presenceを介した他プレイヤー表示（キューブ＋名前ラベル、バトル時赤発光、lerp補間）
+- RewardToast 演出仕上げ（reduce-motion配慮、サウンドON/OFF、カウントアップ安定化、ARIAラベル付与）
 - RewardToastカウントアップ＋簡易サウンド、Shake/Confetti演出を組み込み済み
 
 ### 1.3 目標状態（UXフロー）
