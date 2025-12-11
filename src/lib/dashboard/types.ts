@@ -9,6 +9,13 @@ export type DashboardSummary = {
     rank: string;
     name?: string;
   };
+  currentCurriculum?: {
+    lineId: string;
+    lineTitle: string;
+    slug: string;
+    lessonTitle: string;
+    progressPercent: number;
+  };
   todayQuests: {
     total: number;
     completed: number;

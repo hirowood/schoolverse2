@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useEffect } from "react";
 import { useDashboardStore } from "@/hooks/useDashboardStore";
 import {
@@ -23,6 +24,7 @@ const Canvas3D = dynamic(
 
 export default function DashboardPage() {
   const { summary, isLoading, error, fetchSummary } = useDashboardStore();
+  const currentCurriculum = summary?.currentCurriculum;
 
   useEffect(() => {
     void fetchSummary();
@@ -44,6 +46,43 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="space-y-4 lg:col-span-5">
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Now Learning</p>
+                <h2 className="text-lg font-bold text-slate-900">進行中のカリキュラム</h2>
+              </div>
+              <Link href="/curriculum" className="text-xs font-semibold text-emerald-600 hover:text-emerald-700">
+                一覧へ
+              </Link>
+            </div>
+            {currentCurriculum ? (
+              <Link
+                href={`/curriculum/${currentCurriculum.lineId}/${currentCurriculum.slug}`}
+                className="mt-3 block rounded-xl border border-slate-100 bg-emerald-50/60 p-4 transition hover:-translate-y-0.5 hover:shadow-sm"
+              >
+                <p className="text-xs font-semibold text-emerald-700">{currentCurriculum.lineTitle}</p>
+                <p className="text-base font-bold text-slate-900">{currentCurriculum.lessonTitle}</p>
+                <div className="mt-3 h-2 rounded-full bg-white/70 ring-1 ring-emerald-100">
+                  <div
+                    className="h-2 rounded-full bg-emerald-500"
+                    style={{ width: `${Math.min(100, Math.max(0, currentCurriculum.progressPercent))}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-slate-600">
+                  進捗 {Math.round(currentCurriculum.progressPercent)}%
+                </p>
+              </Link>
+            ) : (
+              <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                進行中のカリキュラムはありません。{" "}
+                <Link href="/curriculum" className="font-semibold text-emerald-600 hover:text-emerald-700">
+                  カリキュラム一覧
+                </Link>{" "}
+                から開始してください。
+              </div>
+            )}
+          </section>
           <TodayQuestsCard />
           <TodayTasksCard />
         </div>
