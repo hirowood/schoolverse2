@@ -9,6 +9,22 @@ const TYPING_TIMEOUT_MS = 3000;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+function getSharedRoomPresenceClient(): SupabaseClient | null {
+  if (typeof window === "undefined" || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  const g = globalThis as typeof globalThis & { __sbRoomPresenceClient?: SupabaseClient };
+  if (g.__sbRoomPresenceClient) return g.__sbRoomPresenceClient;
+  g.__sbRoomPresenceClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      storageKey: "sb-schoolverse2-roompresence",
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
+    global: { headers: { "X-Client-Context": "roompresence" } },
+  });
+  return g.__sbRoomPresenceClient;
+}
+
 export function useRoomPresence(roomId: string | null, userId: string | null, userName: string | null) {
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -16,16 +32,7 @@ export function useRoomPresence(roomId: string | null, userId: string | null, us
   const isTypingRef = useRef(false);
 
   const supabase = useMemo<SupabaseClient | null>(() => {
-    if (typeof window === "undefined") return null;
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        storageKey: "sb-schoolverse2-roompresence",
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-      },
-    });
+    return getSharedRoomPresenceClient();
   }, []);
 
   useEffect(() => {

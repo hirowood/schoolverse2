@@ -38,6 +38,22 @@ export type UseClassroomPresenceResult = {
 
 const AVATAR_COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#eab308", "#ef4444", "#84cc16"];
 
+function getSharedClassroomClient(): SupabaseClient | null {
+  if (typeof window === "undefined" || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  const g = globalThis as typeof globalThis & { __sbClassroomClient?: SupabaseClient };
+  if (g.__sbClassroomClient) return g.__sbClassroomClient;
+  g.__sbClassroomClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      storageKey: "sb-schoolverse2-classroom",
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
+    global: { headers: { "X-Client-Context": "classroom" } },
+  });
+  return g.__sbClassroomClient;
+}
+
 function getAvatarColor(userId: string): string {
   let hash = 0;
   for (let i = 0; i < userId.length; i++) hash = userId.charCodeAt(i) + ((hash << 5) - hash);
@@ -59,15 +75,7 @@ export function useClassroomPresence(
 
   const supabase = useMemo<SupabaseClient | null>(() => {
     if (!enabled) return null;
-    if (typeof window === "undefined" || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        storageKey: "sb-schoolverse2-classroom",
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-      },
-    });
+    return getSharedClassroomClient();
   }, [enabled]);
 
   const avatarColor = useMemo(() => (userId ? getAvatarColor(userId) : "#94a3b8"), [userId]);

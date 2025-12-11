@@ -37,6 +37,11 @@ export function useUserChat() {
         persistSession: true,
         detectSessionInUrl: false,
       },
+      global: {
+        headers: {
+          "X-Client-Context": "userchat",
+        },
+      },
     });
   }, []);
 
