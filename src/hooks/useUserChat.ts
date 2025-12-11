@@ -42,6 +42,7 @@ export function useUserChat() {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const subscriptionRef = useRef<ReturnType<SupabaseClient["channel"]> | null>(null);
   const lastMarkReadRef = useRef<{ roomId: string; ts: number; messageId?: string }>({ roomId: "", ts: 0 });
+  const markReadInFlight = useRef<boolean>(false);
 
   const activeRoom = useMemo(
     () => rooms.find((r) => r.id === activeRoomId) ?? null,
@@ -154,6 +155,18 @@ export function useUserChat() {
         setError("送信先ルームが選択されていません");
         return;
       }
+      // 楽観的に末尾へ追加
+      const optimisticId = `optimistic-${Date.now()}`;
+      const optimisticMessage: ChatRoomMessage = {
+        id: optimisticId,
+        roomId: activeRoomId,
+        content: text,
+        senderId: currentUser?.id ?? "me",
+        createdAt: new Date().toISOString(),
+        reads: [],
+      };
+      setMessages((prev) => [...prev, optimisticMessage]);
+
       recordActivity();
       const res = await fetch(`/api/user-chat/rooms/${activeRoomId}/messages`, {
         method: "POST",
@@ -164,12 +177,11 @@ export function useUserChat() {
         setError("サインインが必要です");
       } else if (!res.ok) {
         setError("メッセージ送信に失敗しました");
-      } else {
-        // 送信後に最新メッセージを再取得して遅延を解消
-        void fetchMessages(activeRoomId);
       }
+      // 最新を取得して整合性を保つ
+      void fetchMessages(activeRoomId);
     },
-    [activeRoomId, recordActivity, fetchMessages],
+    [activeRoomId, recordActivity, fetchMessages, currentUser?.id],
   );
 
   const sendTyping = useCallback(
@@ -183,11 +195,13 @@ export function useUserChat() {
   const markRead = useCallback(
     async (messageId: string) => {
       if (!activeRoomId) return;
-       // クライアント側で連続リクエストを抑制（429回避）
+      // クライアント側で連続リクエストを抑制（429回避）
       const now = Date.now();
       const last = lastMarkReadRef.current;
       if (last.roomId === activeRoomId && last.messageId === messageId) return;
-      if (last.roomId === activeRoomId && now - last.ts < 2000) return;
+      if (last.roomId === activeRoomId && now - last.ts < 5000) return;
+      if (markReadInFlight.current) return;
+      markReadInFlight.current = true;
       lastMarkReadRef.current = { roomId: activeRoomId, ts: now, messageId };
       recordActivity();
       await fetch(`/api/user-chat/rooms/${activeRoomId}/read`, {
@@ -197,6 +211,7 @@ export function useUserChat() {
       });
       setUnreadCounts((prev) => ({ ...prev, [activeRoomId]: 0 }));
       setRooms((prev) => prev.map((room) => (room.id === activeRoomId ? { ...room, unreadCount: 0 } : room)));
+      markReadInFlight.current = false;
     },
     [activeRoomId, recordActivity],
   );
