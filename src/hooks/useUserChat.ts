@@ -163,13 +163,36 @@ export function useUserChat() {
     [activeRoomId, recordActivity],
   );
 
-  const searchUsers = useCallback(async (q: string) => {
-    if (!q.trim()) return;
-    const res = await fetch(`/api/user-chat/search-users?q=${encodeURIComponent(q)}`);
-    if (!res.ok) return;
-    const data = (await res.json()) as { users: UserPreview[] };
-    setSearchResults(data.users ?? []);
-  }, []);
+  const searchUsers = useCallback(
+    async (q: string) => {
+      const keyword = q.trim();
+      if (!keyword) {
+        setSearchResults([]);
+        return;
+      }
+      try {
+        setError(null);
+        const res = await fetch(`/api/user-chat/search-users?q=${encodeURIComponent(keyword)}&limit=20`);
+        if (res.status === 401) {
+          setError("検索するにはサインインが必要です");
+          setSearchResults([]);
+          return;
+        }
+        if (!res.ok) {
+          setError("検索に失敗しました");
+          setSearchResults([]);
+          return;
+        }
+        const data = (await res.json()) as { users?: UserPreview[] };
+        setSearchResults(data.users ?? []);
+      } catch (e) {
+        setError("検索に失敗しました");
+        setSearchResults([]);
+        console.error("searchUsers error", e);
+      }
+    },
+    [setError],
+  );
 
   const createRoom = useCallback(
     async (participantId: string, type: ChatRoomType = "dm") => {
