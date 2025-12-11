@@ -36,7 +36,6 @@ export function UserChat({ onInputFocusChange }: Props) {
     getUserStatus,
   } = useUserChat();
 
-  const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
   const [showSidebar, setShowSidebar] = useState(true);
 
@@ -48,11 +47,10 @@ export function UserChat({ onInputFocusChange }: Props) {
     return () => clearTimeout(id);
   }, [activeRoom]);
 
-  const handleSend = async () => {
-    const text = input.trim();
-    if (!text) return;
-    setInput("");
-    await sendMessage(text);
+  const handleSend = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    await sendMessage(trimmed);
   };
 
   const handleSearch = async () => {
