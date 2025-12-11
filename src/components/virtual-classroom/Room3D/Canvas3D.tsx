@@ -28,12 +28,54 @@ function hasWebGL(): boolean {
 }
 
 function FlatPlaceholder() {
+  // 簡易なドット絵教室（ピクセルパターン）
+  const pixels = [
+    // 16x16 グリッドをRGBで表現
+    "................",
+    "................",
+    "...GGGGGGGGGG...",
+    "...G........G...",
+    "...G....##..G...",
+    "...G........G...",
+    "...G....P...G...",
+    "...G........G...",
+    "...G........G...",
+    "...G....TT..G...",
+    "...G........G...",
+    "...GGGGGGGGGG...",
+    "................",
+    "................",
+    "................",
+    "................",
+  ];
+
+  const colorMap: Record<string, string> = {
+    ".": "transparent",
+    G: "#94a3b8", // desk/ground
+    "#": "#0ea5e9", // window
+    P: "#22c55e", // player
+    T: "#f59e0b", // teacher/marker
+  };
+
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-700">
-      <div className="text-xl font-bold">2D Classroom Preview</div>
-      <p className="text-sm text-slate-600">3Dが利用できない場合はこのモードで閲覧できます。</p>
-      <div className="mt-2 h-24 w-48 rounded-xl bg-white/70 shadow-inner border border-slate-300 flex items-center justify-center text-slate-500">
-        Flat Mode
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-700">
+      <div className="text-lg font-bold">2D Classroom (Pixel)</div>
+      <p className="text-xs text-slate-600">WebGL非対応時はこちらのドット絵ビューをご利用ください。</p>
+      <div
+        className="rounded-2xl border border-slate-300 bg-white/80 p-3 shadow-inner"
+        style={{ imageRendering: "pixelated" }}
+      >
+        <div className="grid h-48 w-48 grid-cols-16 grid-rows-16">
+          {pixels.flatMap((row, y) =>
+            row.split("").map((cell, x) => (
+              <div
+                key={`${x}-${y}`}
+                style={{ backgroundColor: colorMap[cell] ?? "transparent" }}
+                className="h-full w-full"
+              />
+            )),
+          )}
+        </div>
       </div>
     </div>
   );
