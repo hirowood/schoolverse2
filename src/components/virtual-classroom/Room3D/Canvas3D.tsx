@@ -29,8 +29,8 @@ function hasWebGL(): boolean {
 
 function FlatPlaceholder() {
   // 簡易なドット絵教室（移動可能）
-  const [pos, setPos] = useState({ x: 7, y: 7 });
-  const size = 16;
+  const size = 32;
+  const [pos, setPos] = useState({ x: Math.floor(size / 2), y: Math.floor(size / 2) });
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -54,17 +54,41 @@ function FlatPlaceholder() {
 
   const pixels = Array.from({ length: size }, () => Array.from({ length: size }, () => "."));
 
-  // 窓や机の簡易配置
-  for (let x = 3; x <= 12; x++) pixels[2][x] = "G";
-  for (let x = 3; x <= 12; x++) pixels[11][x] = "G";
-  for (let y = 3; y <= 10; y++) {
-    pixels[y][3] = "G";
-    pixels[y][12] = "G";
+  // 壁を全体に張る
+  const margin = 3;
+  for (let x = margin; x < size - margin; x++) {
+    pixels[margin][x] = "G";
+    pixels[size - margin - 1][x] = "G";
   }
-  pixels[5][8] = "#";
-  pixels[6][8] = "#";
-  pixels[9][8] = "T";
-  pixels[9][9] = "T";
+  for (let y = margin; y < size - margin; y++) {
+    pixels[y][margin] = "G";
+    pixels[y][size - margin - 1] = "G";
+  }
+
+  // 窓
+  const windowX = Math.floor(size * 0.35);
+  const windowY = margin + 1;
+  pixels[windowY][windowX] = "#";
+  pixels[windowY][windowX + 1] = "#";
+
+  // 先生位置
+  const teacherX = Math.floor(size * 0.6);
+  const teacherY = Math.floor(size * 0.55);
+  pixels[teacherY][teacherX] = "T";
+  pixels[teacherY + 1]?.[teacherX + 1] = "T";
+
+  // 机（オレンジ）を複数配置
+  const desks = [
+    { x: Math.floor(size * 0.2), y: Math.floor(size * 0.25) },
+    { x: Math.floor(size * 0.45), y: Math.floor(size * 0.25) },
+    { x: Math.floor(size * 0.2), y: Math.floor(size * 0.7) },
+    { x: Math.floor(size * 0.7), y: Math.floor(size * 0.7) },
+  ];
+  desks.forEach((d) => {
+    if (pixels[d.y] && pixels[d.y][d.x] !== undefined) {
+      pixels[d.y][d.x] = "D";
+    }
+  });
 
   // プレイヤー
   pixels[pos.y][pos.x] = "P";
@@ -75,6 +99,7 @@ function FlatPlaceholder() {
     "#": "#0ea5e9", // window
     P: "#22c55e", // player
     T: "#f59e0b", // teacher/marker
+    D: "#f59e0b", // desks
   };
 
   return (
@@ -83,7 +108,7 @@ function FlatPlaceholder() {
         <div>
           <div className="text-lg font-bold">2D Classroom (Pixel)</div>
           <p className="text-xs text-slate-600">
-            WebGL非対応時はこちらのドット絵ビューをご利用ください。WASD/矢印キーで移動できます。
+        WebGL非対応時はこちらのドット絵ビューをご利用ください。WASD/矢印キーで移動できます。
           </p>
         </div>
         <p className="text-[11px] text-slate-500">ドット絵背景・机/キャラクターの追加予定</p>
@@ -93,7 +118,13 @@ function FlatPlaceholder() {
           className="h-full w-full rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-inner"
           style={{ imageRendering: "pixelated" }}
         >
-          <div className="grid h-full w-full grid-cols-16 grid-rows-16">
+          <div
+            className="grid h-full w-full"
+            style={{
+              gridTemplateColumns: `repeat(${size}, 1fr)`,
+              gridTemplateRows: `repeat(${size}, 1fr)`,
+            }}
+          >
             {pixels.flatMap((row, y) =>
               row.map((cell, x) => (
                 <div
