@@ -91,7 +91,7 @@ export function useClassroomPresence(roomId: string | null, userId: string | nul
         const players = new Map<string, PlayerState>();
         for (const [key, presences] of Object.entries(state)) {
           if (key === userId || presences.length === 0) continue;
-          const p = presences[0] as ClassroomPresenceState;
+        const p = presences[0] as unknown as ClassroomPresenceState;
           players.set(key, {
             userId: key,
             position: p.position ?? { x: 0, y: 0, z: 0 },
@@ -106,7 +106,7 @@ export function useClassroomPresence(roomId: string | null, userId: string | nul
       })
       .on("presence", { event: "join" }, ({ key, newPresences }) => {
         if (key === userId || newPresences.length === 0) return;
-        const p = newPresences[0] as ClassroomPresenceState;
+        const p = newPresences[0] as unknown as ClassroomPresenceState;
         setOtherPlayers((prev) => {
           const next = new Map(prev);
           next.set(key, {

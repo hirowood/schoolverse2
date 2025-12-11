@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useVirtualRoomStore } from "@/stores/useVirtualRoomStore";
+import { useClassroomPresence } from "@/hooks/useClassroomPresence";
 
 function hasWebGL(): boolean {
   if (typeof window === "undefined") return false;
@@ -43,6 +44,7 @@ export function Canvas3D() {
   const [mode, setMode] = useState<"3d" | "2d">(() => (supported ? "3d" : "2d"));
   const { setPosition, triggerAutoEncounter } = useVirtualRoomStore();
   const lastZoneRef = useRef<string | null>(null);
+  const { broadcastPosition } = useClassroomPresence("default", null, null);
 
   useEffect(() => {
     if (!supported || mode !== "3d") return;
@@ -151,6 +153,7 @@ export function Canvas3D() {
       box.position.y = 0.6 + Math.sin(t) * 0.15;
       // push position to store + zone detection
       setPosition({ x: box.position.x, y: box.position.y, z: box.position.z });
+      broadcastPosition({ x: box.position.x, y: box.position.y, z: box.position.z });
       const currentZone = useVirtualRoomStore.getState().currentZone;
       if (currentZone?.id !== lastZoneRef.current) {
         lastZoneRef.current = currentZone?.id ?? null;
@@ -189,7 +192,7 @@ export function Canvas3D() {
         renderer.domElement.parentElement.removeChild(renderer.domElement);
       }
     };
-  }, [supported, mode, setPosition, triggerAutoEncounter]);
+  }, [supported, mode, setPosition, triggerAutoEncounter, broadcastPosition]);
 
   // Mouse look & zoom: FPS-like camera pivoting around the player
   useEffect(() => {

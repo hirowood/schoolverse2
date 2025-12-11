@@ -2,6 +2,10 @@
 
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
+import { useSession } from "next-auth/react";
+import { useClassroomPresence } from "@/hooks/useClassroomPresence";
+import { OtherPlayerBattles } from "@/components/virtual-classroom/HUD/OtherPlayerBattles";
+import { PlayerCountIndicator } from "@/components/virtual-classroom/HUD/PlayerCountIndicator";
 import { ConfettiEffect } from "@/components/virtual-classroom/Effects/ConfettiEffect";
 import { ShakeEffect } from "@/components/virtual-classroom/Effects/ShakeEffect";
 import { ZoneIndicator } from "@/components/virtual-classroom/HUD/ZoneIndicator";
@@ -32,6 +36,10 @@ const Canvas3D = dynamic(
 export default function VirtualClassroomPage() {
   const showConfetti = useVirtualRoomStore((s) => s.showConfetti);
   const showShake = useVirtualRoomStore((s) => s.showShake);
+  const { data: session } = useSession();
+  const userId = (session?.user as { id?: string } | undefined)?.id ?? null;
+  const userName = session?.user?.name ?? session?.user?.email ?? "Guest";
+  const { otherPlayers, isConnected, playerCount } = useClassroomPresence("default", userId, userName);
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
       <div className="mx-auto w-full px-3 sm:px-6 lg:px-10 pt-8 space-y-6">
@@ -65,6 +73,8 @@ export default function VirtualClassroomPage() {
         <div className="flex justify-end">
           <ZoneIndicator />
         </div>
+        <OtherPlayerBattles players={otherPlayers} />
+        <PlayerCountIndicator playerCount={playerCount} isConnected={isConnected} />
 
         {/* 操作説明 */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
