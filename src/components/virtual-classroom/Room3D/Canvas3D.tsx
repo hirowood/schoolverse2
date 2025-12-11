@@ -110,7 +110,8 @@ export function Canvas3D({
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.shadowMap.enabled = true;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio ?? 1, 1.5)); // 軽量化
+    renderer.shadowMap.enabled = false;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -130,16 +131,14 @@ export function Canvas3D({
     floor.receiveShadow = true;
     scene.add(floor);
 
-    // Desk grid (few boxes to keep light)
+    // Desk grid (軽量版 2x3)
     const deskGeo = new THREE.BoxGeometry(1.2, 0.2, 0.8);
     const deskMat = new THREE.MeshStandardMaterial({ color: "#cbd5e1" });
     const desks: THREE.Mesh[] = [];
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 4; col++) {
+    for (let row = 0; row < 2; row++) {
+      for (let col = 0; col < 3; col++) {
         const mesh = new THREE.Mesh(deskGeo, deskMat);
-        mesh.position.set(col * 1.6 - 2.4, 0.1, row * 1.6 - 1.6);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
+        mesh.position.set(col * 1.8 - 1.8, 0.1, row * 1.8 - 0.9);
         scene.add(mesh);
         desks.push(mesh);
       }
@@ -150,7 +149,6 @@ export function Canvas3D({
     const boxMat = new THREE.MeshStandardMaterial({ color: "#10b981" });
     const box = new THREE.Mesh(boxGeo, boxMat);
     box.position.set(0, 0.6, 0);
-    box.castShadow = true;
     scene.add(box);
 
     // Other players group
