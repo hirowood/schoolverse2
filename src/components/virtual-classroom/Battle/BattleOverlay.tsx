@@ -43,6 +43,8 @@ export function BattleOverlay({ monster, question, result, loading, error, onAns
     setInput("");
   };
 
+  const timeLimitText = question.timeLimit && question.timeLimit > 0 ? `${question.timeLimit}s` : "60s";
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center px-4">
       <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
@@ -50,7 +52,9 @@ export function BattleOverlay({ monster, question, result, loading, error, onAns
           <div>
             <p className="text-xs uppercase tracking-wide opacity-80">Monster Encounter</p>
             <h3 className="text-xl font-bold">{monster.name}</h3>
-            <p className="text-sm opacity-90">{monster.category} / {monster.subcategory ?? "general"}</p>
+            <p className="text-sm opacity-90">
+              {monster.category} / {monster.subcategory ?? "general"} ・ 制限時間 {timeLimitText}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -79,9 +83,7 @@ export function BattleOverlay({ monster, question, result, loading, error, onAns
                   onClick={() => handleOption(opt.value)}
                   disabled={loading || Boolean(result)}
                   className={`flex items-center gap-2 rounded-lg border px-3 py-3 text-left transition ${
-                    result
-                      ? "opacity-70 cursor-not-allowed"
-                      : "hover:-translate-y-0.5 hover:shadow"
+                    result ? "opacity-70 cursor-not-allowed" : "hover:-translate-y-0.5 hover:shadow"
                   }`}
                 >
                   <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-white text-xs font-bold">
@@ -95,7 +97,7 @@ export function BattleOverlay({ monster, question, result, loading, error, onAns
             <div className="flex items-center gap-2">
               <input
                 className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
-                placeholder="解答を入力"
+                placeholder="回答を入力..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={loading || Boolean(result)}
@@ -106,7 +108,7 @@ export function BattleOverlay({ monster, question, result, loading, error, onAns
                 disabled={!canSubmit || loading || Boolean(result)}
                 className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               >
-                解答する
+                送信
               </button>
             </div>
           )}
@@ -116,7 +118,7 @@ export function BattleOverlay({ monster, question, result, loading, error, onAns
           {result && (
             <div className={`rounded-lg border p-4 ${result.isCorrect ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
               <p className="text-base font-semibold text-slate-900">
-                {result.isCorrect ? "正解！" : "残念、不正解"}
+                {result.isCorrect ? "正解！" : "不正解"}
               </p>
               <p className="text-sm text-slate-700 mt-1">
                 XP: {result.xpEarned} (+{result.bonusXpEarned}) / Coins: {result.coinsEarned}

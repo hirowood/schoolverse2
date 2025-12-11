@@ -32,7 +32,12 @@ export function useVirtualEncounter() {
       const res = await fetch("/api/monster/encounter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category: category ?? null }),
+        body: JSON.stringify({
+          category: category ?? null,
+          // 位置・レベルは暫定値（3D座標同期はPhase3で連携）
+          position: { x: 0, y: 0, z: 0 },
+          playerLevel: 1,
+        }),
       });
       if (!res.ok) {
         setState((prev) => ({ ...prev, loading: false, error: "遭遇できませんでした" }));
