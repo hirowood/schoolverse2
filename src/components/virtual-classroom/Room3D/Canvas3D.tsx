@@ -78,28 +78,34 @@ function FlatPlaceholder() {
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-700">
-      <div className="text-lg font-bold">2D Classroom (Pixel)</div>
-      <p className="text-xs text-slate-600 text-center px-4">
-        WebGL非対応時はこちらのドット絵ビューをご利用ください。WASD/矢印キーで移動できます。
-      </p>
-      <div
-        className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-inner"
-        style={{ imageRendering: "pixelated" }}
-      >
-        <div className="grid h-80 w-80 grid-cols-16 grid-rows-16">
-          {pixels.flatMap((row, y) =>
-            row.map((cell, x) => (
-              <div
-                key={`${x}-${y}`}
-                style={{ backgroundColor: colorMap[cell] ?? "transparent" }}
-                className="h-full w-full"
-              />
-            )),
-          )}
+    <div className="absolute inset-0 flex flex-col gap-3 text-slate-700">
+      <div className="flex items-start justify-between px-3 pt-3">
+        <div>
+          <div className="text-lg font-bold">2D Classroom (Pixel)</div>
+          <p className="text-xs text-slate-600">
+            WebGL非対応時はこちらのドット絵ビューをご利用ください。WASD/矢印キーで移動できます。
+          </p>
+        </div>
+        <p className="text-[11px] text-slate-500">ドット絵背景・机/キャラクターの追加予定</p>
+      </div>
+      <div className="relative flex-1 p-3">
+        <div
+          className="h-full w-full rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-inner"
+          style={{ imageRendering: "pixelated" }}
+        >
+          <div className="grid h-full w-full grid-cols-16 grid-rows-16">
+            {pixels.flatMap((row, y) =>
+              row.map((cell, x) => (
+                <div
+                  key={`${x}-${y}`}
+                  style={{ backgroundColor: colorMap[cell] ?? "transparent" }}
+                  className="h-full w-full"
+                />
+              )),
+            )}
+          </div>
         </div>
       </div>
-      <p className="text-[11px] text-slate-500">ドット絵背景・机/キャラクターの追加予定</p>
     </div>
   );
 }
