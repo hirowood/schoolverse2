@@ -21,6 +21,7 @@ export function useUserChat() {
   const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null } | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const subscriptionRef = useRef<ReturnType<SupabaseClient["channel"]> | null>(null);
+  const lastMarkReadRef = useRef<{ roomId: string; ts: number; messageId?: string }>({ roomId: "", ts: 0 });
 
   const activeRoom = useMemo(
     () => rooms.find((r) => r.id === activeRoomId) ?? null,
@@ -175,6 +176,12 @@ export function useUserChat() {
   const markRead = useCallback(
     async (messageId: string) => {
       if (!activeRoomId) return;
+       // クライアント側で連続リクエストを抑制（429回避）
+      const now = Date.now();
+      const last = lastMarkReadRef.current;
+      if (last.roomId === activeRoomId && last.messageId === messageId) return;
+      if (last.roomId === activeRoomId && now - last.ts < 2000) return;
+      lastMarkReadRef.current = { roomId: activeRoomId, ts: now, messageId };
       recordActivity();
       await fetch(`/api/user-chat/rooms/${activeRoomId}/read`, {
         method: "POST",
