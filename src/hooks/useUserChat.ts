@@ -119,7 +119,7 @@ export function useUserChat() {
       setLoadingMessages(true);
       try {
         if (process.env.NODE_ENV !== "production") {
-          console.debug("[DEBUG] fetchMessages called for room:", roomId);
+          console.log("[DEBUG] fetchMessages called for room:", roomId);
         }
         const res = await fetch(`/api/user-chat/rooms/${roomId}/messages?limit=30`);
         if (res.status === 401) {
@@ -130,7 +130,7 @@ export function useUserChat() {
         setMessages(data.messages ?? []);
         setHasMoreMessages(Boolean(data.nextCursor));
         if (process.env.NODE_ENV !== "production") {
-          console.debug("[DEBUG] fetchMessages got", data.messages?.length ?? 0, "messages");
+          console.log("[DEBUG] fetchMessages got", data.messages?.length ?? 0, "messages");
         }
       } catch (e) {
         setError((e as Error).message);
@@ -184,7 +184,7 @@ export function useUserChat() {
 
       recordActivity();
       if (process.env.NODE_ENV !== "production") {
-        console.debug("[DEBUG] Sending message to room:", activeRoomId, "text length:", text.length);
+        console.log("[DEBUG] Sending message to room:", activeRoomId, "text length:", text.length);
       }
       const res = await fetch(`/api/user-chat/rooms/${activeRoomId}/messages`, {
         method: "POST",
@@ -197,8 +197,8 @@ export function useUserChat() {
         setError("send_fail");
       }
       if (process.env.NODE_ENV !== "production") {
-        console.debug("[DEBUG] Send response status:", res.status);
-        console.debug("[DEBUG] Calling fetchMessages after send room:", activeRoomId);
+        console.log("[DEBUG] Send response status:", res.status);
+        console.log("[DEBUG] Calling fetchMessages after send room:", activeRoomId);
       }
       void fetchMessages(activeRoomId);
     },

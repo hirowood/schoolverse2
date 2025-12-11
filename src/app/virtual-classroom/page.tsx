@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useClassroomPresence } from "@/hooks/useClassroomPresence";
 import { OtherPlayerBattles } from "@/components/virtual-classroom/HUD/OtherPlayerBattles";
@@ -48,6 +48,24 @@ export default function VirtualClassroomPage() {
   const userName = session?.user?.name ?? session?.user?.email ?? "Guest";
   const presence = useClassroomPresence("default", userId, userName);
   const { otherPlayers, isConnected, playerCount } = presence;
+
+  // モーダル表示中は背面スクロールをロック
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const prevBody = document.body.style.overflow;
+    const prevHtml = document.documentElement.style.overflow;
+    if (chatOpen) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = prevBody || "";
+      document.documentElement.style.overflow = prevHtml || "";
+    }
+    return () => {
+      document.body.style.overflow = prevBody || "";
+      document.documentElement.style.overflow = prevHtml || "";
+    };
+  }, [chatOpen]);
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
       <div className="mx-auto w-full px-3 sm:px-6 lg:px-10 pt-8 space-y-6">

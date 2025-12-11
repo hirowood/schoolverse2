@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUserChat } from "@/hooks/useUserChat";
 import type { UserPreview } from "@/features/user-chat/types";
 import { ChatSidebar } from "@/components/user-chat/ChatSidebar";
