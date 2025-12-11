@@ -199,21 +199,27 @@ export function useUserChat() {
       const now = Date.now();
       const last = lastMarkReadRef.current;
       if (last.roomId === activeRoomId && last.messageId === messageId) return;
-      if (last.roomId === activeRoomId && now - last.ts < 5000) return;
+      if (last.roomId === activeRoomId && now - last.ts < 8000) return;
+      if ((unreadCounts[activeRoomId] ?? 0) === 0) return;
       if (markReadInFlight.current) return;
       markReadInFlight.current = true;
       lastMarkReadRef.current = { roomId: activeRoomId, ts: now, messageId };
       recordActivity();
-      await fetch(`/api/user-chat/rooms/${activeRoomId}/read`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageId }),
-      });
-      setUnreadCounts((prev) => ({ ...prev, [activeRoomId]: 0 }));
-      setRooms((prev) => prev.map((room) => (room.id === activeRoomId ? { ...room, unreadCount: 0 } : room)));
-      markReadInFlight.current = false;
+      try {
+        await fetch(`/api/user-chat/rooms/${activeRoomId}/read`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messageId }),
+        });
+        setUnreadCounts((prev) => ({ ...prev, [activeRoomId]: 0 }));
+        setRooms((prev) => prev.map((room) => (room.id === activeRoomId ? { ...room, unreadCount: 0 } : room)));
+      } catch {
+        // ignore errors to avoid loops
+      } finally {
+        markReadInFlight.current = false;
+      }
     },
-    [activeRoomId, recordActivity],
+    [activeRoomId, recordActivity, unreadCounts],
   );
 
   const searchUsers = useCallback(
