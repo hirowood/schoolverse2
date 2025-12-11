@@ -128,11 +128,14 @@ function FlatPlaceholder({
   pixels[pos.y][pos.x] = "P";
 
   const remoteCells = new Map<string, string>();
+  const remoteList: { x: number; y: number; color: string }[] = [];
   otherPlayers.forEach((player) => {
-    const gx = worldToGrid(player.position.x);
-    const gy = worldToGrid(player.position.z);
+    const gx = THREE.MathUtils.clamp(worldToGrid(player.position.x), 0, size - 1);
+    const gy = THREE.MathUtils.clamp(worldToGrid(player.position.z), 0, size - 1);
     const key = `${gx}-${gy}`;
-    remoteCells.set(key, player.avatarColor ?? "#22c55e");
+    const color = player.status === "battling" ? "#ef4444" : player.avatarColor ?? "#22c55e";
+    remoteCells.set(key, color);
+    remoteList.push({ x: gx, y: gy, color });
   });
 
   const colorMap: Record<string, string> = {
@@ -160,24 +163,42 @@ function FlatPlaceholder({
           className="h-full w-full rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-inner"
           style={{ imageRendering: "pixelated" }}
         >
-          <div
-            className="grid h-full w-full"
-            style={{
-              gridTemplateColumns: `repeat(${size}, 1fr)`,
-              gridTemplateRows: `repeat(${size}, 1fr)`,
-            }}
-          >
-            {pixels.flatMap((row, y) =>
-              row.map((cell, x) => (
+          <div className="relative h-full w-full">
+            <div
+              className="grid h-full w-full"
+              style={{
+                gridTemplateColumns: `repeat(${size}, 1fr)`,
+                gridTemplateRows: `repeat(${size}, 1fr)`,
+              }}
+            >
+              {pixels.flatMap((row, y) =>
+                row.map((cell, x) => (
+                  <div
+                    key={`${x}-${y}`}
+                    style={{
+                      backgroundColor: remoteCells.get(`${x}-${y}`) ?? colorMap[cell] ?? "transparent",
+                    }}
+                    className="h-full w-full"
+                  />
+                )),
+              )}
+            </div>
+            {/* リモートプレイヤーを目立たせるオーバーレイ（枠付き） */}
+            <div className="pointer-events-none absolute inset-0">
+              {remoteList.map((p, idx) => (
                 <div
-                  key={`${x}-${y}`}
+                  key={`${p.x}-${p.y}-${idx}`}
+                  className="absolute rounded-sm border border-white shadow-[0_0_0_2px_rgba(0,0,0,0.08)]"
                   style={{
-                    backgroundColor: remoteCells.get(`${x}-${y}`) ?? colorMap[cell] ?? "transparent",
+                    width: `${100 / size}%`,
+                    height: `${100 / size}%`,
+                    left: `${(p.x / size) * 100}%`,
+                    top: `${(p.y / size) * 100}%`,
+                    backgroundColor: p.color,
                   }}
-                  className="h-full w-full"
                 />
-              )),
-            )}
+              ))}
+            </div>
           </div>
         </div>
       </div>
