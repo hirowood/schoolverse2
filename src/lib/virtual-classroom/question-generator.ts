@@ -62,15 +62,50 @@ JSONスキーマ:
 }
 `;
 
+function sanitizeGenerated(result: GeneratedQuestion | null): GeneratedQuestion | null {
+  if (!result?.questionText || !result.correctAnswer) return null;
+
+  const validType: GeneratedQuestion["questionType"] =
+    result.questionType === "multiple_choice" || result.questionType === "text" || result.questionType === "code"
+      ? result.questionType
+      : "multiple_choice";
+
+  let options: MonsterQuestionOption[] | null = null;
+  if (validType === "multiple_choice") {
+    const labels = ["A", "B", "C", "D"];
+    const raw = Array.isArray(result.options) ? result.options.slice(0, 4) : [];
+    options = raw.map((opt, idx) => ({
+      label: labels[idx] ?? opt.label ?? `O${idx + 1}`,
+      value: opt.value?.toString().trim() ?? "",
+      isCorrect: Boolean(opt.isCorrect),
+    }));
+    if (!options.some((o) => o.isCorrect) && options.length > 0) {
+      options[0].isCorrect = true;
+    }
+  }
+
+  return {
+    questionText: result.questionText.trim(),
+    questionType: validType,
+    options,
+    correctAnswer: result.correctAnswer.toString().trim(),
+    explanation: result.explanation?.trim() ?? "",
+    hints: result.hints?.slice(0, 3) ?? [],
+    timeLimit: Math.min(90, Math.max(30, Math.round(result.timeLimit ?? 60))),
+    bonusXp: Math.max(0, Math.round(result.bonusXp ?? 0)),
+  };
+}
+
 export async function generateQuestionWithAI(monster: MonsterDefinition): Promise<MonsterQuestion | null> {
   try {
     const client = createAnthropicClient();
-    const result = await client.chatJSON<GeneratedQuestion>([
+    const raw = await client.chatJSON<GeneratedQuestion>([
       { role: "system", content: "You are a question generator for an educational RPG. Respond in JSON." },
       { role: "user", content: AI_PROMPT(monster) },
     ], { maxTokens: 600, temperature: 0.4 });
 
-    if (!result?.questionText || !result.correctAnswer) return null;
+    const result = sanitizeGenerated(raw);
+    if (!result) return null;
 
     const created = await prisma.monsterQuestion.create({
       data: {
