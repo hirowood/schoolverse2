@@ -596,6 +596,16 @@ export function Canvas3D({
     };
   }, [supported, mode]);
 
+  const handleVirtualPress = useCallback((keys: string[], down: boolean) => {
+    keys.forEach((k) => {
+      if (down) {
+        pressedKeysRef.current.add(k);
+      } else {
+        pressedKeysRef.current.delete(k);
+      }
+    });
+  }, []);
+
   return (
     <div className="relative h-[calc(100vh-160px)] min-h-[560px] w-full overflow-hidden rounded-2xl border border-slate-300 bg-slate-100 shadow-inner">
       {mode === "3d" && supported && <div ref={containerRef} className="absolute inset-0 cursor-grab" />}
@@ -605,6 +615,97 @@ export function Canvas3D({
           setPosition={setPosition}
           otherPlayers={otherPlayers}
         />
+      )}
+
+      {mode === "3d" && (
+        <div className="pointer-events-none absolute inset-0 lg:hidden">
+          <div className="pointer-events-auto absolute bottom-4 left-4 flex gap-4">
+            <div className="grid h-24 w-24 grid-cols-3 grid-rows-3 gap-1">
+              <button
+                type="button"
+                aria-label="上に移動"
+                className="col-start-2 row-start-1 rounded-full bg-white/90 text-slate-700 shadow ring-1 ring-slate-300 active:translate-y-0.5"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  handleVirtualPress(["w", "arrowup"], true);
+                }}
+                onPointerUp={(e) => {
+                  e.preventDefault();
+                  handleVirtualPress(["w", "arrowup"], false);
+                }}
+                onPointerLeave={() => handleVirtualPress(["w", "arrowup"], false)}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                aria-label="左に移動"
+                className="col-start-1 row-start-2 rounded-full bg-white/90 text-slate-700 shadow ring-1 ring-slate-300 active:translate-y-0.5"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  handleVirtualPress(["a", "arrowleft"], true);
+                }}
+                onPointerUp={(e) => {
+                  e.preventDefault();
+                  handleVirtualPress(["a", "arrowleft"], false);
+                }}
+                onPointerLeave={() => handleVirtualPress(["a", "arrowleft"], false)}
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                aria-label="右に移動"
+                className="col-start-3 row-start-2 rounded-full bg-white/90 text-slate-700 shadow ring-1 ring-slate-300 active:translate-y-0.5"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  handleVirtualPress(["d", "arrowright"], true);
+                }}
+                onPointerUp={(e) => {
+                  e.preventDefault();
+                  handleVirtualPress(["d", "arrowright"], false);
+                }}
+                onPointerLeave={() => handleVirtualPress(["d", "arrowright"], false)}
+              >
+                →
+              </button>
+              <button
+                type="button"
+                aria-label="下に移動"
+                className="col-start-2 row-start-3 rounded-full bg-white/90 text-slate-700 shadow ring-1 ring-slate-300 active:translate-y-0.5"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  handleVirtualPress(["s", "arrowdown"], true);
+                }}
+                onPointerUp={(e) => {
+                  e.preventDefault();
+                  handleVirtualPress(["s", "arrowdown"], false);
+                }}
+                onPointerLeave={() => handleVirtualPress(["s", "arrowdown"], false)}
+              >
+                ↓
+              </button>
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              <button
+                type="button"
+                aria-label="Aボタン（決定）"
+                className="h-12 w-12 rounded-full bg-emerald-500 text-white text-lg font-bold shadow ring-2 ring-emerald-200 active:translate-y-0.5"
+                onPointerDown={(e) => e.preventDefault()}
+              >
+                A
+              </button>
+              <button
+                type="button"
+                aria-label="Bボタン（メニュー）"
+                className="h-12 w-12 rounded-full bg-amber-500 text-white text-lg font-bold shadow ring-2 ring-amber-200 active:translate-y-0.5"
+                onPointerDown={(e) => e.preventDefault()}
+              >
+                B
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="absolute left-3 top-3 flex items-center gap-2 z-10">
