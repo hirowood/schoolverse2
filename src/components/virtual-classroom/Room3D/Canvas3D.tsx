@@ -700,7 +700,7 @@ export function Canvas3D({
       )}
 
       {mode === "3d" && (
-        <div className="pointer-events-none absolute inset-0 lg:hidden">
+        <div className="pointer-events-none absolute inset-0">
           <div className="pointer-events-auto absolute bottom-4 left-4 flex gap-4">
             <div className="grid h-24 w-24 grid-cols-3 grid-rows-3 gap-1">
               <button
