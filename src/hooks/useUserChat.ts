@@ -92,7 +92,7 @@ export function useUserChat() {
         const qs = new URLSearchParams();
         if (type && type !== "all") qs.set("type", type);
         const res = await fetch(`/api/user-chat/rooms?${qs.toString()}`);
-        if (!res.ok) throw new Error("luomu");
+        if (!res.ok) throw new Error("room_fetch_failed");
         const data = (await res.json()) as { rooms: ChatRoom[] };
         const roomsData = data.rooms ?? [];
         const mappedUnread = roomsData.reduce<Record<string, number>>((acc, room) => {
