@@ -31,7 +31,7 @@ export type UseClassroomPresenceResult = {
   otherPlayers: Map<string, PlayerState>;
   isConnected: boolean;
   avatarColor: string;
-  broadcastPosition: (position: { x: number; y: number; z: number }) => void;
+  broadcastPosition: (position: { x: number; y: number; z: number }, force?: boolean) => void;
   broadcastBattleState: (isBattling: boolean, monsterName?: string | null) => void;
   playerCount: number;
 };
@@ -66,12 +66,12 @@ export function useClassroomPresence(
   const avatarColor = useMemo(() => (userId ? getAvatarColor(userId) : "#94a3b8"), [userId]);
 
   const broadcastPosition = useCallback(
-    (position: { x: number; y: number; z: number }) => {
+    (position: { x: number; y: number; z: number }, force = false) => {
       if (!enabled || !userId) return;
       lastKnownPositionRef.current = position;
       if (!channelRef.current) return;
       const now = Date.now();
-      if (now - lastBroadcastRef.current < POSITION_BROADCAST_INTERVAL) return;
+      if (!force && now - lastBroadcastRef.current < POSITION_BROADCAST_INTERVAL) return;
       lastBroadcastRef.current = now;
 
       const newState: ClassroomPresenceState = {
@@ -161,6 +161,9 @@ export function useClassroomPresence(
           };
           currentStateRef.current = initialState;
           await channel.track(initialState);
+          // 追加で即座にブロードキャストして存在を確実に知らせる
+          lastBroadcastRef.current = 0;
+          broadcastPosition(lastKnownPositionRef.current, true);
         }
       });
 
@@ -172,7 +175,17 @@ export function useClassroomPresence(
       setIsConnected(false);
       setOtherPlayers(new Map());
     };
-  }, [enabled, supabase, roomId, userId, avatarColor, userName]);
+  }, [enabled, supabase, roomId, userId, avatarColor, userName, broadcastPosition]);
+
+  // フォーカス復帰時にも位置を再送
+  useEffect(() => {
+    if (!enabled) return;
+    const handler = () => {
+      broadcastPosition(lastKnownPositionRef.current, true);
+    };
+    window.addEventListener("focus", handler);
+    return () => window.removeEventListener("focus", handler);
+  }, [broadcastPosition, enabled]);
 
   return {
     otherPlayers,
