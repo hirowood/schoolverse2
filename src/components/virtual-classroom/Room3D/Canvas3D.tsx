@@ -2,7 +2,7 @@
 
 // three.jsの軽量実装（R3F非依存）。3D/2Dトグル、WASD移動、FPS視点。
 // 他プレイヤー表示: Presenceから位置を受け取りキューブ＋ラベルで描画、lerpで補間。
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useVirtualRoomStore } from "@/stores/useVirtualRoomStore";
 import {
