@@ -10,6 +10,8 @@ import { ConfettiEffect } from "@/components/virtual-classroom/Effects/ConfettiE
 import { ShakeEffect } from "@/components/virtual-classroom/Effects/ShakeEffect";
 import { ZoneIndicator } from "@/components/virtual-classroom/HUD/ZoneIndicator";
 import { useVirtualRoomStore } from "@/stores/useVirtualRoomStore";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 // BattleHUDも遅延読み込み（3D関連の依存がある場合に備えて）
 const BattleHUD = dynamic(
@@ -49,6 +51,15 @@ export default function VirtualClassroomPage() {
   const presence = useClassroomPresence("default", userId, userName);
   const { otherPlayers, isConnected, playerCount } = presence;
 
+  // HUD内ボタンからも使うため、開閉ロジックをまとめる
+  const toggleChat = () => {
+    setChatOpen((v) => {
+      const next = !v;
+      if (!next) setChatInputFocused(false);
+      return next;
+    });
+  };
+
   // モーダル表示中は背面スクロールをロック
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -85,33 +96,34 @@ export default function VirtualClassroomPage() {
         </div>
 
         {/* 3Dキャンバス */}
-      <Suspense
-        fallback={
-          <div className="h-[520px] w-full rounded-2xl border border-slate-200 bg-slate-100 shadow-inner flex items-center justify-center">
-            <p className="text-slate-500">読み込み中...</p>
-          </div>
-        }
-      >
-        <ShakeEffect active={showShake}>
-          <div className="relative min-h-[360px] sm:min-h-[520px] md:min-h-[600px] w-full">
-            <Canvas3D
-              roomId="default"
-              userId={userId}
-              userName={userName}
-              presence={presence}
-              paused={chatInputFocused && chatOpen}
-            />
-          </div>
-        </ShakeEffect>
-      </Suspense>
+        <Suspense
+          fallback={
+            <div className="h-[520px] w-full rounded-2xl border border-slate-200 bg-slate-100 shadow-inner flex items-center justify-center">
+              <p className="text-slate-500">読み込み中...</p>
+            </div>
+          }
+        >
+          <ShakeEffect active={showShake}>
+            <div className="relative min-h-[360px] sm:min-h-[520px] md:min-h-[600px] w-full">
+              <Canvas3D
+                roomId="default"
+                userId={userId}
+                userName={userName}
+                presence={presence}
+                paused={chatInputFocused && chatOpen}
+              />
+              {/* Canvas上に重ねて表示するHUD（absoluteなので親をrelativeにする） */}
+              <OtherPlayerBattles players={otherPlayers} />
+              <PlayerCountIndicator playerCount={playerCount} isConnected={isConnected} />
+            </div>
+          </ShakeEffect>
+        </Suspense>
         <div className="flex justify-end">
           <ZoneIndicator />
         </div>
-        <OtherPlayerBattles players={otherPlayers} />
-        <PlayerCountIndicator playerCount={playerCount} isConnected={isConnected} />
 
         {/* 操作説明 */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <Card>
           <h2 className="text-sm font-semibold text-slate-700 mb-2">🎮 操作方法</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-slate-600">
             <div className="flex items-center gap-2">
@@ -131,11 +143,11 @@ export default function VirtualClassroomPage() {
               <span>ベータ版のため一部機能制限あり</span>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* バトルHUD（オーバーレイ） */}
-      <BattleHUD />
+      <BattleHUD chatOpen={chatOpen} onToggleChat={toggleChat} />
       <ConfettiEffect active={showConfetti} />
 
       {/* ユーザーチャット（モーダル） */}
@@ -148,16 +160,17 @@ export default function VirtualClassroomPage() {
                   <p className="text-[11px] font-semibold uppercase text-slate-500">User Chat</p>
                   <p className="text-[13px] font-bold text-slate-900">教室チャット</p>
                 </div>
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
+                  size="tap"
+                  className="min-h-11 text-slate-700"
                   onClick={() => {
                     setChatOpen(false);
                     setChatInputFocused(false);
                   }}
-                  className="rounded-md px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100"
                 >
                   閉じる
-                </button>
+                </Button>
               </div>
               <div className="flex-1 min-h-0 overflow-hidden px-2 pb-3">
                 <div className="h-full w-full overflow-hidden rounded-xl border border-slate-100 text-[12px] leading-tight [&_*]:text-[12px] [&_input]:text-[12px] [&_textarea]:text-[12px]">
@@ -173,19 +186,6 @@ export default function VirtualClassroomPage() {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => {
-          setChatOpen((v) => {
-            const next = !v;
-            if (!next) setChatInputFocused(false);
-            return next;
-          });
-        }}
-        className="fixed bottom-28 right-3 z-50 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg ring-2 ring-emerald-200"
-      >
-        {chatOpen ? "チャットを閉じる" : "チャットを開く"}
-      </button>
     </main>
   );
 }

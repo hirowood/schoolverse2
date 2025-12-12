@@ -15,7 +15,7 @@ export function ZoneIndicator() {
   const zone = useVirtualRoomStore((s) => s.currentZone);
   if (!zone) return null;
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm sm:py-1 sm:text-xs">
       <span className="h-2 w-2 rounded-full bg-emerald-500" />
       <span>ゾーン: {ZONE_NAMES[zone.category] ?? zone.category}</span>
     </div>

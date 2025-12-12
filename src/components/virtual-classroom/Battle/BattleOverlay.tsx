@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { MonsterDefinition, MonsterQuestionOption } from "@/features/virtual-classroom/types";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   monster: MonsterDefinition | null;
@@ -48,7 +49,7 @@ export function BattleOverlay({ monster, question, result, loading, error, onAns
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center px-4">
       <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
-        <header className="bg-gradient-to-r from-emerald-500 to-blue-600 text-white px-6 py-4 flex items-center justify-between">
+        <header className="bg-gradient-to-r from-emerald-500 to-blue-600 text-white px-4 py-4 sm:px-6 flex items-center justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-wide opacity-80">Monster Encounter</p>
             <h3 className="text-xl font-bold">{monster.name}</h3>
@@ -56,13 +57,15 @@ export function BattleOverlay({ monster, question, result, loading, error, onAns
               {monster.category} / {monster.subcategory ?? "general"} ・ 制限時間 {timeLimitText}
             </p>
           </div>
-          <button
+          <Button
+            variant="solid"
+            color="slate"
+            size="tap"
+            className="min-h-11 bg-white/15 text-white hover:bg-white/25"
             onClick={onClose}
-            className="rounded-md bg-white/15 px-3 py-1 text-sm font-semibold hover:bg-white/25"
-            type="button"
           >
             閉じる
-          </button>
+          </Button>
         </header>
 
         <div className="p-6 space-y-4">
@@ -86,7 +89,7 @@ export function BattleOverlay({ monster, question, result, loading, error, onAns
                     result ? "opacity-70 cursor-not-allowed" : "hover:-translate-y-0.5 hover:shadow"
                   }`}
                 >
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-white text-xs font-bold">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white text-sm font-bold sm:h-7 sm:w-7 sm:text-xs">
                     {opt.label}
                   </span>
                   <span className="text-sm text-slate-800">{opt.value}</span>
@@ -96,20 +99,22 @@ export function BattleOverlay({ monster, question, result, loading, error, onAns
           ) : (
             <div className="flex items-center gap-2">
               <input
-                className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="min-h-11 flex-1 rounded-md border border-slate-300 px-3 py-2.5 text-sm"
                 placeholder="回答を入力..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={loading || Boolean(result)}
               />
-              <button
-                type="button"
+              <Button
+                variant="solid"
+                color="emerald"
+                size="tap"
+                className="min-h-11"
                 onClick={handleSubmit}
                 disabled={!canSubmit || loading || Boolean(result)}
-                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               >
                 送信
-              </button>
+              </Button>
             </div>
           )}
 

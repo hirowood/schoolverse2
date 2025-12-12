@@ -6,6 +6,15 @@ import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
 import { StudyTask } from "../types";
 import { PLAN_TEXT } from "../constants";
+import { Button } from "@/components/ui/Button";
+
+// ステータスごとのアクティブ色（非アクティブ時は outline slate を使う）
+const STATUS_COLOR = {
+  todo: "slate",
+  in_progress: "amber",
+  paused: "blue",
+  done: "emerald",
+} as const;
 
 type Props = {
   task: StudyTask;
@@ -120,63 +129,32 @@ const NextChildTaskCard = ({
           {PLAN_TEXT.labelWorkTime}: {formatWorkTime(childWorkTime)}
         </span>
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-1">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onStatusChange(child.id, "todo");
-          }}
-          className={`rounded-md px-2 py-1 text-[11px] ${
-            child.status === "todo"
-              ? "bg-slate-900 text-white"
-              : "border border-slate-300 text-slate-700"
-          }`}
-        >
-          {PLAN_TEXT.statusTodo}
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onStatusChange(child.id, "in_progress");
-          }}
-          className={`rounded-md px-2 py-1 text-[11px] ${
-            child.status === "in_progress"
-              ? "bg-amber-500 text-white"
-              : "border border-slate-300 text-slate-700"
-          }`}
-        >
-          {PLAN_TEXT.statusInProgress}
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onStatusChange(child.id, "paused");
-          }}
-          className={`rounded-md px-2 py-1 text-[11px] ${
-            child.status === "paused"
-              ? "bg-blue-500 text-white"
-              : "border border-slate-300 text-slate-700"
-          }`}
-        >
-          {PLAN_TEXT.statusPaused}
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onStatusChange(child.id, "done");
-          }}
-          className={`rounded-md px-2 py-1 text-[11px] ${
-            child.status === "done"
-              ? "bg-emerald-600 text-white"
-              : "border border-slate-300 text-slate-700"
-          }`}
-        >
-          {PLAN_TEXT.statusDone}
-        </button>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {(["todo", "in_progress", "paused", "done"] as const).map((status) => {
+          const active = child.status === status;
+          const label =
+            status === "todo"
+              ? PLAN_TEXT.statusTodo
+              : status === "in_progress"
+                ? PLAN_TEXT.statusInProgress
+                : status === "paused"
+                  ? PLAN_TEXT.statusPaused
+                  : PLAN_TEXT.statusDone;
+          return (
+            <Button
+              key={status}
+              size="tapXs"
+              variant={active ? "solid" : "outline"}
+              color={active ? STATUS_COLOR[status] : "slate"}
+              onClick={(e) => {
+                e.stopPropagation();
+                onStatusChange(child.id, status);
+              }}
+            >
+              {label}
+            </Button>
+          );
+        })}
       </div>
     </div>
   );
@@ -254,87 +232,66 @@ const TaskCardContent = ({
           <p className="text-sm font-medium text-slate-900">{task.title}</p>
           {task.description && <p className="text-xs text-slate-700">{task.description}</p>}
         </div>
-        <div className="flex items-center gap-1">
+        {/* モバイルではタップしやすいようボタンを大きめに（sm以上で従来サイズ） */}
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap sm:gap-1">
           {onEdit && (
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="tap"
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(task);
               }}
-              className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
             >
               {PLAN_TEXT.editTaskButton}
-            </button>
+            </Button>
           )}
           {onDetail && (
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="tap"
               onClick={(e) => {
                 e.stopPropagation();
                 onDetail(task);
               }}
-              className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
             >
               詳細
-            </button>
+            </Button>
           )}
           {canAddChild && (
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="tap"
               onClick={(e) => {
                 e.stopPropagation();
                 onAddChild(task);
               }}
-              className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
             >
               {PLAN_TEXT.addChildButton}
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
-            onClick={() => onStatusChange(task.id, "todo")}
-            className={`rounded-md px-2 py-1 text-xs ${
-              task.status === "todo"
-                ? "bg-slate-900 text-white"
-                : "border border-slate-300 text-slate-700"
-            }`}
-          >
-            {PLAN_TEXT.statusTodo}
-          </button>
-          <button
-            type="button"
-            onClick={() => onStatusChange(task.id, "in_progress")}
-            className={`rounded-md px-2 py-1 text-xs ${
-              task.status === "in_progress"
-                ? "bg-amber-500 text-white"
-                : "border border-slate-300 text-slate-700"
-            }`}
-          >
-            {PLAN_TEXT.statusInProgress}
-          </button>
-          <button
-            type="button"
-            onClick={() => onStatusChange(task.id, "paused")}
-            className={`rounded-md px-2 py-1 text-xs ${
-              task.status === "paused"
-                ? "bg-blue-500 text-white"
-                : "border border-slate-300 text-slate-700"
-            }`}
-          >
-            {PLAN_TEXT.statusPaused}
-          </button>
-          <button
-            type="button"
-            onClick={() => onStatusChange(task.id, "done")}
-            className={`rounded-md px-2 py-1 text-xs ${
-              task.status === "done"
-                ? "bg-emerald-600 text-white"
-                : "border border-slate-300 text-slate-700"
-            }`}
-          >
-            {PLAN_TEXT.statusDone}
-          </button>
+          {(["todo", "in_progress", "paused", "done"] as const).map((status) => {
+            const active = task.status === status;
+            const label =
+              status === "todo"
+                ? PLAN_TEXT.statusTodo
+                : status === "in_progress"
+                  ? PLAN_TEXT.statusInProgress
+                  : status === "paused"
+                    ? PLAN_TEXT.statusPaused
+                    : PLAN_TEXT.statusDone;
+            return (
+              <Button
+                key={status}
+                size="tap"
+                variant={active ? "solid" : "outline"}
+                color={active ? STATUS_COLOR[status] : "slate"}
+                onClick={() => onStatusChange(task.id, status)}
+              >
+                {label}
+              </Button>
+            );
+          })}
         </div>
       </div>
       <div className="flex items-center gap-3 text-xs text-slate-500">

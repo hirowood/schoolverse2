@@ -1,51 +1,31 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useState, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import Link from "next/link";
-// Excalidraw v0.17は型エクスポートが限定的なため、必要最小の型をローカルで緩く定義
-type ExcalidrawElement = any;
-type FileId = string;
-type BinaryFileData = any;
-type AppState = any;
-type ExcalidrawImperativeAPI = any;
-type ExcalidrawAPI = any;
 
-import "@excalidraw/excalidraw/index.css";
+import { CanvasHeader } from "@/features/notes/canvas/CanvasHeader";
+import { CanvasCaptureModals } from "@/features/notes/canvas/CanvasCaptureModals";
+import { useCanvasNote } from "@/features/notes/canvas/useCanvasNote";
+import {
+  EMPTY_SCENE,
+  ExcalidrawImperativeAPI,
+  ExcalidrawElement,
+  FileId,
+  BinaryFileData,
+} from "@/features/notes/canvas/types";
 
-import CameraCapture from "@/components/notes/CameraCapture";
-import OcrProcessor from "@/components/notes/OcrProcessor";
-
-// Excalidrawをdynamic importでSSR無効化
 const Excalidraw = dynamic(
   async () => (await import("@excalidraw/excalidraw")).Excalidraw,
   {
     ssr: false,
     loading: () => (
-      <div className="flex items-center justify-center h-full bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div className="flex h-full items-center justify-center bg-gray-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
       </div>
     ),
-  }
-);
-
-// 型定義
-interface SceneSnapshot {
-  elements: readonly ExcalidrawElement[];
-  appState: Partial<AppState>;
-}
-
-const EMPTY_SCENE: SceneSnapshot = {
-  elements: [],
-  appState: {
-    // 背景はお好みで
-    viewBackgroundColor: "#ffffff",
-    // 変な全画面モードに入らないようにしておく
-    zenModeEnabled: false,
   },
-};
+);
 
 function CanvasPageContent() {
   const router = useRouter();
@@ -53,104 +33,37 @@ function CanvasPageContent() {
   const noteId = searchParams?.get("id");
   const taskId = searchParams?.get("taskId");
   const taskTitle = searchParams?.get("taskTitle");
-  const template = searchParams?.get("template"); 
+  const template = searchParams?.get("template");
 
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [isShareable, setIsShareable] = useState(false);
-  const [initialScene, setInitialScene] = useState<SceneSnapshot | null>(null);
-  const [isLoading, setIsLoading] = useState(!!noteId);
-  const [isSaving, setIsSaving] = useState(false);
+  const {
+    title,
+    setTitle,
+    description,
+    setDescription,
+    isShareable,
+    setIsShareable,
+    initialScene,
+    isLoading,
+  } = useCanvasNote({ noteId, template });
 
-  // カメラ/OCR状態
+  const [isSaving, setIsSaving] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [cameraMode, setCameraMode] = useState<"image" | "ocr">("image");
   const [showOcr, setShowOcr] = useState(false);
   const [ocrImageUrl, setOcrImageUrl] = useState<string | null>(null);
-  const [cameraMode, setCameraMode] = useState<"image" | "ocr">("image");
 
-  // 既存ノートを読み込む
-  useEffect(() => {
-    if (!noteId) return;
-
-    const fetchNote = async () => {
-      try {
-        const res = await fetch(`/api/notes/${noteId}`);
-        if (!res.ok) throw new Error("Failed to fetch note");
-        const data = await res.json();
-        const note = data.note;
-
-        setTitle(note.title || "");
-        setDescription(note.content || "");
-        setIsShareable(note.isShareable || false);
-
-        if (note.drawingData) {
-          const elements = Array.isArray(note.drawingData.elements) 
-            ? (note.drawingData.elements as ExcalidrawElement[])
-            : [];
-          const appState = note.drawingData.appState && typeof note.drawingData.appState === 'object'
-            ? (note.drawingData.appState as Partial<AppState>)
-            : {};
-          setInitialScene({ elements, appState });
-        }
-      } catch (error) {
-        console.error("Failed to load note:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchNote();
-  }, [noteId]);
-
-  useEffect(() => {
-    if (noteId) return; // 既存ノート編集時は何もしない
-
-    if (template === "5w2h") {
-      setTitle("5W2Hノート");
-      setDescription(
-        [
-          "【5W2H テンプレート】",
-          "Who（誰が）:",
-          "What（何を）:",
-          "Why（なぜ）:",
-          "When（いつ）:",
-          "Where（どこで）:",
-          "How（どのように）:",
-          "How much（いくらで / どれくらい）:",
-        ].join("\n")
-      );
-    } else if (template === "5why") {
-      setTitle("5Whyノート");
-      setDescription(
-        [
-          "【5Why テンプレート】",
-          "課題 / 事象:",
-          "Why 1:",
-          "Why 2:",
-          "Why 3:",
-          "Why 4:",
-          "Why 5:",
-          "対策案:",
-        ].join("\n")
-      );
-    }
-  }, [noteId, template]);
-
-  // 画像をキャンバスに追加
   const handleAddImage = useCallback(async (file: File) => {
     if (!apiRef.current) return;
 
     const reader = new FileReader();
     reader.onload = async (e) => {
       const dataUrl = e.target?.result as string;
-
-      // ブランド型 FileId にキャスト
       const id = crypto.randomUUID() as FileId;
 
       const fileData: BinaryFileData = {
-        id, // FileId
+        id,
         dataURL: dataUrl as BinaryFileData["dataURL"],
         mimeType: file.type as BinaryFileData["mimeType"],
         created: Date.now(),
@@ -167,7 +80,7 @@ function CanvasPageContent() {
           y: 100,
           width: Math.min(img.width, 400),
           height: Math.min(img.height, 300),
-          fileId: id, // FileId として OK
+          fileId: id,
         };
 
         const currentElements = apiRef.current!.getSceneElements();
@@ -175,39 +88,37 @@ function CanvasPageContent() {
           elements: [...currentElements, element as ExcalidrawElement],
         });
       };
+
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   }, []);
 
+  const handleCameraCapture = useCallback(
+    async (dataUrl: string) => {
+      setShowCamera(false);
 
-  // カメラ撮影完了
-  const handleCameraCapture = useCallback(async (dataUrl: string) => {
-    setShowCamera(false);
+      if (cameraMode === "ocr") {
+        setOcrImageUrl(dataUrl);
+        setShowOcr(true);
+        return;
+      }
 
-    if (cameraMode === "ocr") {
-      setOcrImageUrl(dataUrl);
-      setShowOcr(true);
-    } else {
-      // 画像モード: DataURLをFileに変換してキャンバスに追加
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const file = new File([blob], `camera-${Date.now()}.jpg`, { type: "image/jpeg" });
       await handleAddImage(file);
-    }
-  }, [cameraMode, handleAddImage]);
+    },
+    [cameraMode, handleAddImage],
+  );
 
-  // OCR完了
   const handleOcrComplete = useCallback((text: string) => {
     setShowOcr(false);
     setOcrImageUrl(null);
-
     if (!apiRef.current || !text) return;
 
-    // テキスト要素を作成
     const currentElements = apiRef.current.getSceneElements();
     const appState = apiRef.current.getAppState();
-
     const centerX = (appState.width || 800) / 2;
     const centerY = (appState.height || 600) / 2;
 
@@ -228,16 +139,12 @@ function CanvasPageContent() {
     });
   }, []);
 
-  // 保存
   const handleSave = async () => {
     if (!apiRef.current) return;
-
     setIsSaving(true);
     try {
       const elements = apiRef.current.getSceneElements();
       const appState = apiRef.current.getAppState();
-
-      // 保存に必要な appState のみ抽出
       const saveAppState = {
         viewBackgroundColor: appState.viewBackgroundColor,
         zoom: appState.zoom,
@@ -251,7 +158,7 @@ function CanvasPageContent() {
         templateType: "canvas",
         isShareable,
         drawingData: {
-          elements: elements,
+          elements,
           appState: saveAppState,
         },
         ...(taskId && { relatedTaskId: taskId, relatedTaskTitle: taskTitle }),
@@ -267,7 +174,6 @@ function CanvasPageContent() {
       });
 
       if (!res.ok) throw new Error("Failed to save");
-
       router.push("/notes");
     } catch (error) {
       console.error("Save error:", error);
@@ -277,14 +183,12 @@ function CanvasPageContent() {
     }
   };
 
-  // ファイル選択からの画像追加
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handleAddImage(file);
     e.target.value = "";
   };
 
-  // OCRファイル選択
   const handleOcrFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -300,115 +204,45 @@ function CanvasPageContent() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* ヘッダー */}
-      <div className="p-2 sm:p-4 border-b dark:border-gray-700 bg-white dark:bg-gray-800">
-        <div className="flex items-center justify-between mb-2">
-          <Link href="/notes" className="text-blue-600 hover:underline text-sm">
-            ← ノート一覧に戻る
-          </Link>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isSaving ? "保存中..." : "💾 保存"}
-          </button>
-        </div>
+    <div className="flex h-screen flex-col">
+      <CanvasHeader
+        title={title}
+        description={description}
+        isShareable={isShareable}
+        onTitleChange={setTitle}
+        onDescriptionChange={setDescription}
+        onToggleShareable={setIsShareable}
+        onSave={handleSave}
+        saving={isSaving}
+        onSelectImageFile={handleFileSelect}
+        onSelectOcrFile={handleOcrFileSelect}
+        onOpenCamera={(mode) => {
+          setCameraMode(mode);
+          setShowCamera(true);
+        }}
+        taskTitle={taskTitle}
+      />
 
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="タイトル"
-            className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
-          />
-          <input
-            type="text"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="説明（任意）"
-            className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
-          />
-          <label className="flex items-center gap-2 px-3 py-2">
-            <input
-              type="checkbox"
-              checked={isShareable}
-              onChange={(e) => setIsShareable(e.target.checked)}
-              className="rounded"
-            />
-            <span className="text-sm">共有可能</span>
-          </label>
-        </div>
-
-        {/* ツールボタン */}
-        <div className="flex flex-wrap gap-2 mt-2">
-          <label className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-sm">
-            🖼️ 画像追加
-            <input type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
-          </label>
-
-          <button
-            onClick={() => {
-              setCameraMode("image");
-              setShowCamera(true);
-            }}
-            className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-sm"
-          >
-            📷 カメラ撮影
-          </button>
-
-          <label className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-sm">
-            🔍 OCR
-            <input type="file" accept="image/*" onChange={handleOcrFileSelect} className="hidden" />
-          </label>
-
-          <button
-            onClick={() => {
-              setCameraMode("ocr");
-              setShowCamera(true);
-            }}
-            className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-sm"
-          >
-            📷→🔍 カメラ+OCR
-          </button>
-        </div>
-
-        {/* タスク連携表示 */}
-        {taskTitle && (
-          <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            📎 タスク「{taskTitle}」に関連付け
-          </div>
-        )}
-      </div>
-
-      {/* キャンバス */}
-      <div className="flex-1 min-h-0">
-        <Excalidraw
-          excalidrawAPI={(api) => {
-            apiRef.current = api as ExcalidrawAPI | null;
+       <div className="min-h-0 flex-1">
+         <Excalidraw
+           excalidrawAPI={(api) => {
+            apiRef.current = api;
+           }}
+           initialData={{
+            elements: initialScene?.elements ?? EMPTY_SCENE.elements,
+             appState: {
+               ...EMPTY_SCENE.appState,
+               ...(initialScene?.appState ?? {}),
+               zenModeEnabled: false,
+            },
           }}
-          initialData={
-            {
-              // 要素は、既存シーンがあればそれを、なければ空
-              elements: (initialScene?.elements ?? EMPTY_SCENE.elements) as any,
-              // appState は空シーンをベースに、保存済みのものを上書き
-              appState: {
-                ...EMPTY_SCENE.appState,
-                ...(initialScene?.appState ?? {}),
-                // ここだけは強制的に false にしておく
-                zenModeEnabled: false,
-              },
-            } as any
-          }
           UIOptions={{
             canvasActions: {
               saveToActiveFile: false,
@@ -420,37 +254,28 @@ function CanvasPageContent() {
         />
       </div>
 
+      <CanvasCaptureModals
+        showCamera={showCamera}
+        showOcr={showOcr}
+        ocrImageUrl={ocrImageUrl}
+        onCapture={handleCameraCapture}
+        onCloseCamera={() => setShowCamera(false)}
+        onOcrComplete={handleOcrComplete}
+        onCloseOcr={() => {
+          setShowOcr(false);
+          setOcrImageUrl(null);
+        }}
+      />
 
-      {/* カメラモーダル */}
-      {showCamera && (
-        <CameraCapture
-          onCapture={handleCameraCapture}
-          onClose={() => setShowCamera(false)}
-        />
-      )}
-
-      {/* OCRモーダル */}
-      {showOcr && ocrImageUrl && (
-        <OcrProcessor
-          imageUrl={ocrImageUrl}
-          onComplete={handleOcrComplete}
-          onCancel={() => {
-            setShowOcr(false);
-            setOcrImageUrl(null);
-          }}
-        />
-      )}
-
-      {/* 使い方ヒント */}
-      <details className="p-2 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      <details className="border-t bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-900">
         <summary className="cursor-pointer text-sm text-gray-600 dark:text-gray-400">
           💡 使い方ヒント
         </summary>
-        <ul className="mt-2 text-xs text-gray-500 dark:text-gray-500 space-y-1 pl-4">
-          <li>• 左のツールバーで図形・テキスト・フリーハンドを選択</li>
-          <li>• 画像はドラッグ&ドロップでも追加可能</li>
-          <li>• OCRで画像からテキストを抽出してキャンバスに配置</li>
-          <li>• すべてのオブジェクトは移動・拡大縮小・回転可能</li>
+        <ul className="mt-2 space-y-1 pl-4 text-xs text-gray-500 dark:text-gray-500">
+          <li>🖊️ 左のツールバーで図形・テキスト・フリーハンドを選択</li>
+          <li>🖼️ 画像はドラッグ&ドロップでも追加可能</li>
+          <li>🔎 OCRで画像からテキストを抽出してキャンバスに配置</li>
+          <li>🧭 全てのオブジェクトは移動・拡大縮小・回転可能</li>
         </ul>
       </details>
     </div>
@@ -459,11 +284,13 @@ function CanvasPageContent() {
 
 export default function CanvasPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
+        </div>
+      }
+    >
       <CanvasPageContent />
     </Suspense>
   );

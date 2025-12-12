@@ -6,6 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { MAIN_NAV_ITEMS } from "@/config/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
+import { MobileNavBar } from "./MobileNavBar";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -23,8 +24,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--panel)] text-[var(--foreground)]">
-      <header className="flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--panel)] px-4 py-3 sm:px-6 sm:py-4">
-        <div className="flex items-center gap-3">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--panel)] px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <button
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
@@ -56,7 +57,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             AIと学習者がともに成長するコーチ
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
           <ThemeToggle />
           {status === "authenticated" && session?.user ? (
             <>
@@ -71,7 +72,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <button
                 type="button"
                 onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-                className="rounded-md border border-[var(--border)] px-3 py-1 text-sm text-[var(--foreground)] transition-colors hover:bg-white/80"
+                className="shrink-0 rounded-md border border-[var(--border)] px-3 py-1 text-sm text-[var(--foreground)] transition-colors hover:bg-white/80"
               >
                 サインアウト
               </button>
@@ -79,7 +80,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           ) : (
             <Link
               href="/auth/signin"
-              className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+              className="shrink-0 rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
             >
               サインイン
             </Link>
@@ -107,7 +108,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </nav>
         </aside>
 
-        <main className="flex-1 p-6 pb-24 lg:p-10 lg:pb-0">{children}</main>
+        <main className="flex-1 p-4 pb-28 sm:p-6 lg:p-10 lg:pb-10">{children}</main>
       </div>
 
       {/* モバイル用ドロワーメニュー */}
@@ -145,6 +146,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </nav>
         </div>
       </div>
+
+      <MobileNavBar />
     </div>
   );
 }

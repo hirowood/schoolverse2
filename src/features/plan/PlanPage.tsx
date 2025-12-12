@@ -4,7 +4,6 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   DndContext,
-  DragOverlay,
   PointerSensor,
   closestCenter,
   useSensor,
@@ -14,11 +13,11 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Modal } from "@/components/ui/Modal";
-import { CalendarGrid } from "@/features/plan/components/CalendarGrid";
+import { Button, buttonClassName } from "@/components/ui/Button";
 import { ChildSortableCard, ChildTaskCard } from "@/features/plan/components/ChildTaskCard";
-import { HistoryPanel } from "@/features/plan/components/HistoryPanel";
-import { TaskColumn } from "@/features/plan/components/TaskColumn";
-import { TaskCardReadonly } from "@/features/plan/components/TaskCard";
+import { SummaryCards } from "@/features/plan/components/SummaryCards";
+import { MobileQuickActions } from "@/features/plan/components/MobileQuickActions";
+import { TaskBoards } from "@/features/plan/components/TaskBoards";
 import { PLAN_TEXT } from "@/features/plan/constants";
 import { StudyTask } from "@/features/plan/types";
 import { addDays, formatLocalIsoDate, getToday, parseLocalDate, buildTaskTree } from "@/features/plan/utils/date";
@@ -619,7 +618,7 @@ export function PlanPage() {
   }, [detailTask, dashboardTasks]);
 
   return (
-    <main className="space-y-4">
+    <main className="space-y-4 pb-24">
       {showPlanOnboarding && (
         <OnboardingPanel
           show
@@ -647,162 +646,67 @@ export function PlanPage() {
       </header>
 
       {!loading && (
-        <div className="space-y-3">
-          {/* 達成度バー */}
-          <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-sm font-medium text-slate-900">{PLAN_TEXT.todayProgressLabel}</p>
-            {todayParentProgress ? (
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-semibold text-emerald-600">{todayParentProgress.percent}%</span>
-                <span className="text-xs text-slate-500">
-                  ({todayParentProgress.done}/{todayParentProgress.total})
-                </span>
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500">{PLAN_TEXT.progressNoTasks}</p>
-            )}
-          </div>
-
-          {/* ポモドーロタイマー */}
-          <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-900">ポモドーロタイマー</p>
-              <p className="text-xs text-slate-500">
-                状態:{' '}
-                {pomodoroEnabled
-                  ? pomodoroPhase === "break"
-                    ? "休憩中"
-                    : "作業中"
-                  : "OFF"}
-              </p>
-              <p className="text-xs text-slate-500">
-                残り {formatPomodoroTime(pomodoroSecondsLeft)}（作業 {pomodoroWorkMinutes}分 / 休憩 {pomodoroBreakMinutes}分）
-              </p>
-              {pomodoroLoading && <p className="text-[11px] text-slate-500">設定を読み込み中...</p>}
-            </div>
-            <button
-              type="button"
-              onClick={handleTogglePomodoro}
-              disabled={pomodoroLoading}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 ${
-                pomodoroEnabled ? "bg-emerald-500" : "bg-slate-200"
-              } ${pomodoroLoading ? "opacity-60" : ""}`}
-              role="switch"
-              aria-checked={pomodoroEnabled}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  pomodoroEnabled ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
-          {/* シングルタスクモードトグル */}
-          <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="flex flex-col">
-              <p className="text-sm font-medium text-slate-900">{PLAN_TEXT.singleTaskModeLabel}</p>
-              <p className="text-xs text-slate-500">{PLAN_TEXT.singleTaskModeDescription}</p>
-            </div>
-            <button
-              type="button"
-              onClick={toggleSingleTaskMode}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 ${
-                singleTaskMode ? "bg-emerald-500" : "bg-slate-200"
-              }`}
-              role="switch"
-              aria-checked={singleTaskMode}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  singleTaskMode ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
-        </div>
+        <SummaryCards
+          todayParentProgress={todayParentProgress}
+          pomodoroEnabled={pomodoroEnabled}
+          pomodoroLoading={pomodoroLoading}
+          pomodoroPhase={pomodoroPhase}
+          pomodoroSecondsLeft={pomodoroSecondsLeft}
+          pomodoroWorkMinutes={pomodoroWorkMinutes}
+          pomodoroBreakMinutes={pomodoroBreakMinutes}
+          singleTaskMode={singleTaskMode}
+          onTogglePomodoro={handleTogglePomodoro}
+          onToggleSingleTaskMode={toggleSingleTaskMode}
+          formatPomodoroTime={formatPomodoroTime}
+          todayLabel={PLAN_TEXT.todayProgressLabel}
+          singleTaskLabel={PLAN_TEXT.singleTaskModeLabel}
+          singleTaskDescription={PLAN_TEXT.singleTaskModeDescription}
+        />
       )}
 
       {error && <p className="text-sm text-red-500">{error}</p>}
       {loading ? (
         <p className="text-sm text-slate-500">{PLAN_TEXT.loading}</p>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
+        <TaskBoards
+          today={today}
+          tomorrow={tomorrow}
+          currentMonthIso={formatLocalIsoDate(currentMonth)}
+          historyDate={historyDate}
+          isHistoryToday={isHistoryToday}
+          isHistoryTomorrow={isHistoryTomorrow}
+          historyTasks={historyTasks}
+          historyLoading={historyLoading}
+          historyColumnId={historyColumnId}
+          historyPlaceholderId={historyPlaceholderId}
+          itemsToday={itemsToday}
+          itemsTomorrow={itemsTomorrow}
+          tasksToday={tasksToday}
+          tasksTomorrow={tasksTomorrow}
+          todayLeafProgress={todayLeafProgress ?? undefined}
+          onSelectHistoryDate={setHistoryDate}
+          onPrevMonth={() => goMonth(-1)}
+          onNextMonth={() => goMonth(1)}
+          onOpenModalForDate={openModalForDate}
+          onStatusChange={handleStatus}
+          onEdit={openEditModal}
+          onAddChild={openAddChild}
+          onDetail={openDetailModal}
+          onLoadHistory={loadHistory}
+          activeTask={activeTask}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
-        >
-          <div className="grid gap-4 md:grid-cols-2">
-            <SortableContext items={itemsToday} strategy={verticalListSortingStrategy}>
-            <TaskColumn
-              id="today"
-              title={`${PLAN_TEXT.todayBoardTitle} (${today})`}
-              tasks={tasksToday}
-              progress={todayLeafProgress ?? undefined}
-              progressLabel={PLAN_TEXT.todayLeafProgressLabel}
-              showAddButton
-              onAddClick={() => openModalForDate(today)}
-              onStatusChange={handleStatus}
-              onEdit={openEditModal}
-              onAddChild={openAddChild}
-              onDetail={openDetailModal}
-            />
-          </SortableContext>
-
-            <SortableContext items={itemsTomorrow} strategy={verticalListSortingStrategy}>
-            <TaskColumn
-              id="tomorrow"
-              title={`${PLAN_TEXT.tomorrowBoardTitle} (${tomorrow})`}
-              tasks={tasksTomorrow}
-              onStatusChange={handleStatus}
-              onEdit={openEditModal}
-              onAddChild={openAddChild}
-              onDetail={openDetailModal}
-            />
-          </SortableContext>
-          </div>
-
-          <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <CalendarGrid
-              today={today}
-              currentMonthIso={formatLocalIsoDate(currentMonth)}
-              selectedDate={historyDate}
-              onSelect={(date) => {
-                setHistoryDate(date);
-                loadHistory(date);
-              }}
-              onPrevMonth={() => goMonth(-1)}
-              onNextMonth={() => goMonth(1)}
-            />
-
-            <HistoryPanel
-              selectedDate={historyDate}
-              isToday={isHistoryToday}
-              isTomorrow={isHistoryTomorrow}
-              tasks={isHistoryToday ? tasksToday : isHistoryTomorrow ? tasksTomorrow : historyTasks}
-              loading={historyLoading}
-              droppableId={historyColumnId}
-              placeholderId={historyPlaceholderId}
-              onAddClick={() => openModalForDate(historyDate)}
-              onStatusChange={handleStatus}
-              onEdit={openEditModal}
-              onAddChild={openAddChild}
-              onDetail={openDetailModal}
-            />
-          </section>
-
-          <DragOverlay
-            dropAnimation={{
-              duration: 200,
-              easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-            }}
-          >
-            {activeTask ? (
-              <TaskCardReadonly task={activeTask} onStatusChange={handleStatus} onEdit={openEditModal} onAddChild={openAddChild} />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          historyTodayTasks={tasksToday}
+          historyTomorrowTasks={tasksTomorrow}
+        />
       )}
+
+      <MobileQuickActions
+        onAddToday={() => openModalForDate(today)}
+        onAddTomorrow={() => openModalForDate(tomorrow)}
+      />
 
       <Modal
         open={modalOpen}
@@ -936,7 +840,7 @@ export function PlanPage() {
                       {childDrafts.length > 1 && (
                         <button
                           type="button"
-                          className="text-[11px] text-slate-600 underline"
+                          className="px-1 py-1 text-xs text-slate-600 underline sm:text-[11px]"
                           onClick={() =>
                             setChildDrafts((prev) =>
                               prev.length === 1 ? prev : prev.filter((_, i) => i !== index),
@@ -1016,23 +920,25 @@ export function PlanPage() {
                   </div>
                 ))}
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="outline"
+                    size="tapXs"
                     onClick={() =>
                       setChildDrafts((prev) => [...prev, createChildDraft(newDate || today)])
                     }
-                    className="rounded-md border border-slate-300 px-3 py-1 text-[11px] text-slate-700 hover:bg-slate-100"
                   >
                     {PLAN_TEXT.addChildButton}
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="solid"
+                    color="slate"
+                    size="tap"
+                    className="flex-1"
                     onClick={handleAddChildInline}
                     disabled={childSaving || !childDrafts.some((d) => d.title.trim())}
-                    className="flex-1 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
                   >
                     {childSaving ? PLAN_TEXT.modalSubmitAdding : PLAN_TEXT.modalChildSubmit}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -1097,13 +1003,9 @@ export function PlanPage() {
             {/* パンくずナビゲーション */}
             {detailStack.length > 0 && (
               <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-                <button
-                  type="button"
-                  onClick={handleDetailBack}
-                  className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
-                >
+                <Button variant="outline" size="tap" onClick={handleDetailBack}>
                   ← 戻る
-                </button>
+                </Button>
                 <div className="flex items-center gap-1 text-xs text-slate-500">
                   {detailStack.map((t, i) => (
                     <span key={t.id}>
@@ -1150,7 +1052,13 @@ export function PlanPage() {
               </span>
               <Link
                 href={`/notes?taskId=${detailTask.id}&taskTitle=${encodeURIComponent(detailTask.title ?? "")}`}
-                className="rounded-full border border-slate-300 px-3 py-1 text-[11px] text-slate-700 hover:bg-slate-50"
+                className={buttonClassName({
+                  variant: "outline",
+                  color: "slate",
+                  size: "chipXs",
+                  rounded: "full",
+                  className: "hover:bg-slate-50",
+                })}
               >
                 📝 このタスクのノート
               </Link>

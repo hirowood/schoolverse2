@@ -4,9 +4,16 @@ import { useEffect, useState } from "react";
 import { BattleOverlay } from "@/components/virtual-classroom/Battle/BattleOverlay";
 import { MONSTER_CATEGORIES } from "@/features/virtual-classroom/constants";
 import { useVirtualRoomStore } from "@/stores/useVirtualRoomStore";
+import { Button } from "@/components/ui/Button";
 import { RewardToast } from "./RewardToast";
 
-export function BattleHUD() {
+type Props = {
+  // VirtualClassroom のチャットモーダルをHUD内のボタンから開閉したい場合に渡す
+  chatOpen?: boolean;
+  onToggleChat?: () => void;
+};
+
+export function BattleHUD({ chatOpen, onToggleChat }: Props) {
   const [category, setCategory] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const {
@@ -51,9 +58,10 @@ export function BattleHUD() {
 
   return (
     <>
-      <div className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 flex-wrap items-center gap-2 sm:gap-3 rounded-2xl bg-white/90 px-3 sm:px-4 py-2.5 sm:py-3 shadow-lg ring-1 ring-slate-200 backdrop-blur">
+      {/* モバイルの下部ナビに被らないよう、HUDは少し上に配置 */}
+      <div className="fixed bottom-24 left-1/2 z-40 flex w-[calc(100%-24px)] -translate-x-1/2 flex-col items-stretch gap-2 rounded-2xl bg-white/90 px-3 py-3 shadow-lg ring-1 ring-slate-200 backdrop-blur sm:bottom-4 sm:max-w-3xl sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-4 sm:py-3">
         <select
-          className="rounded-md border border-slate-300 px-2.5 py-2 text-sm"
+          className="min-h-11 w-full rounded-md border border-slate-300 px-3 py-2.5 text-sm shadow-sm sm:w-auto sm:min-w-[240px]"
           value={category ?? ""}
           onChange={(e) => setCategory(e.target.value || null)}
         >
@@ -64,33 +72,48 @@ export function BattleHUD() {
             </option>
           ))}
         </select>
-        <button
-          type="button"
+        <Button
+          variant="solid"
+          color="emerald"
+          size="tap"
+          className="min-h-11 w-full shadow-md sm:w-auto"
           onClick={() => startEncounter({ category })}
           disabled={loading}
-          className="rounded-md bg-emerald-600 px-3 sm:px-4 py-2 text-sm font-semibold text-white shadow-md disabled:opacity-60"
         >
           遭遇開始
-        </button>
-        <label className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">
+        </Button>
+        {/* 固定のフローティングボタンだとモバイルHUDと被るため、HUD内に統合 */}
+        {onToggleChat && (
+          <Button
+            variant={chatOpen ? "solid" : "outline"}
+            color={chatOpen ? "emerald" : "slate"}
+            size="tap"
+            className="min-h-11 w-full shadow sm:w-auto"
+            onClick={onToggleChat}
+          >
+            {chatOpen ? "チャットを閉じる" : "チャットを開く"}
+          </Button>
+        )}
+        <label className="min-h-11 flex w-full items-center gap-2 rounded-md border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm sm:w-auto sm:text-xs">
           <input
             type="checkbox"
             checked={soundEnabled}
             onChange={toggleSound}
-            className="h-4 w-4 accent-emerald-600"
+            className="h-5 w-5 accent-emerald-600"
           />
           サウンド
         </label>
         {(encounterId || isBattleActive) && (
-          <button
-            type="button"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+          <Button
+            variant="outline"
+            size="tap"
+            className="min-h-11 w-full sm:w-auto"
             onClick={resetBattle}
           >
             リセット
-          </button>
+          </Button>
         )}
-        <span className="text-xs text-slate-500">
+        <span className="text-center text-sm text-slate-500 sm:text-left sm:text-xs">
           {encounterId || isBattleActive ? "バトル中" : loading ? "ロード中" : "待機中"}
         </span>
       </div>

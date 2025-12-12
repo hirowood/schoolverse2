@@ -5,6 +5,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useVirtualRoomStore } from "@/stores/useVirtualRoomStore";
+import { Button } from "@/components/ui/Button";
+import { OnScreenGamepad, type OnScreenGamepadDirection } from "@/components/ui/OnScreenGamepad";
 import {
   useClassroomPresence,
   type PlayerState,
@@ -17,6 +19,15 @@ type Props = {
   userName?: string | null;
   presence?: UseClassroomPresenceResult | null;
   paused?: boolean;
+};
+
+// 画面内コントローラ（十字キー）→ 仮想キー入力のマッピング
+// - 3D側は「押しっぱなし」で移動し続けるため、down/up の両方で Set を更新する
+const VIRTUAL_DPAD_KEYS: Record<OnScreenGamepadDirection, string[]> = {
+  up: ["w", "arrowup"],
+  down: ["s", "arrowdown"],
+  left: ["a", "arrowleft"],
+  right: ["d", "arrowright"],
 };
 
 function hasWebGL(): boolean {
@@ -257,64 +268,32 @@ function FlatPlaceholder({
       </div>
       {/* モバイル用バーチャルコントローラ */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="pointer-events-auto absolute bottom-4 left-4 flex gap-4">
-          <div className="grid h-24 w-24 grid-cols-3 grid-rows-3 gap-1">
-            <button
-              type="button"
-              aria-label="上に移動"
-              className="col-start-2 row-start-1 rounded-full bg-white/80 text-slate-700 shadow ring-1 ring-slate-300"
-              onClick={() => movePlayer(0, -1)}
-            >
-              ↑
-            </button>
-            <button
-              type="button"
-              aria-label="左に移動"
-              className="col-start-1 row-start-2 rounded-full bg-white/80 text-slate-700 shadow ring-1 ring-slate-300"
-              onClick={() => movePlayer(-1, 0)}
-            >
-              ←
-            </button>
-            <button
-              type="button"
-              aria-label="右に移動"
-              className="col-start-3 row-start-2 rounded-full bg-white/80 text-slate-700 shadow ring-1 ring-slate-300"
-              onClick={() => movePlayer(1, 0)}
-            >
-              →
-            </button>
-            <button
-              type="button"
-              aria-label="下に移動"
-              className="col-start-2 row-start-3 rounded-full bg-white/80 text-slate-700 shadow ring-1 ring-slate-300"
-              onClick={() => movePlayer(0, 1)}
-            >
-              ↓
-            </button>
-          </div>
-          <div className="flex flex-col items-center gap-3">
-            <button
-              type="button"
-              aria-label="Aボタン（決定）"
-              className="h-12 w-12 rounded-full bg-emerald-500 text-white text-lg font-bold shadow ring-2 ring-emerald-200"
-              onClick={() => {
-                // 決定アクション（将来のインタラクション用）
-              }}
-            >
-              A
-            </button>
-            <button
-              type="button"
-              aria-label="Bボタン（メニュー予定）"
-              className="h-12 w-12 rounded-full bg-amber-500 text-white text-lg font-bold shadow ring-2 ring-amber-200"
-              onClick={() => {
-                // メニュー表示予定のプレースホルダ
-              }}
-            >
-              B
-            </button>
-          </div>
-        </div>
+        {/* モバイルのナビ（下部ナビ）に被らないよう、ボタンは上に逃がす */}
+        {/* A/B は将来のインタラクション用（現状はUIのみ） */}
+        <OnScreenGamepad
+          className="pointer-events-auto absolute bottom-24 left-4 sm:hidden"
+          onDirectionPress={(dir, pressed) => {
+            if (!pressed) return;
+            switch (dir) {
+              case "up":
+                movePlayer(0, -1);
+                return;
+              case "down":
+                movePlayer(0, 1);
+                return;
+              case "left":
+                movePlayer(-1, 0);
+                return;
+              case "right":
+                movePlayer(1, 0);
+                return;
+              default: {
+                const _exhaustive: never = dir;
+                return _exhaustive;
+              }
+            }
+          }}
+        />
       </div>
     </div>
   );
@@ -732,7 +711,7 @@ export function Canvas3D({
   }, []);
 
   return (
-    <div className="relative h-[calc(100vh-160px)] min-h-[560px] w-full overflow-hidden rounded-2xl border border-slate-300 bg-slate-100 shadow-inner">
+    <div className="relative h-[70vh] min-h-[420px] w-full overflow-hidden rounded-2xl border border-slate-300 bg-slate-100 shadow-inner sm:h-[calc(100vh-160px)] sm:min-h-[560px]">
       {mode === "3d" && supported && <div ref={containerRef} className="absolute inset-0 cursor-grab" />}
       {(mode === "2d" || !supported) && (
         <FlatPlaceholder
@@ -744,118 +723,48 @@ export function Canvas3D({
 
       {mode === "3d" && (
         <div className="pointer-events-none absolute inset-0">
-          <div className="pointer-events-auto absolute bottom-4 left-4 flex gap-4">
-            <div className="grid h-24 w-24 grid-cols-3 grid-rows-3 gap-1">
-              <button
-                type="button"
-                aria-label="上に移動"
-                className="col-start-2 row-start-1 rounded-full bg-white/90 text-slate-700 shadow ring-1 ring-slate-300 active:translate-y-0.5"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  handleVirtualPress(["w", "arrowup"], true);
-                }}
-                onPointerUp={(e) => {
-                  e.preventDefault();
-                  handleVirtualPress(["w", "arrowup"], false);
-                }}
-                onPointerLeave={() => handleVirtualPress(["w", "arrowup"], false)}
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                aria-label="左に移動"
-                className="col-start-1 row-start-2 rounded-full bg-white/90 text-slate-700 shadow ring-1 ring-slate-300 active:translate-y-0.5"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  handleVirtualPress(["a", "arrowleft"], true);
-                }}
-                onPointerUp={(e) => {
-                  e.preventDefault();
-                  handleVirtualPress(["a", "arrowleft"], false);
-                }}
-                onPointerLeave={() => handleVirtualPress(["a", "arrowleft"], false)}
-              >
-                ←
-              </button>
-              <button
-                type="button"
-                aria-label="右に移動"
-                className="col-start-3 row-start-2 rounded-full bg-white/90 text-slate-700 shadow ring-1 ring-slate-300 active:translate-y-0.5"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  handleVirtualPress(["d", "arrowright"], true);
-                }}
-                onPointerUp={(e) => {
-                  e.preventDefault();
-                  handleVirtualPress(["d", "arrowright"], false);
-                }}
-                onPointerLeave={() => handleVirtualPress(["d", "arrowright"], false)}
-              >
-                →
-              </button>
-              <button
-                type="button"
-                aria-label="下に移動"
-                className="col-start-2 row-start-3 rounded-full bg-white/90 text-slate-700 shadow ring-1 ring-slate-300 active:translate-y-0.5"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  handleVirtualPress(["s", "arrowdown"], true);
-                }}
-                onPointerUp={(e) => {
-                  e.preventDefault();
-                  handleVirtualPress(["s", "arrowdown"], false);
-                }}
-                onPointerLeave={() => handleVirtualPress(["s", "arrowdown"], false)}
-              >
-                ↓
-              </button>
-            </div>
-            <div className="flex flex-col items-center gap-3">
-              <button
-                type="button"
-                aria-label="Aボタン（決定）"
-                className="h-12 w-12 rounded-full bg-emerald-500 text-white text-lg font-bold shadow ring-2 ring-emerald-200 active:translate-y-0.5"
-                onPointerDown={(e) => e.preventDefault()}
-              >
-                A
-              </button>
-              <button
-                type="button"
-                aria-label="Bボタン（メニュー）"
-                className="h-12 w-12 rounded-full bg-amber-500 text-white text-lg font-bold shadow ring-2 ring-amber-200 active:translate-y-0.5"
-                onPointerDown={(e) => e.preventDefault()}
-              >
-                B
-              </button>
-            </div>
-          </div>
+          {/* モバイルのナビに被らないよう、ボタンは上に逃がす */}
+          {/* A/B は将来のインタラクション用（現状はUIのみ） */}
+          <OnScreenGamepad
+            className="pointer-events-auto absolute bottom-24 left-4 sm:hidden"
+            onDirectionPress={(dir, pressed) => {
+              handleVirtualPress(VIRTUAL_DPAD_KEYS[dir], pressed);
+            }}
+          />
         </div>
       )}
 
-      <div className="absolute left-3 top-3 flex items-center gap-2 z-10">
-        <span className={`rounded-full px-3 py-1 text-[11px] font-bold text-white shadow ${mode === "3d" && supported ? "bg-emerald-500" : "bg-blue-500"}`}>
+      <div className="absolute left-3 top-3 z-10 flex items-center gap-2">
+        <span
+          className={`rounded-full px-3 py-2 text-xs font-bold text-white shadow sm:py-1 sm:text-[11px] ${
+            mode === "3d" && supported ? "bg-emerald-500" : "bg-blue-500"
+          }`}
+        >
           {mode === "3d" && supported ? "3D Mode (three.js)" : "2D Mode"}
         </span>
       </div>
 
       <div className="absolute right-3 top-3 z-10 flex gap-2">
-        <button
-          type="button"
+        <Button
+          variant={mode === "3d" ? "solid" : "outline"}
+          color={mode === "3d" ? "emerald" : "slate"}
+          size="tapXs"
+          className="min-h-11 shadow disabled:cursor-not-allowed"
           onClick={() => setMode("3d")}
           disabled={!supported}
-          className={`rounded-md px-3 py-1 text-xs font-semibold shadow ${mode === "3d" ? "bg-emerald-600 text-white" : "bg-white text-slate-700 border border-slate-200"} ${!supported ? "opacity-50 cursor-not-allowed" : ""}`}
           title={!supported ? "WebGL非対応のため使用不可" : "3D表示に切り替え"}
         >
           3Dに切替
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant={mode === "2d" || !supported ? "solid" : "outline"}
+          color={mode === "2d" || !supported ? "blue" : "slate"}
+          size="tapXs"
+          className="min-h-11 shadow"
           onClick={() => setMode("2d")}
-          className={`rounded-md px-3 py-1 text-xs font-semibold shadow ${mode === "2d" || !supported ? "bg-blue-600 text-white" : "bg-white text-slate-700 border border-slate-200"}`}
         >
           2Dに切替
-        </button>
+        </Button>
       </div>
     </div>
   );

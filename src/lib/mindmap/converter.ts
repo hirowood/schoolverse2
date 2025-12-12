@@ -1,8 +1,28 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // Excalidrawとの相互変換ユーティリティ（暫定実装）
-// バージョン差の型が混在するため ExcalidrawElement は暫定 any で扱う
+// バージョン差の型が混在しても扱えるよう、最低限の構造だけを型として定義する（anyは使わない）
 
-type ExcalidrawElement = any;
+type ExcalidrawBoundElementRef = {
+  id: string;
+  type: string;
+};
+
+type ExcalidrawElement = Record<string, unknown> & {
+  id: string;
+  type: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  text?: string;
+  fontSize?: number;
+  strokeColor?: string;
+  backgroundColor?: string;
+  strokeWidth?: number;
+  boundElements?: ReadonlyArray<ExcalidrawBoundElementRef> | null;
+  startBinding?: { elementId: string; focus?: number; gap?: number } | null;
+  endBinding?: { elementId: string; focus?: number; gap?: number } | null;
+  label?: string;
+};
 import type { MindMapEdge, MindMapNode, LayoutType } from "./types";
 
 type ConvertOptions = {
@@ -147,16 +167,16 @@ export function excalidrawToMindMap(elements: ExcalidrawElement[]): {
   const nodes: MindMapNode[] = [];
   const edges: MindMapEdge[] = [];
 
-  const shapes = elements.filter((e: any) => ["rectangle", "ellipse", "diamond"].includes(e.type));
-  shapes.forEach((shape: any, index: number) => {
-    const boundTextId = shape.boundElements?.find((b: any) => b.type === "text")?.id;
+  const shapes = elements.filter((element) => ["rectangle", "ellipse", "diamond"].includes(element.type));
+  shapes.forEach((shape, index) => {
+    const boundTextId = shape.boundElements?.find((b) => b.type === "text")?.id;
     const textElement = boundTextId
-      ? elements.find((e: any) => e.id === boundTextId)
+      ? elements.find((element) => element.id === boundTextId)
       : elements.find(
-          (e: any) =>
-            e.type === "text" &&
-            Math.abs((e.x ?? 0) - (shape.x ?? 0)) < (shape.width ?? 140) &&
-            Math.abs((e.y ?? 0) - (shape.y ?? 0)) < (shape.height ?? 60)
+          (element) =>
+            element.type === "text" &&
+            Math.abs((element.x ?? 0) - (shape.x ?? 0)) < (shape.width ?? 140) &&
+            Math.abs((element.y ?? 0) - (shape.y ?? 0)) < (shape.height ?? 60),
         );
 
     nodes.push({
@@ -179,8 +199,8 @@ export function excalidrawToMindMap(elements: ExcalidrawElement[]): {
     });
   });
 
-  const lines = elements.filter((e: any) => ["arrow", "line"].includes(e.type));
-  lines.forEach((line: any) => {
+  const lines = elements.filter((element) => ["arrow", "line"].includes(element.type));
+  lines.forEach((line) => {
     const startId = line.startBinding?.elementId;
     const endId = line.endBinding?.elementId;
     if (startId && endId) {

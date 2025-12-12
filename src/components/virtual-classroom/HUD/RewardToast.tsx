@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   open: boolean;
@@ -99,13 +100,13 @@ export function RewardToast({
 
   return (
     <div
-      className={`fixed bottom-4 right-4 z-50 transition-all duration-300 ${
+      className={`fixed bottom-24 right-3 z-50 transition-all duration-300 sm:bottom-4 sm:right-4 ${
         open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0 pointer-events-none"
       }`}
       aria-live="polite"
     >
       <div
-        className={`relative w-80 rounded-2xl border shadow-xl ${
+        className={`relative w-[calc(100vw-24px)] max-w-80 rounded-2xl border shadow-xl ${
           accent === "emerald"
             ? "border-emerald-200 bg-emerald-50"
             : "border-amber-200 bg-amber-50"
@@ -124,13 +125,16 @@ export function RewardToast({
             </p>
             {monsterName && <p className="text-sm text-slate-700">{monsterName}</p>}
           </div>
-          <button
-            type="button"
+          <Button
+            rounded="full"
+            size="tapXs"
+            variant="outline"
+            color="slate"
+            className="border-transparent bg-white/70 text-slate-700 hover:bg-white hover:border-transparent"
             onClick={onClose}
-            className="rounded-full bg-white/70 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-white"
           >
             閉じる
-          </button>
+          </Button>
         </div>
         <div className="grid grid-cols-3 border-t border-white/70 text-center text-sm font-semibold text-slate-800">
           <div className="px-2 py-2">

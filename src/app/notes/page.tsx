@@ -7,6 +7,10 @@ import NotesOnboarding from "@/components/notes/NotesOnboarding";
 import SkeletonBlock from "@/components/ui/SkeletonBlock";
 import OcrEnhanced from "@/components/notes/OcrEnhanced";
 import AiAnalyzer from "@/components/notes/AiAnalyzer";
+import { NotesFilters } from "@/components/notes/NotesFilters";
+import { NotesList } from "@/components/notes/NotesList";
+import { OcrPanel } from "@/components/ocr/OcrPanel";
+import { CoachFeedbackModal } from "@/components/notes/CoachFeedbackModal";
 // import AutoTagger from "@/components/notes/AutoTagger";
 import { NOTE_TEMPLATE_OPTIONS } from "@/lib/notes/templates";
 import { useSearchParams } from "next/navigation";
@@ -522,13 +526,19 @@ function NotesPageContent() {
         
         // OCR強化版モーダルを開く
         setOcrEnhancedImage(dataUrl);
-        setShowOcrEnhanced(true);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "画像が追加できませんでした");
-      }
-    },
-    [loadNotes, selectedNote],
-  );
+      setShowOcrEnhanced(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "画像が追加できませんでした");
+    }
+  },
+  [loadNotes, selectedNote],
+);
+
+  // OCR強化ビューを開く（画像サムネイルから呼び出し）
+  const handleOpenOcrEnhanced = useCallback((url: string) => {
+    setOcrEnhancedImage(url);
+    setShowOcrEnhanced(true);
+  }, []);
 
   const handleAddOcr = useCallback(
     async (event: FormEvent) => {
@@ -832,89 +842,18 @@ function NotesPageContent() {
         </div>
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 
-        <div className="mt-6 space-y-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300">
-          <p className="text-base font-semibold text-slate-900 dark:text-white">📸 画像・OCR（AI強化版）</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            画像をアップロードすると、AI強化版OCRで文字を抽出できます。
-          </p>
-          <div className="flex flex-col gap-2">
-            <label className="flex flex-col gap-1 text-sm">
-              画像追加（アップロード後にOCR処理画面が開きます）
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="text-sm text-slate-600 dark:text-slate-400" />
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {imageFiles.map((file) => (
-                <div key={file.url} className="relative w-24 rounded border border-slate-200 bg-white p-1 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={file.url} alt={file.name} className="h-16 w-16 object-cover" />
-                  <p className="truncate">{file.name}</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOcrEnhancedImage(file.url);
-                      setShowOcrEnhanced(true);
-                    }}
-                    className="mt-1 w-full rounded bg-blue-500 px-1 py-0.5 text-[10px] text-white hover:bg-blue-600"
-                  >
-                    📸 OCR
-                  </button>
-                </div>
-              ))}
-              {imageFiles.length === 0 && <p className="text-xs text-slate-500 dark:text-slate-400">画像がありません</p>}
-            </div>
-            <form className="flex flex-col gap-2" onSubmit={handleAddOcr}>
-              <label className="flex flex-col gap-1 text-sm">
-                手動OCRメモ（AI OCRを使わない場合）
-                <textarea
-                  className="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800"
-                  rows={2}
-                  value={ocrInput}
-                  onChange={(e) => setOcrInput(e.target.value)}
-                  placeholder="画像から読み取ったテキストや注釈"
-                />
-              </label>
-              {imageFiles.length > 0 && (
-                <label className="flex flex-col gap-1 text-sm">
-                  関連画像ID（任意）
-                  <select
-                    value={ocrImageId}
-                    onChange={(e) => setOcrImageId(e.target.value)}
-                    className="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800"
-                  >
-                    <option value="">画像と紐づけない</option>
-                    {imageFiles.map((file) => (
-                      <option key={file.id} value={file.id}>
-                        {file.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <button
-                type="submit"
-                disabled={sendingOcr}
-                className="self-start rounded-md bg-amber-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-amber-600 disabled:opacity-60"
-              >
-                {sendingOcr ? "OCR保存中..." : "手動OCRを追加"}
-              </button>
-            </form>
-            {ocrTexts.length > 0 && (
-              <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
-                <p className="font-medium">📝 抽出済みテキスト</p>
-                {ocrTexts.map((ocr, idx) => (
-                  <div key={`${ocr.imageId}-${idx}`} className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-600 dark:bg-slate-800">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[11px] text-slate-500 dark:text-slate-500">
-                        画像ID: {ocr.imageId || "未設定"} / 信頼度: {Math.round(ocr.confidence * 100)}%
-                      </p>
-                    </div>
-                    <p className="mt-1">{ocr.text}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <OcrPanel
+          imageFiles={imageFiles}
+          ocrTexts={ocrTexts}
+          ocrInput={ocrInput}
+          ocrImageId={ocrImageId}
+          sending={sendingOcr}
+          onImageUpload={handleImageUpload}
+          onOpenEnhanced={handleOpenOcrEnhanced}
+          onSubmitManual={handleAddOcr}
+          onChangeInput={setOcrInput}
+          onChangeImageId={setOcrImageId}
+        />
 
         {/* 選択中のノートのAI分析表示 */}
         {selectedNote && (
@@ -930,166 +869,28 @@ function NotesPageContent() {
         )}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-4 dark:border-slate-700 dark:bg-slate-800">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">表示フィルター</p>
-          <button
-            type="button"
-            className={`rounded-full border px-3 py-1 text-xs ${
-              filterType === "all" ? "border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30" : "border-slate-200 text-slate-600 dark:border-slate-600 dark:text-slate-400"
-            }`}
-            onClick={() => setFilterType("all")}
-          >
-            すべて
-          </button>
-          {NOTE_TEMPLATE_OPTIONS.map((template) => (
-            <button
-              key={template.id}
-              type="button"
-              className={`rounded-full border px-3 py-1 text-xs ${
-                filterType === template.id
-                  ? "border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30"
-                  : "border-slate-200 text-slate-600 dark:border-slate-600 dark:text-slate-400"
-              }`}
-              onClick={() => setFilterType(template.id)}
-            >
-              {template.label}
-            </button>
-          ))}
-          <div className="ml-auto flex items-center gap-2">
-            <input
-              type="search"
-              placeholder="タイトル/本文を検索"
-              value={pendingSearch}
-              onChange={(e) => setPendingSearch(e.target.value)}
-              className="rounded-md border border-slate-300 px-3 py-1 text-sm dark:border-slate-600 dark:bg-slate-700"
-            />
-            <button
-              type="button"
-              onClick={() => setActiveSearch(pendingSearch)}
-              className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
-            >
-              検索
-            </button>
-          </div>
-        </div>
-      </section>
+      <NotesFilters
+        filterType={filterType}
+        pendingSearch={pendingSearch}
+        onFilterChange={setFilterType}
+        onSearchChange={setPendingSearch}
+        onSearchApply={() => setActiveSearch(pendingSearch)}
+      />
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">保存済みノート</h2>
-          <span className="text-xs text-slate-500 dark:text-slate-400">編集して再保存できます</span>
-        </div>
-        {loading ? (
-          <div className="mt-3">
-            <SkeletonBlock rows={4} />
-          </div>
-        ) : notes.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">まだノートがありません</p>
-        ) : (
-          <div className="mt-3 space-y-3">
-            {notes.map((note) => (
-              <article key={note.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-600 dark:bg-slate-700">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{note.title || "無題のノート"}</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      {note.templateType
-                        ? `テンプレート: ${TEMPLATE_LABELS.get(note.templateType) ?? note.templateType}`
-                        : "テンプレート未設定"}
-                      ・更新: {formatIso(note.updatedAt)}
-                      {note.analyzedAt && <span className="ml-1 text-blue-500">✓ AI分析済み</span>}
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      画像: {note.imageFiles.length}件 / OCR: {note.ocrTexts.length}件
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() => handleAnalyze(note.id)}
-                      disabled={analyzingNoteId === note.id}
-                      className="rounded-full border border-purple-300 bg-purple-50 px-3 py-1 text-purple-700 transition hover:bg-purple-100 disabled:opacity-50 dark:border-purple-500 dark:bg-purple-900/30 dark:text-purple-300"
-                    >
-                      {analyzingNoteId === note.id ? "🔄 分析中..." : "🔍 AI分析"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRequestCoach(note.id)}
-                      disabled={requestingCoach === note.id}
-                      className="rounded-full border border-blue-300 bg-blue-50 px-3 py-1 text-blue-700 transition hover:bg-blue-100 disabled:opacity-50 dark:border-blue-500 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50"
-                    >
-                      {requestingCoach === note.id ? "🤔 分析中..." : "🎓 AIコーチ"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSelect(note)}
-                      className="rounded-full border border-slate-300 px-3 py-1 text-slate-700 transition hover:border-slate-500 dark:border-slate-500 dark:text-slate-300 dark:hover:border-slate-400"
-                    >
-                      編集
-                    </button>
-                    <Link
-                      href={`/notes/canvas?id=${note.id}`}
-                      className="rounded-full border border-slate-300 px-3 py-1 text-slate-700 transition hover:border-slate-500 dark:border-slate-500 dark:text-slate-300 dark:hover:border-slate-400"
-                    >
-                      キャンバス
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(note.id)}
-                      className="rounded-full border border-red-200 px-3 py-1 text-red-600 transition hover:border-red-400 dark:border-red-400 dark:text-red-400"
-                      disabled={deletingId === note.id}
-                    >
-                      {deletingId === note.id ? "削除中..." : "削除"}
-                    </button>
-                  </div>
-                </div>
-                
-                {/* AI要約表示 */}
-                {note.aiSummary && (
-                  <div className="mt-2 rounded-md bg-blue-50 p-2 dark:bg-blue-900/20">
-                    <p className="text-xs text-blue-700 dark:text-blue-300">
-                      <span className="font-medium">💡 AI要約:</span> {note.aiSummary}
-                    </p>
-                  </div>
-                )}
-                
-                <p className="mt-2 text-sm text-slate-700 dark:text-slate-300 line-clamp-2">{note.content ?? "内容がありません"}</p>
-                
-                {/* タグ表示（手動 + 自動） */}
-                {(note.tags.length > 0 || (note.autoTags && note.autoTags.length > 0)) && (
-                  <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
-                    {note.tags.map((tag) => (
-                      <span key={tag} className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-slate-600 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                        #{tag}
-                      </span>
-                    ))}
-                    {note.autoTags?.filter((t) => !note.tags.includes(t)).map((tag) => (
-                      <span key={`auto-${tag}`} className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 dark:bg-blue-800 dark:text-blue-200">
-                        🤖 #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                
-                {note.relatedTaskTitle && note.relatedTaskId && (
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400">
-                    <span>関連タスク: {note.relatedTaskTitle}</span>
-                    <button
-                      type="button"
-                      onClick={() => setLinkedTask({ id: note.relatedTaskId!, title: note.relatedTaskTitle ?? undefined })}
-                      className="rounded-full border border-slate-300 px-2 py-0.5 hover:bg-slate-50 dark:border-slate-500 dark:hover:bg-slate-600"
-                    >
-                      このタスクで絞る
-                    </button>
-                  </div>
-                )}
-                {note.isShareable && <p className="mt-2 text-xs text-emerald-600">共有中</p>}
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      <NotesList
+        notes={notes}
+        loading={loading}
+        analyzingNoteId={analyzingNoteId}
+        requestingCoach={requestingCoach}
+        deletingId={deletingId}
+        onAnalyze={handleAnalyze}
+        onRequestCoach={handleRequestCoach}
+        onSelect={handleSelect}
+        onDelete={handleDelete}
+        formatIso={formatIso}
+        templateLabels={TEMPLATE_LABELS}
+      />
+
 
       {/* OCR強化版モーダル */}
       {showOcrEnhanced && ocrEnhancedImage && (
@@ -1104,61 +905,16 @@ function NotesPageContent() {
         />
       )}
 
-      {/* AIコーチフィードバックモーダル */}
-      {showCoachModal && coachFeedback && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-800">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🎓</span>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">AIコーチからのフィードバック</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCoachModal(false);
-                  setCoachFeedback(null);
-                  setCoachNoteId(null);
-                }}
-                className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
-              >
-                ✕
-              </button>
-            </div>
-            
-            {feedbackNote && (
-              <div className="mb-4 rounded-lg bg-slate-100 p-3 dark:bg-slate-700">
-                <p className="text-xs text-slate-500 dark:text-slate-400">対象ノート</p>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{feedbackNote.title || "無題のノート"}</p>
-              </div>
-            )}
-            
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-700 dark:bg-blue-900/20">
-              <div className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300">
-                {coachFeedback.split("\n").map((line, i) => (
-                  <p key={i} className={line.trim() === "" ? "h-2" : ""}>
-                    {line}
-                  </p>
-                ))}
-              </div>
-            </div>
-            
-            <div className="mt-4 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCoachModal(false);
-                  setCoachFeedback(null);
-                  setCoachNoteId(null);
-                }}
-                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
-              >
-                閉じる
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CoachFeedbackModal
+        open={showCoachModal}
+        feedback={coachFeedback}
+        noteTitle={feedbackNote?.title ?? "無題のノート"}
+        onClose={() => {
+          setShowCoachModal(false);
+          setCoachFeedback(null);
+          setCoachNoteId(null);
+        }}
+      />
     </div>
   );
 }

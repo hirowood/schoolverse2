@@ -1,10 +1,14 @@
 "use client";
 
+// 1カラム分のタスク一覧 + 追加ボタン + 進捗表示
 import { useDroppable } from "@dnd-kit/core";
 import { StudyTask } from "../types";
 import { PLAN_TEXT } from "../constants";
 import { TaskCard } from "./TaskCard";
 import { buildTaskTree } from "../utils/date";
+import { Button } from "@/components/ui/Button";
+import { cardClassName } from "@/components/ui/Card";
+import { cn } from "@/lib/cn";
 
 type Props = {
   id: string;
@@ -40,29 +44,32 @@ export const TaskColumn = ({
   return (
     <div
       ref={setNodeRef}
-      className={`space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition ${
-        isOver ? "ring-2 ring-slate-300" : ""
-      }`}
+      className={cardClassName({
+        padding: "board",
+        className: cn("space-y-3 transition", isOver ? "ring-2 ring-slate-300" : ""),
+      })}
     >
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-        {progress && (
-          <div className="flex flex-col items-end text-xs text-slate-600">
-            {progressLabel ? <span className="font-medium text-slate-800">{progressLabel}</span> : null}
-            <span className="text-sm font-semibold text-emerald-600">{progress.percent}%</span>
-            <span>
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <h2 className="text-base sm:text-lg font-semibold text-slate-900 flex-1 min-w-[160px]">{title}</h2>
+        {progress ? (
+          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+            {progressLabel ? <span className="text-[11px] text-slate-500">{progressLabel}</span> : null}
+            <span className="text-sm text-emerald-600">{progress.percent}%</span>
+            <span className="text-[11px] text-slate-500">
               ({progress.done}/{progress.total})
             </span>
           </div>
-        )}
+        ) : null}
         {showAddButton && (
-          <button
-            type="button"
+          <Button
+            variant="solid"
+            color="slate"
+            size="tap"
             onClick={onAddClick}
-            className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+            className="w-full shadow hover:-translate-y-0.5 sm:w-auto"
           >
             {PLAN_TEXT.newTaskButton}
-          </button>
+          </Button>
         )}
       </div>
       {tasks.length === 0 ? (

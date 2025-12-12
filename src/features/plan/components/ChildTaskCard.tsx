@@ -2,8 +2,17 @@
 
 import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
+import { Button } from "@/components/ui/Button";
 import { PLAN_TEXT } from "@/features/plan/constants";
 import { StudyTask } from "@/features/plan/types";
+
+// ステータスボタンのアクティブ色（非アクティブ時は outline slate）
+const STATUS_COLOR = {
+  todo: "slate",
+  in_progress: "amber",
+  paused: "blue",
+  done: "emerald",
+} as const;
 
 type ChildCardProps = {
   child: StudyTask;
@@ -35,15 +44,17 @@ export const ChildSortableCard = ({ child, onEdit }: ChildCardProps) => {
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="cursor-grab rounded border border-slate-300 px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100"
+          {/* DnD用: タップしやすいDragボタン */}
+          <Button
+            variant="outline"
+            size="tapXs"
+            className="cursor-grab"
             aria-label="drag"
             {...attributes}
             {...listeners}
           >
             Drag
-          </button>
+          </Button>
           <div>
             <span className="font-medium text-slate-900">{child.title}</span>
             {child.description && <p className="text-[11px] text-slate-700">{child.description}</p>}
@@ -77,6 +88,7 @@ type ChildTaskCardProps = {
 
 export const ChildTaskCard = ({ task, depth = 0, onOpenDetail, onStatusChange }: ChildTaskCardProps) => {
   const hasChildren = task.children && task.children.length > 0;
+
   const statusColors: Record<StudyTask["status"], string> = {
     done: "bg-emerald-100 text-emerald-700",
     in_progress: "bg-amber-100 text-amber-700",
@@ -84,12 +96,14 @@ export const ChildTaskCard = ({ task, depth = 0, onOpenDetail, onStatusChange }:
     todo: "bg-slate-100 text-slate-700",
   };
   const statusLabels: Record<StudyTask["status"], string> = {
-    done: "����",
-    in_progress: "�i�s��",
-    paused: "�ꎞ��~",
-    todo: "������",
+    done: PLAN_TEXT.statusDone,
+    in_progress: PLAN_TEXT.statusInProgress,
+    paused: PLAN_TEXT.statusPaused,
+    todo: PLAN_TEXT.statusTodo,
   };
-  const sourceLabel = task.source === "dashboard" ? "?? �_�b�V���{�[�h" : null;
+
+  // ダッシュボード由来タスクは明示しておくと、意図しない混在を防げる
+  const sourceLabel = task.source === "dashboard" ? "ダッシュボード" : null;
 
   return (
     <div
@@ -107,63 +121,54 @@ export const ChildTaskCard = ({ task, depth = 0, onOpenDetail, onStatusChange }:
           )}
           {hasChildren && (
             <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] text-slate-600">
-              �q�^�X�N: {task.children!.length}��
+              子タスク: {task.children!.length}件
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           {hasChildren && (
-            <button
-              type="button"
-              onClick={() => onOpenDetail(task)}
-              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100"
-            >
-              �ڍ�
-            </button>
+            <Button variant="outline" size="tapXs" onClick={() => onOpenDetail(task)} className="bg-white">
+              詳細
+            </Button>
           )}
         </div>
       </div>
+
       {task.dueDate && (
         <p className="mt-1 text-[11px] text-slate-600">
-          �\��: {task.dueDate.slice(0, 10)} {task.dueDate.slice(11, 16)}
+          {PLAN_TEXT.labelSchedule}: {task.dueDate.slice(0, 10)} {task.dueDate.slice(11, 16)}
         </p>
       )}
       {task.description && <p className="mt-1 text-xs text-slate-700">{task.description}</p>}
-      <div className="mt-2 flex flex-wrap gap-1">
-        <button
-          type="button"
+
+      {/* モバイルで押しやすいステータスボタン */}
+      <div className="mt-2 flex flex-wrap gap-2 sm:gap-1">
+        <Button
+          size="tapXs"
+          variant={task.status === "in_progress" ? "solid" : "outline"}
+          color={task.status === "in_progress" ? STATUS_COLOR.in_progress : "slate"}
           onClick={() => onStatusChange(task.id, "in_progress")}
-          className={`rounded px-2 py-1 text-[11px] font-medium ${
-            task.status === "in_progress"
-              ? "bg-amber-500 text-white"
-              : "border border-slate-300 text-slate-700 hover:bg-slate-100"
-          }`}
         >
-          ���s
-        </button>
-        <button
-          type="button"
+          {PLAN_TEXT.statusInProgress}
+        </Button>
+        <Button
+          size="tapXs"
+          variant={task.status === "paused" ? "solid" : "outline"}
+          color={task.status === "paused" ? STATUS_COLOR.paused : "slate"}
           onClick={() => onStatusChange(task.id, "paused")}
-          className={`rounded px-2 py-1 text-[11px] font-medium ${
-            task.status === "paused"
-              ? "bg-blue-500 text-white"
-              : "border border-slate-300 text-slate-700 hover:bg-slate-100"
-          }`}
         >
-          �ꎞ��~
-        </button>
-        <button
-          type="button"
+          {PLAN_TEXT.statusPaused}
+        </Button>
+        <Button
+          size="tapXs"
+          variant={task.status === "done" ? "solid" : "outline"}
+          color={task.status === "done" ? STATUS_COLOR.done : "slate"}
           onClick={() => onStatusChange(task.id, "done")}
-          className={`rounded px-2 py-1 text-[11px] font-medium ${
-            task.status === "done"
-              ? "bg-emerald-600 text-white"
-              : "border border-slate-300 text-slate-700 hover:bg-slate-100"
-          }`}
         >
-          ����
-        </button>
+          {PLAN_TEXT.statusDone}
+        </Button>
       </div>
     </div>
   );
 };
+
