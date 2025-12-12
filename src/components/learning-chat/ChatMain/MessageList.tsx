@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { LearningChatMessage } from "@/features/learning-chat/types";
 import { MessageItem } from "./MessageItem";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   messages: LearningChatMessage[];
@@ -30,22 +31,23 @@ export function MessageList({ messages, isLoading = false, hasMore = false, onLo
   return (
     <div
       ref={listRef}
-      className="flex h-full flex-col gap-2 overflow-y-auto bg-gradient-to-b from-slate-50 via-white to-slate-50 px-4 py-3"
+      className="flex h-full flex-col gap-3 overflow-y-auto bg-gradient-to-b from-slate-50 via-white to-slate-50 px-4 py-4"
+      aria-live="polite"
     >
       {isLoading && messages.length === 0 ? (
         <p className="text-center text-sm text-slate-500">読み込み中...</p>
       ) : null}
       {!isLoading && messages.length === 0 ? (
-        <p className="text-center text-sm text-slate-500">まだメッセージがありません。最初の質問を送ってみてください。</p>
+        <p className="text-center text-base text-slate-500">
+          まだメッセージがありません。最初の質問を送ってみてください。
+        </p>
       ) : null}
       {hasMore && (
-        <button
-          type="button"
-          onClick={onLoadMore}
-          className="mx-auto text-[11px] font-semibold text-slate-500 underline"
-        >
-          履歴をもっと見る
-        </button>
+        <div className="flex justify-center">
+          <Button size="tapXs" onClick={onLoadMore}>
+            履歴をもっと見る
+          </Button>
+        </div>
       )}
       {messages.map((message) => (
         <MessageItem key={message.id} message={message} />

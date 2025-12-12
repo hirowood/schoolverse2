@@ -3,6 +3,7 @@
 import { FormEvent } from "react";
 import { CategorySelector } from "./CategorySelector";
 import { LearningCategory } from "@/features/learning-chat/types";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   value: string;
@@ -26,27 +27,30 @@ export function MessageInput({
     onSend();
   };
 
+  const canSend = !disabled && value.trim().length > 0;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-2">
-      <div className="flex flex-wrap gap-2">
-        <CategorySelector value={category} onChange={setCategory} />
-      </div>
-      <div className="flex items-end gap-2">
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <CategorySelector value={category} onChange={setCategory} />
+      <div className="flex flex-col gap-3 sm:flex-row">
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="質問や相談内容を入力..."
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-inner focus:border-slate-400 focus:outline-none"
-          rows={3}
+          className="min-h-[120px] flex-1 rounded-2xl border border-slate-200/80 px-4 py-3 text-base shadow-inner focus:border-slate-400 focus:outline-none"
+          rows={4}
           disabled={disabled}
         />
-        <button
+        <Button
           type="submit"
-          disabled={disabled || value.trim().length === 0}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60"
+          disabled={!canSend}
+          variant="solid"
+          color="slate"
+          size="tap"
+          className="w-full rounded-2xl sm:w-40"
         >
           送信
-        </button>
+        </Button>
       </div>
     </form>
   );

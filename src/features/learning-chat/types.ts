@@ -86,6 +86,39 @@ export type SendMessagePayload = {
   category?: LearningCategory;
 };
 
+/**
+ * SSE event contract for streaming responses.
+ * Server route: `POST /api/learning-chat/sessions/[sessionId]/messages`
+ */
+export type LearningChatStreamEvent =
+  | { type: "delta"; content: string }
+  | { type: "done"; messageId?: string }
+  | { type: "error"; message: string };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+/**
+ * Runtime parser for SSE events.
+ * - Returns `null` for unknown/malformed payloads so the UI can safely ignore them.
+ */
+export function parseLearningChatStreamEvent(raw: unknown): LearningChatStreamEvent | null {
+  if (!isRecord(raw)) return null;
+
+  const type = raw.type;
+  if (type === "delta") {
+    return typeof raw.content === "string" ? { type: "delta", content: raw.content } : null;
+  }
+  if (type === "done") {
+    return typeof raw.messageId === "string" ? { type: "done", messageId: raw.messageId } : { type: "done" };
+  }
+  if (type === "error") {
+    return typeof raw.message === "string" ? { type: "error", message: raw.message } : null;
+  }
+
+  return null;
+}
+
 export const MODE_LABEL: Record<ChatMode, string> = {
   [ChatMode.LEARNING]: "Learning",
   [ChatMode.CAREER]: "Career",

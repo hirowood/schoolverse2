@@ -1,6 +1,7 @@
 "use client";
 
 import { ChatMode, LearningCategory } from "@/features/learning-chat/types";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   onCreate: (mode?: ChatMode, category?: LearningCategory) => Promise<unknown>;
@@ -8,12 +9,14 @@ type Props = {
 
 export function NewChatButton({ onCreate }: Props) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="solid"
+      color="slate"
+      size="tap"
+      className="w-full rounded-full sm:w-auto"
       onClick={() => onCreate()}
-      className="rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
     >
       ＋ 新規チャット
-    </button>
+    </Button>
   );
 }

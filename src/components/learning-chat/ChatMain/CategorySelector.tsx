@@ -9,12 +9,17 @@ type Props = {
 
 export function CategorySelector({ value, onChange }: Props) {
   return (
-    <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">
-      <span>📂 カテゴリ</span>
+    <label className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
+      <span className="flex items-center gap-2 text-base">
+        <span role="img" aria-label="category">
+          🏷
+        </span>
+        カテゴリ
+      </span>
       <select
         value={value ?? ""}
         onChange={(e) => onChange((e.target.value as LearningCategory) || null)}
-        className="rounded-md border border-slate-200 px-2 py-1 text-xs focus:border-slate-400 focus:outline-none"
+        className="rounded-xl border border-slate-200 px-3 py-2 text-base focus:border-slate-400 focus:outline-none"
       >
         <option value="">指定なし</option>
         {CATEGORY_OPTIONS.map((opt) => (
