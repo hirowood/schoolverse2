@@ -2,6 +2,8 @@
 "use client";
 
 import { useCoachPlan } from "@/hooks/useCoachPlan";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { PlanCard } from "./PlanCard";
 
 export function PlanPanel() {
@@ -23,13 +25,15 @@ export function PlanPanel() {
   return (
     <div className="space-y-4">
       {/* 生成ボタン */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
+      <Card>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+          <Button
+            variant="solid"
+            color="slate"
+            size="tap"
+            className="min-h-11 w-full shadow-sm sm:w-auto"
             onClick={handleGenerate}
             disabled={isLoading || (retryAfter !== null && retryAfter > 0)}
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? (
               <span className="flex items-center gap-2">
@@ -39,16 +43,18 @@ export function PlanPanel() {
             ) : (
               "🤖 AIに今日の学習計画を作らせる"
             )}
-          </button>
+          </Button>
 
           {plan && (
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              color="slate"
+              size="tap"
+              className="min-h-11 w-full sm:w-auto"
               onClick={clearPlan}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50"
             >
               クリア
-            </button>
+            </Button>
           )}
         </div>
 
@@ -63,14 +69,14 @@ export function PlanPanel() {
             </p>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* プラン表示 */}
       {plan && <PlanCard plan={plan} />}
 
       {/* ガイド */}
       {!plan && !isLoading && (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <Card variant="subtle" radius="lg" shadow="none" className="border-slate-200">
           <p className="text-xs font-semibold text-slate-700 mb-2">
             💡 学習プランについて
           </p>
@@ -80,7 +86,7 @@ export function PlanPanel() {
             <li>登録済みのタスクがあれば、それも組み込みます</li>
             <li>1日に何度でも再生成できます（制限あり）</li>
           </ul>
-        </div>
+        </Card>
       )}
     </div>
   );

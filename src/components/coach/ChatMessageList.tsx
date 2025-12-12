@@ -1,16 +1,19 @@
 "use client";
 
 import type { ChatMessage } from "@/hooks/useCoachChat";
+import type { RefObject, UIEventHandler } from "react";
 import { MessageBubble } from "./MessageBubble";
 
 type Props = {
   messages: ChatMessage[];
   isLoading: boolean;
-  bottomRef: React.RefObject<HTMLDivElement>;
+  bottomRef: RefObject<HTMLDivElement>;
+  containerRef?: RefObject<HTMLDivElement>;
+  onScroll?: UIEventHandler<HTMLDivElement>;
 };
 
-export const ChatMessageList = ({ messages, isLoading, bottomRef }: Props) => (
-  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+export const ChatMessageList = ({ messages, isLoading, bottomRef, containerRef, onScroll }: Props) => (
+  <div ref={containerRef} onScroll={onScroll} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
     {isLoading && (
       <div className="flex flex-col items-center justify-center py-8">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />

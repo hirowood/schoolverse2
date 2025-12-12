@@ -4,3 +4,4 @@ export * from "./PlanPanel";
 export * from "./PlanCard";
 export * from "./MessageBubble";
 export * from "./UsageGuide";
+export * from "./CoachTabs";

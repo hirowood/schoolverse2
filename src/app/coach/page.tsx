@@ -3,7 +3,8 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import OnboardingPanel, { type OnboardingStep } from "@/components/OnboardingPanel";
-import { ChatPanel, PlanPanel, UsageGuide } from "@/components/coach";
+import { ChatPanel, CoachTabs, PlanPanel, UsageGuide } from "@/components/coach";
+import { Button } from "@/components/ui/Button";
 
 type Tab = "chat" | "plan";
 
@@ -11,7 +12,6 @@ type TabDefinition = {
   id: Tab;
   label: string;
   renderPanel: () => ReactNode;
-  panelWrapperClassName?: string;
 };
 
 const COACH_ONBOARDING_KEY = "schoolverse2-onboarding-coach";
@@ -34,7 +34,6 @@ const TAB_DEFINITIONS: TabDefinition[] = [
   {
     id: "chat",
     label: "チャット",
-    panelWrapperClassName: "h-[500px]",
     renderPanel: () => <ChatPanel />,
   },
   {
@@ -69,7 +68,7 @@ export default function CoachPage() {
   };
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex h-full flex-col gap-3 sm:gap-4">
       {showOnboarding ? (
         <OnboardingPanel
           show
@@ -80,13 +79,9 @@ export default function CoachPage() {
         />
       ) : (
         <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={handleShowOnboarding}
-            className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-          >
+          <Button variant="outline" rounded="full" size="tap" className="min-h-11" onClick={handleShowOnboarding}>
             オンボーディングを再表示
-          </button>
+          </Button>
         </div>
       )}
 
@@ -98,24 +93,15 @@ export default function CoachPage() {
         </p>
       </header>
 
-      <UsageGuide />
-
-      <div className="flex border-b border-slate-200">
-        {TAB_DEFINITIONS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 text-sm font-medium transition ${
-              activeTab === tab.id
-                ? "border-b-2 border-emerald-500 text-emerald-600"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* モバイルはコンパクト表示で、チャット領域を確保する */}
+      <div className="sm:hidden">
+        <UsageGuide compact />
       </div>
+      <div className="hidden sm:block">
+        <UsageGuide />
+      </div>
+
+      <CoachTabs tabs={TAB_DEFINITIONS} activeTab={activeTab} onChange={(tab) => setActiveTab(tab)} />
 
       <div className="flex-1 min-h-0">{activeTabDefinition.renderPanel()}</div>
     </div>

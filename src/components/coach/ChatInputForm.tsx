@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   input: string;
@@ -11,11 +12,11 @@ type Props = {
 };
 
 export const ChatInputForm = ({ input, setInput, onSubmit, isSending, disabled }: Props) => (
-  <form onSubmit={onSubmit} className="border-t border-slate-200 p-3">
-    <div className="flex items-end gap-2">
+  <form onSubmit={onSubmit} className="border-t border-slate-200 p-3 sm:p-4">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
       <textarea
-        className="flex-1 resize-none rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:bg-slate-50 disabled:text-slate-400"
-        rows={2}
+        className="w-full flex-1 resize-none rounded-md border border-slate-300 px-3 py-2.5 text-base sm:text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:bg-slate-50 disabled:text-slate-400"
+        rows={3}
         maxLength={500}
         placeholder="例: 最近の状況を教えて / 気になっていることを相談"
         value={input}
@@ -28,21 +29,24 @@ export const ChatInputForm = ({ input, setInput, onSubmit, isSending, disabled }
           }
         }}
       />
-      <button
+      <Button
         type="submit"
+        variant="solid"
+        color="slate"
+        size="tap"
+        className="min-h-11 w-full shadow-sm sm:w-auto"
         disabled={disabled || isSending}
-        className="h-10 rounded-md bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isSending ? (
-          <span className="flex items-center gap-1">
-            <span className="h-3 w-3 animate-spin rounded-full border border-white border-t-transparent" />
+          <span className="flex items-center gap-2">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
             送信中
           </span>
         ) : (
           "送信"
         )}
-      </button>
+      </Button>
     </div>
-    <p className="mt-1 text-xs text-slate-400">Shift + Enter で改行 / Enter で送信</p>
+    <p className="mt-2 text-xs text-slate-400">Shift + Enter で改行 / Enter で送信</p>
   </form>
 );

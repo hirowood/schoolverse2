@@ -2,6 +2,7 @@
 "use client";
 
 import type { StudyPlan } from "@/hooks/useCoachPlan";
+import { Card } from "@/components/ui/Card";
 
 interface PlanCardProps {
   plan: StudyPlan;
@@ -15,7 +16,7 @@ export function PlanCard({ plan }: PlanCardProps) {
   };
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+    <Card variant="subtle" radius="lg" shadow="none" className="border-slate-200 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium text-slate-500">今日のプラン</p>
         <p className="text-xs text-slate-400">{formatDate(plan.date)}</p>
@@ -39,10 +40,10 @@ export function PlanCard({ plan }: PlanCardProps) {
           {plan.tasks.map((task, i) => (
             <li
               key={`${task.title}-${i}`}
-              className="rounded-md border border-slate-200 bg-white p-2"
+              className="rounded-md border border-slate-200 bg-white p-3 sm:p-2"
             >
               <div className="flex items-start gap-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs text-white">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs text-white">
                   {i + 1}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -77,6 +78,6 @@ export function PlanCard({ plan }: PlanCardProps) {
           <span>{plan.coachMessage}</span>
         </p>
       </div>
-    </div>
+    </Card>
   );
 }

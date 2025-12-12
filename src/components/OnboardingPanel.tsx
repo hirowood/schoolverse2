@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Button } from "@/components/ui/Button";
 
 export type OnboardingStep = {
   title: string;
@@ -27,13 +28,16 @@ export default function OnboardingPanel({ show, title, description, steps, onClo
           <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">{title}</h2>
           <p className="text-sm text-slate-600">{description}</p>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          color="slate"
+          size="tap"
+          rounded="full"
+          className="min-h-11 border-transparent bg-white/70 text-slate-700 hover:bg-white hover:border-transparent"
           onClick={onClose}
-          className="text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-900"
         >
           閉じる
-        </button>
+        </Button>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {steps.map((step, index) => (

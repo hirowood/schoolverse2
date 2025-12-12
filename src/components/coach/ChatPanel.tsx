@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useCoachChat } from "@/hooks/useCoachChat";
+import { Card } from "@/components/ui/Card";
 import { ChatInputForm } from "./ChatInputForm";
 import { ChatMessageList } from "./ChatMessageList";
 
@@ -32,11 +33,11 @@ export function ChatPanel() {
   };
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
+    <Card padding="none" className="flex h-full flex-col">
       <ChatMessageList messages={messages} isLoading={isLoading} bottomRef={bottomRef} />
 
       {error && (
-        <div className="border-t border-slate-200 bg-red-50 px-4 py-2">
+        <div className="border-t border-slate-200 bg-red-50 px-3 py-2 sm:px-4">
           <p className="text-sm text-red-600">
             {error}
             {retryAfter !== null && retryAfter > 0 && (
@@ -53,6 +54,6 @@ export function ChatPanel() {
         isSending={isSending}
         disabled={isSending || (retryAfter !== null && retryAfter > 0)}
       />
-    </div>
+    </Card>
   );
 }
