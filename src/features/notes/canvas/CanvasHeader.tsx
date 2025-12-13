@@ -33,7 +33,7 @@ export function CanvasHeader({
   taskTitle,
 }: CanvasHeaderProps) {
   return (
-    <section className="border-b bg-white px-3 pb-3 pt-2 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:px-4 sm:pb-4 sm:pt-3">
+    <section className="sticky top-0 z-10 border-b bg-white/95 px-3 pb-3 pt-2 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-800/95 sm:px-4 sm:pb-4 sm:pt-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link href="/notes" className="text-sm font-semibold text-blue-600 underline-offset-4 hover:underline">
           ← ノート一覧に戻る

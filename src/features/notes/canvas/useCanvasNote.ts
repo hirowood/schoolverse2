@@ -5,10 +5,10 @@ import { useEffect, useState } from "react";
 import type { SceneSnapshot } from "./types";
 import { EMPTY_SCENE } from "./types";
 
-type UseCanvasNoteArgs = {
+interface UseCanvasNoteArgs {
   noteId?: string | null;
   template?: string | null;
-};
+}
 
 export function useCanvasNote({ noteId, template }: UseCanvasNoteArgs) {
   const [title, setTitle] = useState("");
