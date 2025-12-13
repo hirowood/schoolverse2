@@ -13,7 +13,8 @@ export type QuestCategory =
   | "credo"
   | "social";
 
-export type TodayQuest = {
+// クエスト1件分の情報
+export interface TodayQuest {
   id: string;
   title: string;
   description: string;
@@ -42,9 +43,10 @@ export type TodayQuest = {
   skippedReason?: string;
   elapsedMinutes?: number;
   progressPercent?: number;
-};
+}
 
-export type QuestProgressSummary = {
+// 今日のクエストの概要サマリー
+export interface QuestProgressSummary {
   total: number;
   completed: number;
   inProgress: number;
@@ -55,34 +57,34 @@ export type QuestProgressSummary = {
   completionRate: number;
   streak: number;
   remainingHours: number;
-};
+}
 
-export type QuestRegenerateOptions = {
+export interface QuestRegenerateOptions {
   preferredCategories?: QuestCategory[];
   difficultyPreference?: QuestDifficultyPreference;
-};
+}
 
-export type TodayQuestsResponse = {
+export interface TodayQuestsResponse {
   quests: TodayQuest[];
   summary: QuestProgressSummary;
   generatedAt: string;
   canRegenerate: boolean;
   regenerateRemaining: number;
-};
+}
 
-export type QuestActionResponse = {
+export interface QuestActionResponse {
   success: boolean;
   quest: TodayQuest;
   xpEarned?: number;
   levelUp?: boolean;
   newLevel?: number;
   newAchievements?: string[];
-};
+}
 
-export type CompleteQuestPayload = {
+export interface CompleteQuestPayload {
   note?: string;
   rating?: number;
   actualMinutes?: number;
-};
+}
 
 export type QuestFilter = "all" | "in_progress" | "completed" | "skipped";

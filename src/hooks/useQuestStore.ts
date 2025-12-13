@@ -9,8 +9,16 @@ import type {
   TodayQuest,
   TodayQuestsResponse,
 } from "@/types/quest";
+import { questApiClient } from "@/features/quests/api";
 
-type QuestStoreState = {
+interface LastXpGain {
+  xpEarned: number;
+  questTitle: string;
+  levelUp: boolean;
+  newLevel?: number;
+}
+
+interface QuestStoreState {
   quests: TodayQuest[];
   summary: TodayQuestsResponse["summary"] | null;
   generatedAt: string | null;
@@ -23,12 +31,7 @@ type QuestStoreState = {
   showCompleteModal: boolean;
   showRegenerateModal: boolean;
   showDetailModal: boolean;
-  lastXpGain: {
-    xpEarned: number;
-    questTitle: string;
-    levelUp: boolean;
-    newLevel?: number;
-  } | null;
+  lastXpGain: LastXpGain | null;
   fetchTodayQuests: () => Promise<void>;
   regenerateQuests: (options?: QuestRegenerateOptions) => Promise<void>;
   acceptQuest: (id: string) => Promise<void>;
@@ -44,16 +47,21 @@ type QuestStoreState = {
   openDetailModal: (id: string) => void;
   closeDetailModal: () => void;
   clearLastXpGain: () => void;
+}
+
+const toErrorMessage = (err: unknown, fallback: string): string => {
+  if (err instanceof Error && err.message.trim().length > 0) return err.message;
+  return fallback;
 };
 
-const fetchJson = async <T>(url: string, init?: RequestInit) => {
-  const res = await fetch(url, { cache: "no-store", ...init });
-  if (!res.ok) throw new Error(`Request failed ${res.status}`);
-  return (await res.json()) as T;
-};
-
-const replaceQuest = (quests: TodayQuest[], next: TodayQuest) =>
-  quests.map((q) => (q.id === next.id ? next : q));
+const toTodayQuestsState = (data: TodayQuestsResponse) => ({
+  quests: data.quests,
+  summary: data.summary,
+  generatedAt: data.generatedAt,
+  canRegenerate: data.canRegenerate,
+  regenerateRemaining: data.regenerateRemaining,
+  isLoading: false,
+});
 
 export const useQuestStore = create<QuestStoreState>((set, get) => ({
   quests: [],
@@ -73,20 +81,15 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
   fetchTodayQuests: async () => {
     set({ isLoading: true, error: null });
     try {
-      const data = await fetchJson<TodayQuestsResponse>("/api/quests/today");
-      set({
-        quests: data.quests,
-        summary: data.summary,
-        generatedAt: data.generatedAt,
-        canRegenerate: data.canRegenerate,
-        regenerateRemaining: data.regenerateRemaining,
-        isLoading: false,
-      });
+      const data = await questApiClient.fetchTodayQuests();
+      set((state) => ({
+        ...toTodayQuestsState(data),
+        lastXpGain: state.lastXpGain,
+      }));
     } catch (error) {
-      console.error("[QuestStore] fetchTodayQuests failed", error);
       set({
         isLoading: false,
-        error: "クエストの取得に失敗しました",
+        error: toErrorMessage(error, "クエストの取得に失敗しました"),
       });
     }
   },
@@ -94,19 +97,17 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
   regenerateQuests: async (options) => {
     set({ isLoading: true, error: null });
     try {
-      await fetchJson<TodayQuestsResponse>("/api/quests/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(options ?? {}),
-      });
-      await get().fetchTodayQuests();
-      set({ showRegenerateModal: false });
+      const data = await questApiClient.regenerateTodayQuests(options);
+      set((state) => ({
+        ...toTodayQuestsState(data),
+        showRegenerateModal: false,
+        lastXpGain: state.lastXpGain,
+      }));
     } catch (error) {
-      console.error("[QuestStore] regenerateQuests failed", error);
       set({
         isLoading: false,
-        error: "クエストの再生成に失敗しました",
         showRegenerateModal: false,
+        error: toErrorMessage(error, "クエストの再生成に失敗しました"),
       });
     }
   },
@@ -114,48 +115,34 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
   acceptQuest: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await fetchJson<QuestActionResponse>(`/api/quests/${id}/accept`, { method: "POST" });
-      set((state) => ({
-        quests: replaceQuest(state.quests, data.quest),
-        isLoading: false,
-      }));
+      await questApiClient.acceptQuest(id);
+      await get().fetchTodayQuests();
     } catch (error) {
-      console.error("[QuestStore] acceptQuest failed", error);
-      set(() => ({
+      set({
         isLoading: false,
-        error: "クエスト受諾に失敗しました",
-      }));
+        error: toErrorMessage(error, "クエスト受諾に失敗しました"),
+      });
     }
   },
 
   startQuest: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await fetchJson<QuestActionResponse>(`/api/quests/${id}/start`, { method: "POST" });
-      set((state) => ({
-        quests: replaceQuest(state.quests, data.quest),
-        isLoading: false,
-      }));
+      await questApiClient.startQuest(id);
+      await get().fetchTodayQuests();
     } catch (error) {
-      console.error("[QuestStore] startQuest failed", error);
-      set(() => ({
+      set({
         isLoading: false,
-        error: "クエスト開始に失敗しました",
-      }));
+        error: toErrorMessage(error, "クエスト開始に失敗しました"),
+      });
     }
   },
 
   completeQuest: async (id: string, payload) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await fetchJson<QuestActionResponse>(`/api/quests/${id}/complete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload ?? {}),
-      });
+      const data: QuestActionResponse = await questApiClient.completeQuest(id, payload);
       set((state) => ({
-        quests: replaceQuest(state.quests, data.quest),
-        isLoading: false,
         showCompleteModal: false,
         selectedQuestId: null,
         lastXpGain:
@@ -168,35 +155,27 @@ export const useQuestStore = create<QuestStoreState>((set, get) => ({
               }
             : state.lastXpGain,
       }));
+      await get().fetchTodayQuests();
     } catch (error) {
-      console.error("[QuestStore] completeQuest failed", error);
-      set(() => ({
+      set({
         isLoading: false,
         showCompleteModal: false,
         selectedQuestId: null,
-        error: "クエスト完了に失敗しました",
-      }));
+        error: toErrorMessage(error, "クエスト完了に失敗しました"),
+      });
     }
   },
 
   skipQuest: async (id: string, reason?: string) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await fetchJson<QuestActionResponse>(`/api/quests/${id}/skip`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason }),
-      });
-      set((state) => ({
-        quests: replaceQuest(state.quests, data.quest),
-        isLoading: false,
-      }));
+      await questApiClient.skipQuest(id, reason);
+      await get().fetchTodayQuests();
     } catch (error) {
-      console.error("[QuestStore] skipQuest failed", error);
-      set(() => ({
+      set({
         isLoading: false,
-        error: "クエストスキップに失敗しました",
-      }));
+        error: toErrorMessage(error, "クエストスキップに失敗しました"),
+      });
     }
   },
 
