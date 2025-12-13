@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
+import "@excalidraw/excalidraw/dist/excalidraw.min.css";
 import { CanvasCaptureModals } from "@/features/notes/canvas/CanvasCaptureModals";
 import { CanvasHeader } from "@/features/notes/canvas/CanvasHeader";
 import { useCanvasNote } from "@/features/notes/canvas/useCanvasNote";
@@ -219,27 +220,29 @@ function CanvasPageContent() {
       />
 
       <div className="min-h-0 flex-1">
-        <Excalidraw
-          excalidrawAPI={(api) => {
-            apiRef.current = api;
-          }}
-          initialData={{
-            elements: initialScene?.elements ?? EMPTY_SCENE.elements,
-            appState: {
-              ...EMPTY_SCENE.appState,
-              ...(initialScene?.appState ?? {}),
-              zenModeEnabled: false,
-            },
-          }}
-          UIOptions={{
-            canvasActions: {
-              saveToActiveFile: false,
-              loadScene: false,
-              export: { saveFileToDisk: true },
-              saveAsImage: true,
-            },
-          }}
-        />
+        <div className="h-full w-full">
+          <Excalidraw
+            excalidrawAPI={(api) => {
+              apiRef.current = api;
+            }}
+            initialData={{
+              elements: initialScene?.elements ?? EMPTY_SCENE.elements,
+              appState: {
+                ...EMPTY_SCENE.appState,
+                ...(initialScene?.appState ?? {}),
+                zenModeEnabled: false,
+              },
+            }}
+            UIOptions={{
+              canvasActions: {
+                saveToActiveFile: false,
+                loadScene: false,
+                export: { saveFileToDisk: true },
+                saveAsImage: true,
+              },
+            }}
+          />
+        </div>
       </div>
 
       <CanvasCaptureModals

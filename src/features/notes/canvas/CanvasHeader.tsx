@@ -34,10 +34,13 @@ export function CanvasHeader({
 }: CanvasHeaderProps) {
   return (
     <section className="sticky top-0 z-10 border-b bg-white/95 px-3 pb-3 pt-2 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-800/95 sm:px-4 sm:pb-4 sm:pt-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Link href="/notes" className="text-sm font-semibold text-blue-600 underline-offset-4 hover:underline">
-          ← ノート一覧に戻る
-        </Link>
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <Link href="/notes" className="text-sm font-semibold text-blue-600 underline-offset-4 hover:underline">
+            ← ノート一覧に戻る
+          </Link>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">スマホでも押しやすい大きさに最適化しています</p>
+        </div>
         <button
           onClick={onSave}
           disabled={saving}
@@ -73,7 +76,7 @@ export function CanvasHeader({
         </label>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
         <label className="inline-flex h-11 items-center justify-center rounded-xl bg-gray-100 px-4 text-sm font-semibold text-gray-800 shadow-sm transition hover:bg-gray-200 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
           🖼 画像追加
           <input type="file" accept="image/*" onChange={onSelectImageFile} className="hidden" />
