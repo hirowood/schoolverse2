@@ -13,26 +13,35 @@ export function MessageItem({ message, currentUserId }: Props) {
 
   return (
     <div className={`flex w-full ${isSelf ? "justify-end" : "justify-start"}`}>
-      <div className={`flex max-w-[80%] items-start gap-2 ${isSelf ? "flex-row-reverse" : "flex-row"}`}>
+      <div
+        className={`flex max-w-[90%] items-start gap-2 sm:max-w-[75%] ${
+          isSelf ? "flex-row-reverse" : "flex-row"
+        }`}
+      >
         {!isSelf && (
           <Avatar name={senderName} size="sm" />
         )}
         <div
-          className={`w-full rounded-lg px-3 py-2 shadow-sm ${
+          className={`w-full rounded-2xl px-4 py-3 shadow-sm ${
             isSelf
-              ? "rounded-br-sm bg-emerald-600 text-white"
-              : "rounded-bl-sm border border-slate-200 bg-white"
+              ? "rounded-br-md bg-emerald-600 text-white"
+              : "rounded-bl-md border border-slate-200 bg-white"
           }`}
         >
-          <div className="flex items-center justify-between gap-3 text-[11px] text-slate-500">
+          <div className={`flex items-center justify-between gap-3 text-xs ${isSelf ? "text-emerald-50/80" : "text-slate-400"}`}>
             <span className="font-semibold">{senderName}</span>
-            <span>{new Date(message.createdAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}</span>
+            <span>
+              {new Date(message.createdAt).toLocaleTimeString("ja-JP", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
           </div>
-          <div className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
+          <div className={`mt-2 whitespace-pre-wrap text-[15px] leading-7 ${isSelf ? "text-white" : "text-slate-900"}`}>
+            {message.content}
+          </div>
           {readCount > 0 && (
-            <p className="mt-1 text-[11px] text-slate-200">
-              既読 {readCount}
-            </p>
+            <p className={`mt-2 text-xs ${isSelf ? "text-emerald-50/80" : "text-slate-400"}`}>既読 {readCount}</p>
           )}
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import type { ChatRoomMessage } from "@/features/user-chat/types";
 import { DateSeparator } from "./DateSeparator";
 import { MessageItem } from "./MessageItem";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   messages: ChatRoomMessage[];
@@ -41,19 +42,17 @@ export function MessageList({ messages, isLoading, hasMore, onLoadMore, currentU
   return (
     <div
       ref={listRef}
-      className="flex flex-1 min-h-[240px] flex-col gap-2 overflow-y-auto bg-gradient-to-b from-slate-50 via-white to-slate-50 px-4 py-3"
+      className="flex flex-1 min-h-[240px] flex-col gap-3 overflow-y-auto bg-gradient-to-b from-slate-50 via-white to-slate-50 px-4 py-4"
     >
       {isLoading && messages.length === 0 ? (
         <p className="text-center text-sm text-slate-500">読み込み中...</p>
       ) : null}
       {hasMore && (
-        <button
-          type="button"
-          onClick={onLoadMore}
-          className="mx-auto text-[11px] font-semibold text-slate-500 underline"
-        >
-          履歴をもっと見る
-        </button>
+        <div className="flex justify-center">
+          <Button size="tapXs" onClick={onLoadMore}>
+            履歴をもっと見る
+          </Button>
+        </div>
       )}
 
       {itemsWithSeparators.map((item, idx) => {

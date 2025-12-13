@@ -15,7 +15,7 @@ export function TypingIndicator({ users }: Props) {
         : `${users[0].name} 他${users.length - 1}人が入力中`;
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 text-xs text-slate-600">
+    <div className="flex items-center gap-2 px-4 py-2 text-sm text-slate-600">
       <div className="flex gap-1">
         <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]" />
         <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]" />

@@ -1,5 +1,6 @@
 import type { ChatRoom, ChatRoomMember } from "@/features/user-chat/types";
 import { OnlineIndicator } from "@/components/user-chat/shared/OnlineIndicator";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   room: ChatRoom | null;
@@ -8,28 +9,34 @@ type Props = {
 };
 
 export function ChatHeader({ room, getUserStatus, onBack }: Props) {
+  const title = room
+    ? room.title || (room.type === "dm" ? "ダイレクトメッセージ" : "グループ")
+    : "ルームを選択";
+
   return (
-    <header className="border-b border-slate-200 px-4 py-3">
+    <header className="border-b border-slate-200 px-6 py-4">
       <div className="flex flex-wrap items-center gap-3">
         {onBack && (
-          <button
-            type="button"
+          <Button
             onClick={onBack}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 lg:hidden"
+            size="tap"
+            variant="outline"
+            rounded="full"
+            className="gap-1 lg:hidden"
           >
             <span aria-hidden>←</span>
-            <span>戻る</span>
-          </button>
+            <span>ルーム一覧</span>
+          </Button>
         )}
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Room</p>
-          <h3 className="text-lg font-semibold text-slate-900">
-            {room?.title || (room?.type === "dm" ? "ダイレクトメッセージ" : "グループ")}
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Room</p>
+          <h3 className="text-xl font-semibold text-slate-900">
+            {title}
           </h3>
         </div>
       </div>
       {room?.members && (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           {room.members.map((member) => (
             <MemberStatus key={member.id} member={member} getUserStatus={getUserStatus} />
           ))}
@@ -48,7 +55,7 @@ function MemberStatus({
 }) {
   const status = getUserStatus(member.userId);
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700">
+    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">
       <OnlineIndicator status={status} size="sm" />
       <span>{member.user?.name ?? member.user?.email ?? member.userId}</span>
     </span>

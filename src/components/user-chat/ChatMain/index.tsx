@@ -6,6 +6,8 @@ import { ChatHeader } from "./ChatHeader";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
 import { TypingIndicator } from "./TypingIndicator";
+import { cardClassName } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   room: ChatRoom | null;
@@ -41,21 +43,21 @@ export function ChatMain({
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
   
-  // FIX: Hold onMarkRead in ref to remove from deps
+  // onMarkRead は依存関係に入れると effect が過剰に動くため ref に退避
   const onMarkReadRef = useRef(onMarkRead);
   useEffect(() => {
     onMarkReadRef.current = onMarkRead;
   }, [onMarkRead]);
 
-  // FIX: Track last marked message ID
+  // 既読通知の二重送信防止 + 軽いデバウンス
   const lastMarkedIdRef = useRef<string | null>(null);
-  const markReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const markReadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // FIX: Improved mark read logic
+  // 最後のメッセージIDを既読にする（入力中などの頻繁な更新での過剰POSTを防ぐ）
   useEffect(() => {
     if (!room) return;
     const last = messages[messages.length - 1];
@@ -91,8 +93,25 @@ export function ChatMain({
     await onSendMessage(text);
   };
 
+  if (!room) {
+    return (
+      <section className={cardClassName({ className: "flex h-full flex-col", padding: "none", radius: "xl" })}>
+        <ChatHeader room={room} getUserStatus={getUserStatus} onBack={onBack} />
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+          <p className="text-base font-semibold text-slate-900">ルームが選択されていません</p>
+          <p className="text-sm text-slate-600">左上の「ルーム一覧」から会話を選択してください。</p>
+          {onBack && (
+            <Button variant="outline" size="tap" rounded="full" onClick={onBack}>
+              ルーム一覧を開く
+            </Button>
+          )}
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="flex h-full flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section className={cardClassName({ className: "flex h-full flex-col", padding: "none", radius: "xl" })}>
       <ChatHeader room={room} getUserStatus={getUserStatus} onBack={onBack} />
 
       <div className="flex-1 min-h-0 overflow-hidden">
@@ -108,7 +127,7 @@ export function ChatMain({
 
       {typingNames.length > 0 && <TypingIndicator users={typingUsers} />}
 
-      <div className="border-t border-slate-200 bg-slate-50 px-4 py-3">
+      <div className="border-t border-slate-200 bg-slate-50 px-4 py-4">
         <MessageInput
           value={input}
           onChange={(v) => {

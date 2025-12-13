@@ -1,33 +1,30 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChatRoom, ChatRoomMessage, ChatRoomType, UserPreview } from "@/features/user-chat/types";
 import { usePresence } from "@/hooks/usePresence";
 import { useRoomPresence } from "@/hooks/useRoomPresence";
+import { getSharedUserChatClient } from "@/lib/user-chat/supabaseClient";
+import {
+  createRoom as createRoomApi,
+  listRoomMessages,
+  listRooms,
+  listUnreadCounts,
+  markRoomRead,
+  searchUsers as searchUsersApi,
+  sendRoomMessage,
+} from "@/features/user-chat/api";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+/**
+ * useUserChat
+ *
+ * - APIアクセス（REST）と UI を分離するため、fetch は `src/features/user-chat/api.ts` に集約
+ * - Realtime は Supabase client を `src/lib/user-chat/supabaseClient.ts` で共有
+ * - この hook は「状態管理」と「ユースケース（ルーム選択・送信・既読）」の責務に集中
+ */
 
-function getSharedUserChatClient(): SupabaseClient | null {
-  if (typeof window === "undefined" || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
-  const g = globalThis as typeof globalThis & { __sbUserChatClient?: SupabaseClient };
-  if (g.__sbUserChatClient) return g.__sbUserChatClient;
-  g.__sbUserChatClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      storageKey: "sb-schoolverse2-userchat",
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: false,
-    },
-    global: {
-      headers: {
-        "X-Client-Context": "userchat",
-      },
-    },
-  });
-  return g.__sbUserChatClient;
-}
+type CurrentUser = { id: string; name?: string | null; email?: string | null };
 
 export function useUserChat() {
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
@@ -38,16 +35,20 @@ export function useUserChat() {
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [searchResults, setSearchResults] = useState<UserPreview[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null } | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+
   const subscriptionRef = useRef<ReturnType<SupabaseClient["channel"]> | null>(null);
 
-  // 修正: 既読スロットリング用のref
-  const lastMarkReadRef = useRef<{ roomId: string; ts: number; messageId: string }>({ roomId: "", ts: 0, messageId: "" });
-  const markReadInFlight = useRef<boolean>(false);
+  // 既読スロットリング（無限ループ/過剰POSTの防止）
+  const lastMarkReadRef = useRef<{ roomId: string; ts: number; messageId: string }>({
+    roomId: "",
+    ts: 0,
+    messageId: "",
+  });
+  const markReadInFlight = useRef(false);
   const unreadCountsRef = useRef<Record<string, number>>({});
-  
-  // unreadCountsをrefと同期
+
   useEffect(() => {
     unreadCountsRef.current = unreadCounts;
   }, [unreadCounts]);
@@ -59,51 +60,59 @@ export function useUserChat() {
 
   const supabase = useMemo(() => getSharedUserChatClient(), []);
 
-  const { presenceMap, myStatus, setCurrentRoom, getUserStatus, recordActivity } = usePresence(currentUser?.id ?? null);
+  const { presenceMap, myStatus, setCurrentRoom, getUserStatus, recordActivity } = usePresence(
+    currentUser?.id ?? null,
+  );
+
   const { typingUsers, setTyping } = useRoomPresence(
     activeRoomId,
     currentUser?.id ?? null,
     currentUser?.name ?? currentUser?.email ?? null,
   );
 
+  const mergeUnreadIntoRooms = useCallback((counts: Record<string, number>) => {
+    setRooms((prev) =>
+      prev.map((room) => ({
+        ...room,
+        unreadCount: counts[room.id] ?? room.unreadCount ?? 0,
+      })),
+    );
+  }, []);
+
   const fetchUnreadCounts = useCallback(async () => {
     try {
-      const res = await fetch("/api/user-chat/rooms/unread-counts");
-      if (!res.ok) return;
-      const data = (await res.json()) as { counts?: Record<string, number> };
-      if (data?.counts) {
-        setUnreadCounts(data.counts);
-        setRooms((prev) =>
-          prev.map((room) => ({
-            ...room,
-            unreadCount: data.counts?.[room.id] ?? room.unreadCount ?? 0,
-          })),
-        );
-      }
+      const data = await listUnreadCounts();
+      setUnreadCounts(data.counts);
+      mergeUnreadIntoRooms(data.counts);
     } catch (e) {
-      console.error("Failed to fetch unread counts", e);
+      // unreadCounts は UI の補助情報なので、エラーは握りつぶしてログのみ
+      console.error("[useUserChat] unread-counts failed", e);
     }
-  }, []);
+  }, [mergeUnreadIntoRooms]);
 
   const fetchRooms = useCallback(
     async (type?: ChatRoomType | "all") => {
       setLoadingRooms(true);
       try {
-        const qs = new URLSearchParams();
-        if (type && type !== "all") qs.set("type", type);
-        const res = await fetch(`/api/user-chat/rooms?${qs.toString()}`);
-        if (!res.ok) throw new Error("room_fetch_failed");
-        const data = (await res.json()) as { rooms: ChatRoom[] };
+        const data = await listRooms({ type });
         const roomsData = data.rooms ?? [];
+
+        // rooms が返す unreadCount を state に同期
         const mappedUnread = roomsData.reduce<Record<string, number>>((acc, room) => {
           acc[room.id] = room.unreadCount ?? 0;
           return acc;
         }, {});
+
         setUnreadCounts(mappedUnread);
         setRooms(roomsData);
+
+        // 初回だけ先頭のルームへフォールバック
         if (!activeRoomId && roomsData.length) {
           setActiveRoomId(roomsData[0].id);
         }
+        setError(null);
+
+        // 補助的に unread-counts も更新（サーバー側での lastSeenAt 更新反映）
         void fetchUnreadCounts();
       } catch (e) {
         setError((e as Error).message);
@@ -114,26 +123,19 @@ export function useUserChat() {
     [activeRoomId, fetchUnreadCounts],
   );
 
-  const fetchMessages = useCallback(
-    async (roomId: string) => {
-      setLoadingMessages(true);
-      try {
-        const res = await fetch(`/api/user-chat/rooms/${roomId}/messages?limit=30`);
-        if (res.status === 401) {
-          throw new Error("signin_required");
-        }
-        if (!res.ok) throw new Error("msg_fail");
-        const data = (await res.json()) as { messages: ChatRoomMessage[]; nextCursor: string | null };
-        setMessages(data.messages ?? []);
-        setHasMoreMessages(Boolean(data.nextCursor));
-      } catch (e) {
-        setError((e as Error).message);
-      } finally {
-        setLoadingMessages(false);
-      }
-    },
-    [],
-  );
+  const fetchMessages = useCallback(async (roomId: string) => {
+    setLoadingMessages(true);
+    try {
+      const data = await listRoomMessages(roomId, { limit: 30 });
+      setMessages(data.messages ?? []);
+      setHasMoreMessages(Boolean(data.nextCursor));
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoadingMessages(false);
+    }
+  }, []);
 
   const selectRoom = useCallback(
     async (roomId: string) => {
@@ -144,15 +146,15 @@ export function useUserChat() {
   );
 
   const loadMore = useCallback(async () => {
-    if (!activeRoomId || !hasMoreMessages || !messages.length) return;
+    if (!activeRoomId || !hasMoreMessages || messages.length === 0) return;
     const cursor = messages[0].id;
-    const res = await fetch(
-      `/api/user-chat/rooms/${activeRoomId}/messages?limit=30&cursor=${cursor}`,
-    );
-    if (!res.ok) return;
-    const data = (await res.json()) as { messages: ChatRoomMessage[]; nextCursor: string | null };
-    setMessages((prev) => [...data.messages, ...prev]);
-    setHasMoreMessages(Boolean(data.nextCursor));
+    try {
+      const data = await listRoomMessages(activeRoomId, { limit: 30, cursor });
+      setMessages((prev) => [...data.messages, ...prev]);
+      setHasMoreMessages(Boolean(data.nextCursor));
+    } catch {
+      // ページング失敗は致命ではないので握りつぶし
+    }
   }, [activeRoomId, hasMoreMessages, messages]);
 
   const sendMessage = useCallback(
@@ -160,9 +162,10 @@ export function useUserChat() {
       const text = content.trim();
       if (!text) return;
       if (!activeRoomId) {
-        setError("no_room");
+        setError("ルームが選択されていません");
         return;
       }
+
       const optimisticId = `optimistic-${Date.now()}`;
       const optimisticMessage: ChatRoomMessage = {
         id: optimisticId,
@@ -174,25 +177,27 @@ export function useUserChat() {
         updatedAt: new Date().toISOString(),
         reads: [],
       };
+
       setMessages((prev) => [...prev, optimisticMessage]);
-
       recordActivity();
-      const res = await fetch(`/api/user-chat/rooms/${activeRoomId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text }),
-      });
-      if (res.status === 401) {
-        setError("signin_required");
-      } else if (!res.ok) {
-        setError("send_fail");
-      }
-      if (process.env.NODE_ENV !== "production") {
 
+      try {
+        const data = await sendRoomMessage(activeRoomId, { content: text });
+        setMessages((prev) => prev.map((m) => (m.id === optimisticId ? data.message : m)));
+        setRooms((prev) =>
+          prev.map((r) =>
+            r.id === activeRoomId
+              ? { ...r, lastMessage: data.message, lastMessageAt: data.message.createdAt }
+              : r,
+          ),
+        );
+        setError(null);
+      } catch (e) {
+        setError((e as Error).message);
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
       }
-      void fetchMessages(activeRoomId);
     },
-    [activeRoomId, recordActivity, fetchMessages, currentUser?.id],
+    [activeRoomId, currentUser?.id, recordActivity],
   );
 
   const sendTyping = useCallback(
@@ -203,117 +208,90 @@ export function useUserChat() {
     [recordActivity, setTyping],
   );
 
-  // FIX: Stabilize markRead (remove unreadCounts from deps)
   const markRead = useCallback(
     async (messageId: string) => {
       if (!activeRoomId) return;
-      
+
       const now = Date.now();
       const last = lastMarkReadRef.current;
-      
-      // Skip if same messageId
+
+      // 同じメッセージに対しての二重POST防止
       if (last.messageId === messageId) return;
-      
-      // Skip if same room within 8s
+      // 同じルームで短時間に連続送信しない（スロットリング）
       if (last.roomId === activeRoomId && now - last.ts < 8000) return;
-      
-      // Skip if unread=0 (read from ref)
+      // unread=0 のときは送らない
       if ((unreadCountsRef.current[activeRoomId] ?? 0) === 0) return;
-      
-      // Skip if in flight
+      // 送信中の二重実行防止
       if (markReadInFlight.current) return;
-      
+
       markReadInFlight.current = true;
       lastMarkReadRef.current = { roomId: activeRoomId, ts: now, messageId };
-      
+
       recordActivity();
-      
+
       try {
-        const res = await fetch(`/api/user-chat/rooms/${activeRoomId}/read`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messageId }),
-        });
-        
+        const res = await markRoomRead(activeRoomId, { messageId });
         if (res.ok) {
           setUnreadCounts((prev) => {
             const next = { ...prev, [activeRoomId]: 0 };
             unreadCountsRef.current = next;
             return next;
           });
-          setRooms((prev) => prev.map((room) => (room.id === activeRoomId ? { ...room, unreadCount: 0 } : room)));
+          setRooms((prev) =>
+            prev.map((room) => (room.id === activeRoomId ? { ...room, unreadCount: 0 } : room)),
+          );
         }
       } catch {
-        // Ignore errors to prevent loops
+        // 既読更新は補助なので握りつぶし（無限ループ防止）
       } finally {
         markReadInFlight.current = false;
       }
     },
-    [activeRoomId, recordActivity], // Removed unreadCounts
+    [activeRoomId, recordActivity],
   );
 
+  const searchUsers = useCallback(async (q: string) => {
+    const keyword = q.trim();
+    if (!keyword) {
+      setSearchResults([]);
+      setError(null);
+      return;
+    }
 
-  const searchUsers = useCallback(
-    async (q: string) => {
-      const keyword = q.trim();
-      if (!keyword) {
-        setSearchResults([]);
-        return;
-      }
-      try {
-        setError(null);
-        const res = await fetch(`/api/user-chat/search-users?q=${encodeURIComponent(keyword)}&limit=20`);
-        if (res.status === 401) {
-          setError("signin_required");
-          setSearchResults([]);
-          return;
-        }
-        if (!res.ok) {
-          setError("search_fail");
-          setSearchResults([]);
-          return;
-        }
-        const data = (await res.json()) as { users?: UserPreview[] };
-        const users = data.users ?? [];
-        setSearchResults(users);
-        if (users.length === 0) {
-          setError("no_users_found");
-        } else {
-          setError(null);
-        }
-      } catch (e) {
-        setError("search_fail");
-        setSearchResults([]);
-        console.error("searchUsers error", e);
-      }
-    },
-    [setError],
-  );
+    try {
+      setError(null);
+      const data = await searchUsersApi({ q: keyword, limit: 20 });
+      const users = data.users ?? [];
+      setSearchResults(users);
+      setError(users.length === 0 ? "ユーザーが見つかりませんでした" : null);
+    } catch (e) {
+      setError((e as Error).message);
+      setSearchResults([]);
+      console.error("[useUserChat] searchUsers failed", e);
+    }
+  }, []);
 
   const createRoom = useCallback(
     async (participantId: string, type: ChatRoomType = "dm") => {
-      const res = await fetch("/api/user-chat/rooms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, participantIds: [participantId] }),
-      });
-      if (!res.ok) {
-        setError("create_fail");
+      try {
+        const data = await createRoomApi({ type, participantIds: [participantId] });
+        setRooms((prev) => [data.room, ...prev]);
+        setActiveRoomId(data.room.id);
+        await fetchMessages(data.room.id);
+        setError(null);
+        return data.room;
+      } catch (e) {
+        setError((e as Error).message);
         return null;
       }
-      const data = (await res.json()) as { room: ChatRoom };
-      setRooms((prev) => [data.room, ...prev]);
-      setActiveRoomId(data.room.id);
-      await fetchMessages(data.room.id);
-      return data.room;
     },
     [fetchMessages],
   );
 
-  // Supabase Realtime: Watch message inserts
+  // Realtime: アクティブルームのみ、新規メッセージ INSERT を監視
   useEffect(() => {
     if (!supabase) {
-      setError("supabase_not_configured");
+      setError("Supabaseが未設定です（NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY）");
       return;
     }
     if (!activeRoomId) return;
@@ -331,23 +309,16 @@ export function useUserChat() {
         (payload) => {
           const msg = payload.new as ChatRoomMessage;
           setMessages((prev) => {
-            // Duplicate check
             if (prev.some((m) => m.id === msg.id)) return prev;
             return [...prev, msg];
           });
           setRooms((prev) =>
-            prev.map((r) =>
-              r.id === activeRoomId
-                ? { ...r, lastMessage: msg, lastMessageAt: msg.createdAt }
-                : r,
-            ),
+            prev.map((r) => (r.id === activeRoomId ? { ...r, lastMessage: msg, lastMessageAt: msg.createdAt } : r)),
           );
         },
       )
       .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          setError(null);
-        }
+        if (status === "SUBSCRIBED") setError(null);
       });
 
     subscriptionRef.current = channel;
@@ -360,6 +331,7 @@ export function useUserChat() {
     };
   }, [supabase, activeRoomId]);
 
+  // Session user + initial fetch
   useEffect(() => {
     const fetchSession = async () => {
       try {
@@ -370,16 +342,19 @@ export function useUserChat() {
           setCurrentUser({ id: data.user.id, name: data.user.name, email: data.user.email });
         }
       } catch (e) {
-        console.error("Failed to fetch session", e);
+        console.error("[useUserChat] session fetch failed", e);
       }
     };
+
     void fetchSession();
-    fetchRooms();
+    void fetchRooms();
+
     return () => {
       if (subscriptionRef.current && supabase) supabase.removeChannel(subscriptionRef.current);
     };
   }, [fetchRooms, supabase]);
 
+  // Poll unread-counts (low frequency)
   useEffect(() => {
     const timer = setInterval(() => {
       void fetchUnreadCounts();
@@ -420,3 +395,4 @@ export function useUserChat() {
     myStatus,
   };
 }
+

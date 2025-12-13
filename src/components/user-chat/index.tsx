@@ -1,18 +1,17 @@
-﻿"use client";
+"use client";
 
-import { useState, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useUserChat } from "@/hooks/useUserChat";
 import type { UserPreview } from "@/features/user-chat/types";
 import { ChatSidebar } from "@/components/user-chat/ChatSidebar";
 import { ChatMain } from "@/components/user-chat/ChatMain";
+import { cn } from "@/lib/cn";
 
 type Props = {
   onInputFocusChange?: (focused: boolean) => void;
 };
 
 export function UserChat({ onInputFocusChange }: Props) {
-  // 入力フォーカスハンドラを親に渡せるように optional prop に拡張しても良いが、
-  // 既存のシグネチャを保つためまずは内部で扱う
   const {
     rooms,
     activeRoom,
@@ -36,14 +35,12 @@ export function UserChat({ onInputFocusChange }: Props) {
     getUserStatus,
   } = useUserChat();
 
-  const [search, setSearch] = useState("");
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [isSidebarOpen, setSidebarOpen] = useState(true);
 
-  // ルームが選択済みならメインを優先表示（モーダルで見えない問題の回避）
+  // モバイルは「メッセージ」を優先表示しつつ、ルーム一覧はドロワーで開く
   useEffect(() => {
     if (!activeRoom) return;
-    // 非同期に切り替えてレンダー負荷を避ける
-    const id = setTimeout(() => setShowSidebar(false), 0);
+    const id = setTimeout(() => setSidebarOpen(false), 0);
     return () => clearTimeout(id);
   }, [activeRoom]);
 
@@ -53,32 +50,27 @@ export function UserChat({ onInputFocusChange }: Props) {
     await sendMessage(trimmed);
   };
 
-  const handleSearch = async () => {
-    await searchUsers(search);
-  };
-
   const handleSelectUser = async (user: UserPreview) => {
     const room = await createRoom(user.id, "dm");
     if (room) {
-      setShowSidebar(false);
+      setSidebarOpen(false);
       setSearchResults([]);
-      setSearch("");
     }
   };
 
   const handleSelectRoom = async (roomId: string) => {
     await selectRoom(roomId);
-    setShowSidebar(false);
+    setSidebarOpen(false);
   };
 
   return (
-    <div className="flex h-full min-h-[520px] flex-col gap-3 overflow-hidden lg:grid lg:grid-cols-[320px,1fr] lg:gap-4 lg:space-y-0 lg:overflow-visible">
-      <div className={`${showSidebar ? "block" : "hidden"} lg:block`}>
+    <div className="grid min-h-[560px] grid-cols-1 gap-4 lg:grid-cols-[320px,1fr]">
+      <div className="hidden lg:block">
         <ChatSidebar
           rooms={rooms}
           loadingRooms={loadingRooms}
           searchResults={searchResults}
-          onSearchUsers={handleSearch}
+          onSearchUsers={searchUsers}
           onSelectUser={handleSelectUser}
           onSelectRoom={handleSelectRoom}
           activeRoomId={activeRoom?.id ?? null}
@@ -89,7 +81,7 @@ export function UserChat({ onInputFocusChange }: Props) {
         />
       </div>
 
-      <div className={`${showSidebar ? "hidden" : "block"} lg:block h-full min-h-0`}>
+      <div className="min-h-0">
         <ChatMain
           room={activeRoom}
           messages={messages}
@@ -103,8 +95,68 @@ export function UserChat({ onInputFocusChange }: Props) {
           onInputFocusChange={onInputFocusChange}
           getUserStatus={getUserStatus}
           currentUserId={currentUser?.id}
-          onBack={() => setShowSidebar(true)}
+          onBack={() => setSidebarOpen(true)}
         />
+      </div>
+
+      <MobileSidebarDrawer open={isSidebarOpen} onClose={() => setSidebarOpen(false)}>
+        <ChatSidebar
+          rooms={rooms}
+          loadingRooms={loadingRooms}
+          searchResults={searchResults}
+          onSearchUsers={searchUsers}
+          onSelectUser={handleSelectUser}
+          onSelectRoom={handleSelectRoom}
+          activeRoomId={activeRoom?.id ?? null}
+          currentUserId={currentUser?.id}
+          getUserStatus={getUserStatus}
+          error={error}
+          onClearError={() => setError(null)}
+        />
+      </MobileSidebarDrawer>
+    </div>
+  );
+}
+
+function MobileSidebarDrawer({
+  open,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cn("fixed inset-0 z-50 transition lg:hidden", open ? "pointer-events-auto" : "pointer-events-none")}
+      aria-hidden={!open}
+      role="dialog"
+      aria-label="ルーム一覧"
+    >
+      <div
+        className={cn("absolute inset-0 bg-slate-900/60 transition-opacity", open ? "opacity-100" : "opacity-0")}
+        onClick={onClose}
+      />
+      <div
+        className={cn(
+          "absolute inset-y-0 left-0 flex max-w-full transition-transform duration-300",
+          open ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        <div className="flex h-full w-[86vw] max-w-sm flex-col overflow-y-auto bg-white px-4 py-5 shadow-2xl">
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-base font-semibold text-slate-900">ルーム一覧</p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+            >
+              閉じる
+            </button>
+          </div>
+          {children}
+        </div>
       </div>
     </div>
   );
