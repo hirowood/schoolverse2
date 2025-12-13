@@ -2,22 +2,21 @@
 
 import { create } from "zustand";
 import {
+  claimAllRewards as claimAllRewardsApi,
+  claimReward as claimRewardApi,
+  fetchAchievements as fetchAchievementsApi,
+  fetchProfile as fetchProfileApi,
+  fetchXpHistory as fetchXpHistoryApi,
+} from "@/features/gamification/api";
+import {
   type AchievementSummary,
   type AchievementWithProgress,
   type GamificationFilters,
   type GameProfile,
   type GamificationStats,
-  type ProfileResponse,
-  type AchievementsResponse,
-  type ClaimRewardResponse,
   type XpTransaction,
-  type XpHistoryResponse,
 } from "@/types/gamification";
-import {
-  mockAchievementsResponse,
-  mockProfileResponse,
-  mockXpHistoryResponse,
-} from "@/lib/gamification/mock-data";
+import { mockAchievementsResponse, mockProfileResponse, mockXpHistoryResponse } from "@/lib/gamification/mock-data";
 
 type GameStoreState = {
   profile?: GameProfile;
@@ -37,20 +36,19 @@ type GameStoreState = {
   refreshXpHistory: () => Promise<void>;
 };
 
-const fetchJson = async <T>(path: string, init?: RequestInit) => {
-  const res = await fetch(path, { cache: "no-store", ...init });
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-  return (await res.json()) as T;
+const toError = (error: unknown, fallback: string): string => {
+  if (error instanceof Error && error.message.trim().length > 0) return error.message;
+  return fallback;
 };
 
 export const useGameStore = create<GameStoreState>((set, get) => ({
-  profile: mockProfileResponse.profile,
-  stats: mockProfileResponse.stats,
-  recentXp: mockProfileResponse.recentXp,
-  achievements: mockAchievementsResponse.achievements,
-  achievementsSummary: mockAchievementsResponse.summary,
-  xpHistory: mockXpHistoryResponse.transactions,
-  todayXp: mockXpHistoryResponse.todayTotal,
+  profile: undefined,
+  stats: undefined,
+  recentXp: [],
+  achievements: [],
+  achievementsSummary: undefined,
+  xpHistory: [],
+  todayXp: 0,
   filters: { category: "all", status: "all" },
   isLoading: false,
   error: undefined,
@@ -58,7 +56,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   fetchProfile: async () => {
     set({ isLoading: true, error: undefined });
     try {
-      const data = await fetchJson<ProfileResponse>("/api/gamification/profile");
+      const data = await fetchProfileApi();
       set({
         profile: data.profile,
         stats: data.stats,
@@ -72,7 +70,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         stats: mockProfileResponse.stats,
         recentXp: mockProfileResponse.recentXp,
         isLoading: false,
-        error: "プロフィールを取得できませんでした (モック表示中)",
+        error: toError(error, "プロフィールを取得できませんでした (モック表示中)"),
       });
     }
   },
@@ -84,16 +82,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       ...filters,
     };
     try {
-      const params = new URLSearchParams();
-      if (nextFilters.category && nextFilters.category !== "all") {
-        params.append("category", nextFilters.category);
-      }
-      if (nextFilters.status && nextFilters.status !== "all") {
-        params.append("status", nextFilters.status);
-      }
-      const query = params.toString();
-      const url = query ? `/api/gamification/achievements?${query}` : "/api/gamification/achievements";
-      const data = await fetchJson<AchievementsResponse>(url);
+      const data = await fetchAchievementsApi(nextFilters);
       set({
         achievements: data.achievements,
         achievementsSummary: data.summary,
@@ -107,18 +96,14 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         achievementsSummary: mockAchievementsResponse.summary,
         filters: nextFilters,
         isLoading: false,
-        error: "実績を取得できませんでした (モック表示中)",
+        error: toError(error, "実績を取得できませんでした (モック表示中)"),
       });
     }
   },
 
   claimReward: async (achievementId: string) => {
     try {
-      const data = await fetchJson<ClaimRewardResponse>("/api/gamification/claim-reward", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ achievementId }),
-      });
+      const data = await claimRewardApi(achievementId);
 
       set((state) => ({
         profile: data.updatedProfile ?? state.profile,
@@ -157,11 +142,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     const targetIds = get().achievements.filter((a) => a.isCompleted && !a.isRewardClaimed).map((a) => a.id);
     if (targetIds.length === 0) return;
     try {
-      await fetchJson<ClaimRewardResponse>("/api/gamification/claim-all-rewards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ achievementIds: targetIds }),
-      });
+      await claimAllRewardsApi(targetIds);
     } catch (error) {
       console.error("[GameStore] claimAllRewards failed (local-only update)", error);
     }
@@ -178,7 +159,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
   refreshXpHistory: async () => {
     try {
-      const data = await fetchJson<XpHistoryResponse>("/api/gamification/xp-history");
+      const data = await fetchXpHistoryApi();
       set({
         xpHistory: data.transactions,
         todayXp: data.todayTotal,
@@ -188,7 +169,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       set({
         xpHistory: mockXpHistoryResponse.transactions,
         todayXp: mockXpHistoryResponse.todayTotal,
-        error: "XP履歴を取得できませんでした (モック表示中)",
+        error: toError(error, "XP履歴を取得できませんでした (モック表示中)"),
       });
     }
   },

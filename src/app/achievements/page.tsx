@@ -36,14 +36,23 @@ export default function AchievementsPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">実績</h1>
-          <p className="text-sm text-slate-600">カテゴリ別に進捗と報酬を確認</p>
+    <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 pb-16 pt-6 sm:px-6">
+      <header className="rounded-2xl border border-slate-200 bg-gradient-to-r from-purple-50 via-white to-indigo-50 px-5 py-4 shadow-sm ring-1 ring-slate-100 dark:border-slate-700 dark:from-slate-800 dark:via-slate-900 dark:to-slate-900 dark:ring-slate-700 sm:px-6 sm:py-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-700 dark:text-indigo-200">
+              実績
+            </p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">成果と報酬</h1>
+            <p className="text-sm text-slate-600 dark:text-slate-300">カテゴリ別の進捗と報酬をまとめてチェック</p>
+          </div>
+          {isLoading && (
+            <span className="self-start rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-200">
+              更新中…
+            </span>
+          )}
         </div>
-        {isLoading && <span className="text-xs text-slate-500">更新中...</span>}
-      </div>
+      </header>
 
       {achievementsSummary && <AchievementSummary summary={achievementsSummary} />}
 
@@ -54,7 +63,10 @@ export default function AchievementsPage() {
         onStatusChange={(value) => void fetchAchievements({ status: value })}
       />
 
-      <UnclaimedRewardsBanner count={achievementsSummary?.unclaimed ?? 0} onClaimAll={() => void claimAllRewards()} />
+      <UnclaimedRewardsBanner
+        count={achievementsSummary?.unclaimed ?? 0}
+        onClaimAll={() => void claimAllRewards()}
+      />
 
       <div className="space-y-8">
         <AchievementSection
@@ -85,6 +97,6 @@ export default function AchievementsPage() {
           setSelected(null);
         }}
       />
-    </div>
+    </main>
   );
 }

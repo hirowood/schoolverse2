@@ -36,7 +36,7 @@ export type XpSource =
   | "system"
   | string;
 
-export type GameProfile = {
+export interface GameProfile {
   level: number;
   currentXp: number;
   totalXp: number;
@@ -47,27 +47,27 @@ export type GameProfile = {
   gems: number;
   title: string | null;
   avatarFrame: string | null;
-};
+}
 
-export type GamificationStats = {
+export interface GamificationStats {
   currentStreak: number;
   longestStreak: number;
   totalTasksCompleted: number;
   totalNotesCreated: number;
   totalChatMessages: number;
   totalLearningMinutes: number;
-};
+}
 
-export type XpTransaction = {
+export interface XpTransaction {
   id: string;
   amount: number;
   source: XpSource;
   sourceLabel: string;
   description?: string | null;
   createdAt: string;
-};
+}
 
-export type AchievementDefinition = {
+export interface AchievementDefinition {
   id: string;
   name: string;
   description: string;
@@ -82,37 +82,37 @@ export type AchievementDefinition = {
   coinReward: number;
   titleReward?: string | null;
   isHidden: boolean;
-};
+}
 
-export type AchievementWithProgress = AchievementDefinition & {
+export interface AchievementWithProgress extends AchievementDefinition {
   currentProgress: number;
   progressPercent: number;
   isCompleted: boolean;
   completedAt?: string | null;
   isRewardClaimed: boolean;
   hint?: string | null;
-};
+}
 
-export type AchievementSummary = {
+export interface AchievementSummary {
   total: number;
   completed: number;
   inProgress: number;
   unclaimed: number;
   completionRate: number;
-};
+}
 
-export type ProfileResponse = {
+export interface ProfileResponse {
   profile: GameProfile;
   stats: GamificationStats;
   recentXp: XpTransaction[];
-};
+}
 
-export type AchievementsResponse = {
+export interface AchievementsResponse {
   summary: AchievementSummary;
   achievements: AchievementWithProgress[];
-};
+}
 
-export type ClaimRewardResponse = {
+export interface ClaimRewardResponse {
   success: boolean;
   rewards: {
     xp: number;
@@ -121,14 +121,14 @@ export type ClaimRewardResponse = {
   };
   updatedProfile: GameProfile;
   levelUp: boolean;
-};
+}
 
-export type XpHistoryResponse = {
+export interface XpHistoryResponse {
   transactions: XpTransaction[];
   todayTotal: number;
-};
+}
 
-export type GamificationFilters = {
+export interface GamificationFilters {
   category: AchievementCategory;
   status: AchievementStatusFilter;
-};
+}
