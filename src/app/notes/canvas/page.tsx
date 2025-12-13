@@ -1,31 +1,27 @@
 "use client";
 
-import { useState, useRef, useCallback, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-
-import { CanvasHeader } from "@/features/notes/canvas/CanvasHeader";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CanvasCaptureModals } from "@/features/notes/canvas/CanvasCaptureModals";
+import { CanvasHeader } from "@/features/notes/canvas/CanvasHeader";
 import { useCanvasNote } from "@/features/notes/canvas/useCanvasNote";
 import {
-  EMPTY_SCENE,
-  ExcalidrawImperativeAPI,
-  ExcalidrawElement,
-  FileId,
   BinaryFileData,
+  EMPTY_SCENE,
+  ExcalidrawElement,
+  ExcalidrawImperativeAPI,
+  FileId,
 } from "@/features/notes/canvas/types";
 
-const Excalidraw = dynamic(
-  async () => (await import("@excalidraw/excalidraw")).Excalidraw,
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-full items-center justify-center bg-gray-50">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
-      </div>
-    ),
-  },
-);
+const Excalidraw = dynamic(async () => (await import("@excalidraw/excalidraw")).Excalidraw, {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center bg-gray-50">
+      <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
+    </div>
+  ),
+});
 
 function CanvasPageContent() {
   const router = useRouter();
@@ -37,16 +33,8 @@ function CanvasPageContent() {
 
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
 
-  const {
-    title,
-    setTitle,
-    description,
-    setDescription,
-    isShareable,
-    setIsShareable,
-    initialScene,
-    isLoading,
-  } = useCanvasNote({ noteId, template });
+  const { title, setTitle, description, setDescription, isShareable, setIsShareable, initialScene, isLoading } =
+    useCanvasNote({ noteId, template });
 
   const [isSaving, setIsSaving] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
@@ -58,8 +46,8 @@ function CanvasPageContent() {
     if (!apiRef.current) return;
 
     const reader = new FileReader();
-    reader.onload = async (e) => {
-      const dataUrl = e.target?.result as string;
+    reader.onload = async (event) => {
+      const dataUrl = event.target?.result as string;
       const id = crypto.randomUUID() as FileId;
 
       const fileData: BinaryFileData = {
@@ -183,14 +171,14 @@ function CanvasPageContent() {
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) handleAddImage(file);
-    e.target.value = "";
+    event.target.value = "";
   };
 
-  const handleOcrFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleOcrFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (ev) => {
@@ -199,7 +187,7 @@ function CanvasPageContent() {
       };
       reader.readAsDataURL(file);
     }
-    e.target.value = "";
+    event.target.value = "";
   };
 
   if (isLoading) {
@@ -211,7 +199,7 @@ function CanvasPageContent() {
   }
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-900">
       <CanvasHeader
         title={title}
         description={description}
@@ -230,17 +218,17 @@ function CanvasPageContent() {
         taskTitle={taskTitle}
       />
 
-       <div className="min-h-0 flex-1">
-         <Excalidraw
-           excalidrawAPI={(api) => {
+      <div className="min-h-0 flex-1">
+        <Excalidraw
+          excalidrawAPI={(api) => {
             apiRef.current = api;
-           }}
-           initialData={{
+          }}
+          initialData={{
             elements: initialScene?.elements ?? EMPTY_SCENE.elements,
-             appState: {
-               ...EMPTY_SCENE.appState,
-               ...(initialScene?.appState ?? {}),
-               zenModeEnabled: false,
+            appState: {
+              ...EMPTY_SCENE.appState,
+              ...(initialScene?.appState ?? {}),
+              zenModeEnabled: false,
             },
           }}
           UIOptions={{
@@ -267,15 +255,13 @@ function CanvasPageContent() {
         }}
       />
 
-      <details className="border-t bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-900">
-        <summary className="cursor-pointer text-sm text-gray-600 dark:text-gray-400">
-          💡 使い方ヒント
-        </summary>
-        <ul className="mt-2 space-y-1 pl-4 text-xs text-gray-500 dark:text-gray-500">
+      <details className="border-t bg-gray-50 px-3 py-2 text-sm leading-relaxed text-gray-600 shadow-inner dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 sm:px-4">
+        <summary className="cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-200">💡 使い方ヒント</summary>
+        <ul className="mt-2 space-y-1 pl-4 text-xs text-gray-600 dark:text-gray-400">
           <li>🖊️ 左のツールバーで図形・テキスト・フリーハンドを選択</li>
-          <li>🖼️ 画像はドラッグ&ドロップでも追加可能</li>
-          <li>🔎 OCRで画像からテキストを抽出してキャンバスに配置</li>
-          <li>🧭 全てのオブジェクトは移動・拡大縮小・回転可能</li>
+          <li>🖼 画像はドラッグ&ドロップでも追加可能</li>
+          <li>🔠 OCRで画像からテキストを抽出してキャンバスに配置</li>
+          <li>↕️ 全てのオブジェクトは移動・拡大縮小・回転可能</li>
         </ul>
       </details>
     </div>

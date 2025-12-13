@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ChangeEvent } from "react";
 
-type CanvasHeaderProps = {
+interface CanvasHeaderProps {
   title: string;
   description: string;
   isShareable: boolean;
@@ -16,7 +16,7 @@ type CanvasHeaderProps = {
   onSelectOcrFile: (event: ChangeEvent<HTMLInputElement>) => void;
   onOpenCamera: (mode: "image" | "ocr") => void;
   taskTitle?: string | null;
-};
+}
 
 export function CanvasHeader({
   title,
@@ -33,79 +33,79 @@ export function CanvasHeader({
   taskTitle,
 }: CanvasHeaderProps) {
   return (
-    <div className="p-2 sm:p-4 border-b dark:border-gray-700 bg-white dark:bg-gray-800">
-      <div className="flex items-center justify-between mb-2">
-        <Link href="/notes" className="text-blue-600 hover:underline text-sm">
+    <section className="border-b bg-white px-3 pb-3 pt-2 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:px-4 sm:pb-4 sm:pt-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Link href="/notes" className="text-sm font-semibold text-blue-600 underline-offset-4 hover:underline">
           ← ノート一覧に戻る
         </Link>
         <button
           onClick={onSave}
           disabled={saving}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300 disabled:cursor-not-allowed disabled:bg-blue-300"
         >
           {saving ? "保存中..." : "💾 保存"}
         </button>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <input
           type="text"
           value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
+          onChange={(event) => onTitleChange(event.target.value)}
           placeholder="タイトル"
-          className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-300 dark:border-gray-600 dark:bg-gray-700"
         />
         <input
           type="text"
           value={description}
-          onChange={(e) => onDescriptionChange(e.target.value)}
+          onChange={(event) => onDescriptionChange(event.target.value)}
           placeholder="説明（任意）"
-          className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-300 dark:border-gray-600 dark:bg-gray-700"
         />
-        <label className="flex items-center gap-2 px-3 py-2">
+        <label className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-200">
           <input
             type="checkbox"
             checked={isShareable}
-            onChange={(e) => onToggleShareable(e.target.checked)}
-            className="rounded"
+            onChange={(event) => onToggleShareable(event.target.checked)}
+            className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
-          <span className="text-sm">共有可能</span>
+          <span className="text-sm font-semibold">共有可能</span>
         </label>
       </div>
 
-      <div className="flex flex-wrap gap-2 mt-2">
-        <label className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-sm">
-          🖼️ 画像追加
+      <div className="mt-3 flex flex-wrap gap-2">
+        <label className="inline-flex h-11 items-center justify-center rounded-xl bg-gray-100 px-4 text-sm font-semibold text-gray-800 shadow-sm transition hover:bg-gray-200 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
+          🖼 画像追加
           <input type="file" accept="image/*" onChange={onSelectImageFile} className="hidden" />
         </label>
 
         <button
           type="button"
           onClick={() => onOpenCamera("image")}
-          className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-sm"
+          className="inline-flex h-11 items-center justify-center rounded-xl bg-gray-100 px-4 text-sm font-semibold text-gray-800 shadow-sm transition hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-300 active:scale-[0.99] dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
         >
           📷 カメラ撮影
         </button>
 
-        <label className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-sm">
-          🔎 OCR
+        <label className="inline-flex h-11 items-center justify-center rounded-xl bg-gray-100 px-4 text-sm font-semibold text-gray-800 shadow-sm transition hover:bg-gray-200 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
+          🔠 OCR
           <input type="file" accept="image/*" onChange={onSelectOcrFile} className="hidden" />
         </label>
 
         <button
           type="button"
           onClick={() => onOpenCamera("ocr")}
-          className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-sm"
+          className="inline-flex h-11 items-center justify-center rounded-xl bg-gray-100 px-4 text-sm font-semibold text-gray-800 shadow-sm transition hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-300 active:scale-[0.99] dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
         >
-          📷→🔤 カメラ+OCR
+          📷→📝 カメラ+OCR
         </button>
       </div>
 
       {taskTitle && (
         <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          📌 タスク「{taskTitle}」に関連付け
+          🔗 タスク「{taskTitle}」に関連付け
         </div>
       )}
-    </div>
+    </section>
   );
 }
