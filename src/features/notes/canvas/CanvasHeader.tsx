@@ -33,7 +33,10 @@ export function CanvasHeader({
   taskTitle,
 }: CanvasHeaderProps) {
   return (
-    <section className="sticky top-0 z-10 border-b bg-white/95 px-3 pb-3 pt-2 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-800/95 sm:px-4 sm:pb-4 sm:pt-3">
+    <section
+      className="sticky top-0 z-10 border-b bg-white/95 px-3 pb-3 pt-2 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-800/95 sm:px-4 sm:pb-4 sm:pt-3"
+      data-canvas-header
+    >
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <Link href="/notes" className="text-sm font-semibold text-blue-600 underline-offset-4 hover:underline">

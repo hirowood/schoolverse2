@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import "@excalidraw/excalidraw/index.css";
@@ -9,6 +9,7 @@ import { CanvasCaptureModals } from "@/features/notes/canvas/CanvasCaptureModals
 import { CanvasHeader } from "@/features/notes/canvas/CanvasHeader";
 import { useCanvasNote } from "@/features/notes/canvas/useCanvasNote";
 import {
+  AppState,
   BinaryFileData,
   EMPTY_SCENE,
   ExcalidrawElement,
@@ -43,6 +44,52 @@ function CanvasPageContent() {
   const [cameraMode, setCameraMode] = useState<"image" | "ocr">("image");
   const [showOcr, setShowOcr] = useState(false);
   const [ocrImageUrl, setOcrImageUrl] = useState<string | null>(null);
+  const clampZoom = (value: number) => Math.min(4, Math.max(0.2, value));
+  const [zoomPercent, setZoomPercent] = useState(100);
+  const [toolbarTop, setToolbarTop] = useState<number>(16);
+
+  const updateZoomLabel = useCallback(() => {
+    const current = apiRef.current?.getAppState().zoom?.value ?? 1;
+    setZoomPercent(Math.round(current * 100));
+  }, []);
+
+  const zoomBy = useCallback(
+    (delta: number) => {
+      const api = apiRef.current;
+      if (!api) return;
+      const current = api.getAppState().zoom?.value ?? 1;
+      const next = clampZoom(current + delta);
+      const nextZoom = { value: next as AppState["zoom"]["value"] };
+      api.updateScene({ appState: { zoom: nextZoom } });
+      updateZoomLabel();
+    },
+    [updateZoomLabel],
+  );
+
+  useEffect(() => {
+    updateZoomLabel();
+  }, [updateZoomLabel]);
+
+  useEffect(() => {
+    const updateToolbarPosition = () => {
+      const header = document.querySelector<HTMLElement>("[data-canvas-header]");
+      const headerBottom = header?.getBoundingClientRect().bottom ?? 0;
+      setToolbarTop(Math.max(12, headerBottom + 12));
+    };
+
+    updateToolbarPosition();
+    window.addEventListener("resize", updateToolbarPosition);
+
+    const header = document.querySelector<HTMLElement>("[data-canvas-header]");
+    const resizeObserver =
+      header && typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateToolbarPosition) : null;
+    if (header) resizeObserver?.observe(header);
+
+    return () => {
+      window.removeEventListener("resize", updateToolbarPosition);
+      resizeObserver?.disconnect();
+    };
+  }, []);
 
   const handleAddImage = useCallback(async (file: File) => {
     if (!apiRef.current) return;
@@ -221,7 +268,45 @@ function CanvasPageContent() {
       />
 
       <div className="min-h-0 flex-1">
-        <div className="excalidraw-container h-full w-full">
+        <div className="excalidraw-container relative h-full w-full">
+          <div className="pointer-events-none fixed left-0 right-0 z-20 px-4" style={{ top: toolbarTop }}>
+            <div className="pointer-events-auto mx-auto flex max-w-5xl flex-wrap items-center gap-2 rounded-xl bg-white/95 p-3 shadow-lg ring-1 ring-slate-200 dark:bg-slate-800/95 dark:ring-slate-700">
+              <ToolbarButton label="メニュー" onClick={() => undefined}>
+                ☰
+              </ToolbarButton>
+              <ToolbarButton label="拡大" onClick={() => zoomBy(0.2)}>
+                ＋
+              </ToolbarButton>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{zoomPercent}%</span>
+              <ToolbarButton label="縮小" onClick={() => zoomBy(-0.2)}>
+                －
+              </ToolbarButton>
+              <ToolbarButton
+                label="Undo"
+                onClick={() => {
+                  const historyApi = apiRef.current as unknown as { history?: { undo?: () => void } };
+                  historyApi.history?.undo?.();
+                }}
+              >
+                ↶
+              </ToolbarButton>
+              <ToolbarButton
+                label="Redo"
+                onClick={() => {
+                  const historyApi = apiRef.current as unknown as { history?: { redo?: () => void } };
+                  historyApi.history?.redo?.();
+                }}
+              >
+                ↷
+              </ToolbarButton>
+              <ToolSelector
+                onSelect={(tool) => apiRef.current?.setActiveTool?.({ type: tool } as { type: ToolType })}
+                activeTool={apiRef.current?.getAppState().activeTool?.type}
+                orientation="row"
+              />
+            </div>
+          </div>
+
           <Excalidraw
             excalidrawAPI={(api) => {
               apiRef.current = api;
@@ -242,6 +327,47 @@ function CanvasPageContent() {
                 saveAsImage: true,
               },
             }}
+          />
+        </div>
+      </div>
+
+      {/* Mobile action bar below canvas header for consistent spacing */}
+      <div
+        className="sticky z-20 bg-gray-50 px-4 pt-2 pb-3 dark:bg-gray-900 md:hidden"
+        style={{ top: toolbarTop }}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <ToolbarButton label="メニュー" onClick={() => undefined}>
+            ☰
+          </ToolbarButton>
+          <ToolbarButton label="拡大" onClick={() => zoomBy(0.2)}>
+            ＋
+          </ToolbarButton>
+          <ToolbarButton label="縮小" onClick={() => zoomBy(-0.2)}>
+            －
+          </ToolbarButton>
+          <ToolbarButton
+            label="Undo"
+            onClick={() => {
+              const historyApi = apiRef.current as unknown as { history?: { undo?: () => void } };
+              historyApi.history?.undo?.();
+            }}
+          >
+            ↶
+          </ToolbarButton>
+          <ToolbarButton
+            label="Redo"
+            onClick={() => {
+              const historyApi = apiRef.current as unknown as { history?: { redo?: () => void } };
+              historyApi.history?.redo?.();
+            }}
+          >
+            ↷
+          </ToolbarButton>
+          <ToolSelector
+            onSelect={(tool) => apiRef.current?.setActiveTool?.({ type: tool } as { type: ToolType })}
+            activeTool={apiRef.current?.getAppState().activeTool?.type}
+            orientation="row"
           />
         </div>
       </div>
@@ -269,6 +395,71 @@ function CanvasPageContent() {
         </ul>
       </details>
     </div>
+  );
+}
+
+type ToolType = "selection" | "rectangle" | "diamond" | "ellipse" | "arrow" | "line" | "freedraw" | "text";
+
+interface ToolSelectorProps {
+  onSelect: (tool: ToolType) => void;
+  activeTool?: string;
+  orientation?: "desktop" | "mobile" | "row";
+}
+
+const TOOL_ITEMS: Array<{ type: ToolType; label: string; icon: string }> = [
+  { type: "selection", label: "選択", icon: "🖱" },
+  { type: "rectangle", label: "四角", icon: "▭" },
+  { type: "diamond", label: "ひし形", icon: "◇" },
+  { type: "ellipse", label: "丸", icon: "◯" },
+  { type: "arrow", label: "矢印", icon: "➡" },
+  { type: "line", label: "線", icon: "─" },
+  { type: "freedraw", label: "フリーハンド", icon: "✏" },
+  { type: "text", label: "テキスト", icon: "A" },
+];
+
+function ToolSelector({ onSelect, activeTool, orientation = "row" }: ToolSelectorProps) {
+  const base = orientation === "row" ? "flex flex-row flex-wrap gap-2" : "flex flex-col gap-2";
+
+  return (
+    <div className={base}>
+      {TOOL_ITEMS.map((item) => {
+        const isActive = activeTool === item.type;
+        return (
+          <button
+            key={item.type}
+            type="button"
+            onClick={() => onSelect(item.type)}
+            className={`inline-flex min-w-[3.25rem] items-center justify-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold shadow-sm ring-1 ring-slate-200 transition ${
+              isActive ? "bg-indigo-600 text-white ring-indigo-400" : "bg-white text-slate-800 dark:bg-slate-700 dark:text-white"
+            }`}
+            aria-pressed={isActive}
+          >
+            <span>{item.icon}</span>
+            <span className="hidden sm:inline">{item.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+interface ToolbarButtonProps {
+  onClick?: () => void;
+  children: React.ReactNode;
+  label: string;
+}
+
+function ToolbarButton({ onClick, children, label }: ToolbarButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex min-w-[3.25rem] items-center justify-center gap-1 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 dark:bg-slate-700 dark:text-white dark:ring-slate-600"
+      aria-label={label}
+    >
+      {children}
+      <span className="hidden sm:inline">{label}</span>
+    </button>
   );
 }
 

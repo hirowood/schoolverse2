@@ -1,34 +1,14 @@
-/* Touch-friendly overrides for Excalidraw toolbar on mobile */
-@media (max-width: 640px) {
-  .excalidraw .App-toolbar {
-    gap: 12px;
-    padding: 12px;
-  }
-
-  .excalidraw .ToolIcon_type_button {
-    min-width: 52px;
-    min-height: 52px;
-    padding: 12px;
-    border-radius: 14px;
-  }
-
-  .excalidraw .ToolIcon__icon {
-    width: 24px;
-    height: 24px;
-  }
-
-  .excalidraw .ToolIcon__label {
-    font-size: 12px;
-  }
-}
-
-/* Ensure canvas fills the available space and footer sits at the bottom */
-.excalidraw-container .excalidraw {
-  height: 100%;
-}
-
+/* Hide default toolbar/footer; we render custom controls */
+.excalidraw .App-toolbar,
+.excalidraw .Island .App-toolbar,
 .excalidraw .layer-ui__wrapper__footer {
-  left: 12px;
-  right: 12px;
-  bottom: max(12px, env(safe-area-inset-bottom, 12px));
+  display: none !important;
+}
+
+/* Ensure Excalidraw popovers (color pickers, dropdowns) sit above custom overlay */
+.excalidraw .popover,
+.excalidraw .dropdown-menu,
+.excalidraw .color-picker,
+.excalidraw .Island__wrapper {
+  z-index: 50 !important;
 }
