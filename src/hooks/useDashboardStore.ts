@@ -2,8 +2,9 @@
 
 import { create } from "zustand";
 import type { DashboardSummary } from "@/lib/dashboard/types";
+import { getDashboardSummary } from "@/features/dashboard/api";
 
-type DashboardState = {
+interface DashboardState {
   summary: DashboardSummary | null;
   isLoading: boolean;
   error: string | null;
@@ -14,13 +15,7 @@ type DashboardState = {
   completeTask: (taskId: string) => Promise<void>;
   toggleSection: (section: string) => void;
   expandedSections: Set<string>;
-};
-
-const fetchJson = async <T>(url: string, init?: RequestInit) => {
-  const res = await fetch(url, { cache: "no-store", ...init });
-  if (!res.ok) throw new Error(`Request failed ${res.status}`);
-  return (await res.json()) as T;
-};
+}
 
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   summary: null,
@@ -32,11 +27,11 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   fetchSummary: async () => {
     set({ isLoading: true, error: null });
     try {
-      const data = await fetchJson<DashboardSummary>("/api/dashboard/summary");
+      const data = await getDashboardSummary();
       set({ summary: data, isLoading: false, lastUpdated: new Date() });
     } catch (error) {
       console.error("[Dashboard] fetchSummary failed", error);
-      set({ isLoading: false, error: "ダッシュボードを取得できませんでした" });
+      set({ isLoading: false, error: (error as Error).message || "ダッシュボードを取得できませんでした" });
     }
   },
 
@@ -63,11 +58,12 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     };
     set({ summary: updatedSummary });
     try {
-      await fetchJson(`/api/quests/${questId}/complete`, { method: "POST" });
+      const res = await fetch(`/api/quests/${questId}/complete`, { method: "POST" });
+      if (!res.ok) throw new Error("クエスト完了に失敗しました");
       await get().refreshSection("quests");
     } catch (error) {
       console.error("[Dashboard] completeQuest failed, rollback", error);
-      set({ summary: prev, error: "クエスト完了に失敗しました" });
+      set({ summary: prev, error: (error as Error).message || "クエスト完了に失敗しました" });
     }
   },
 
@@ -87,15 +83,16 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     };
     set({ summary: updatedSummary });
     try {
-      await fetchJson(`/api/tasks`, {
+      const res = await fetch(`/api/tasks`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: taskId, status: "done" }),
       });
+      if (!res.ok) throw new Error("タスク完了に失敗しました");
       await get().refreshSection("tasks");
     } catch (error) {
       console.error("[Dashboard] completeTask failed, rollback", error);
-      set({ summary: prev, error: "タスク完了に失敗しました" });
+      set({ summary: prev, error: (error as Error).message || "タスク完了に失敗しました" });
     }
   },
 

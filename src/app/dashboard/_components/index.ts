@@ -1,4 +1,5 @@
 export { DashboardHeader } from "./DashboardHeader";
+export { DashboardSectionHeader } from "./DashboardSectionHeader";
 export { DashboardSkeleton } from "./DashboardSkeleton";
 export { GameStatusCard } from "./GameStatusCard";
 export { TodayQuestsCard } from "./TodayQuestsCard";

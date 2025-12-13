@@ -2,6 +2,7 @@
 
 import { useTimeTracker } from "@/app/dashboard/_hooks/useTimeTracker";
 import { QuestProgressBar } from "@/components/quests/QuestProgressBar";
+import { cardClassName } from "@/components/ui/Card";
 
 const formatDuration = (seconds: number) => {
   const h = Math.floor(seconds / 3600);
@@ -21,22 +22,25 @@ export function TimeTrackerCard() {
   const max = Math.max(...rows.map((r) => r.value), 0);
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50">⏱️ 学習時間</h3>
-        <div className="rounded-lg bg-slate-900 px-3 py-2 text-right text-white">
-          <p className="text-[11px] uppercase tracking-wide text-slate-200">累計</p>
-          <p className="text-lg font-semibold">{formatDuration(data?.totalSeconds ?? 0)}</p>
+    <section className={cardClassName({ radius: "2xl", className: "bg-white/90 dark:border-slate-700 dark:bg-slate-800" })}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-50">⏱ 学習時間</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-300">日/週/月の学習ログを確認できます。</p>
+        </div>
+        <div className="rounded-2xl bg-slate-900 px-4 py-3 text-right text-white">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-200">累計</p>
+          <p className="mt-1 text-lg font-semibold">{formatDuration(data?.totalSeconds ?? 0)}</p>
         </div>
       </div>
 
-      {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
+      {error ? <p className="mt-3 text-sm font-semibold text-red-600">{error}</p> : null}
 
-      <div className="mt-3 space-y-3">
+      <div className="mt-4 space-y-4">
         {rows.map((row) => (
-          <div key={row.label} className="space-y-1">
-            <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
-              <span>{row.label}</span>
+          <div key={row.label} className="space-y-2">
+            <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
+              <span className="font-semibold">{row.label}</span>
               <span className="font-semibold text-slate-900 dark:text-slate-50">{formatDuration(row.value)}</span>
             </div>
             <QuestProgressBar value={max > 0 ? Math.round((row.value / max) * 100) : 0} max={100} showLabel={false} />
@@ -44,7 +48,8 @@ export function TimeTrackerCard() {
         ))}
       </div>
 
-      {isLoading && <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">読み込み中...</p>}
+      {isLoading ? <p className="mt-3 text-sm text-slate-500 dark:text-slate-300">読み込み中...</p> : null}
     </section>
   );
 }
+

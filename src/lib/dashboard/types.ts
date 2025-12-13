@@ -1,4 +1,4 @@
-export type DashboardSummary = {
+export interface DashboardSummary {
   gameProfile: {
     level: number;
     currentXp: number;
@@ -74,4 +74,4 @@ export type DashboardSummary = {
     monthSeconds: number;
     totalSeconds: number;
   };
-};
+}
