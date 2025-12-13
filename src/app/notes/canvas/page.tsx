@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import "@excalidraw/excalidraw/dist/excalidraw.min.css";
+import "@excalidraw/excalidraw/styles.css";
 import { CanvasCaptureModals } from "@/features/notes/canvas/CanvasCaptureModals";
 import { CanvasHeader } from "@/features/notes/canvas/CanvasHeader";
 import { useCanvasNote } from "@/features/notes/canvas/useCanvasNote";
