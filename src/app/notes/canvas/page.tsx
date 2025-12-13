@@ -4,6 +4,7 @@ import { Suspense, useCallback, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import "@excalidraw/excalidraw/index.css";
+import "./toolbar-touch.css";
 import { CanvasCaptureModals } from "@/features/notes/canvas/CanvasCaptureModals";
 import { CanvasHeader } from "@/features/notes/canvas/CanvasHeader";
 import { useCanvasNote } from "@/features/notes/canvas/useCanvasNote";
@@ -220,7 +221,7 @@ function CanvasPageContent() {
       />
 
       <div className="min-h-0 flex-1">
-        <div className="h-full w-full">
+        <div className="excalidraw-container h-full w-full">
           <Excalidraw
             excalidrawAPI={(api) => {
               apiRef.current = api;
